@@ -1,0 +1,67 @@
+name: CI
+
+permissions:
+  contents: write
+
+# Use our Nix Flake Environment for steps
+defaults:
+  run:
+    shell: nix develop --command bash {0}
+
+on:
+  pull_request:
+    branches: [ "main" ]
+    types: [opened, synchronize, reopened, ready_for_review]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  formatting:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TornaxO7/rust-template@v2-ci-actions
+      - name: Check formatting
+        if: github.event.pull_request.head.repo.full_name != github.repository
+        run: cargo fmt --check --verbose
+      - name: Format code
+        id: format_code
+        if: github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          cargo fmt --verbose
+          echo "modified=$(if git diff-index --quiet HEAD --; then echo "false"; else echo "true"; fi)" >> $GITHUB_OUTPUT
+
+      - name: Committing reformatted code
+        if: |
+          steps.format_code.outputs.modified == 'true' &&
+          github.event.pull_request.head.repo.full_name == github.repository
+        run: |
+          git config --global user.name 'Github Actions'
+          git config --global user.email '<>'
+          git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
+          git commit -am "Automated formatting"
+          git push
+  check:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TornaxO7/rust-template@v2-ci-actions
+      - name: Check for build errors
+        run: cargo check --verbose
+
+  clippy:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TornaxO7/rust-template@v2-ci-actions
+      - name: Check best practices (Clippy)
+        run: cargo clippy --verbose -- -Dwarnings
+
+  tests:
+    if: github.event.pull_request.draft == false
+    runs-on: ubuntu-latest
+    steps:
+      - uses: TornaxO7/rust-template@v2-ci-actions
+      - name: Running tests
+        run: cargo test --verbose
