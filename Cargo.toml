@@ -1,9 +1,17 @@
-[package]
-name = "dreamer"
-version = "0.1.0"
-edition = "2021"
+[workspace]
+members = ["dreamer-daemon"]
+resolver = "2"
 
-[dependencies]
-smithay-client-toolkit = "0.19"
-wgpu = "24.0"
-pollster = "0.4"
+[workspace.dependencies]
+ron = "0.8"
+serde = { version = "1", features = ["derive"] }
+
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+xdg = "2.5"
+
+[profile.release-lto]
+inherits = "release"
+codegen-units = 1
+lto = true
