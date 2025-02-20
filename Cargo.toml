@@ -1,0 +1,9 @@
+[package]
+name = "cosmic-dreamer"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+smithay-client-toolkit = "0.19"
+wgpu = "24.0"
+pollster = "0.4"

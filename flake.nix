@@ -25,9 +25,32 @@
           devShells.default =
             let
               rust-toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
+              dependencies = with pkgs; [
+                pkg-config
+                alsa-lib
+                wayland
+                libxkbcommon
+                libGL
+
+                xorg.libX11
+                xorg.libxcb
+                xorg.libXi
+                xorg.libXrandr
+                xorg.libXcursor
+
+                vulkan-loader
+                vulkan-validation-layers
+                vulkan-tools
+              ];
             in
-            pkgs.mkShell {
+            pkgs.mkShell rec {
               packages = [ rust-toolchain ];
+
+              buildInputs = dependencies;
+
+              shellHook = ''
+                export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}
+              '';
             };
         };
       };
