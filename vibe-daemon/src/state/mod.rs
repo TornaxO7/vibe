@@ -1,4 +1,7 @@
-mod wgpu_state;
+mod vibe_output_state;
+mod wayland_handle;
+
+use std::collections::HashMap;
 
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -13,8 +16,17 @@ use smithay_client_toolkit::{
         Connection, QueueHandle,
     },
     registry::{ProvidesRegistryState, RegistryState},
-    shell::wlr_layer::{LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
+    shell::{
+        wlr_layer::{
+            Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
+            LayerSurfaceConfigure,
+        },
+        WaylandSurface,
+    },
 };
+use tracing::{debug, instrument};
+use vibe_output_state::VibeOutputState;
+use wayland_handle::WaylandHandle;
 
 pub struct State {
     pub run: bool,
@@ -24,7 +36,8 @@ pub struct State {
     pub compositor_state: CompositorState,
 
     pub globals: GlobalList,
-    pub eqh: QueueHandle<Self>,
+
+    pub wgpu_states: HashMap<WlOutput, VibeOutputState>,
 }
 
 impl State {
@@ -38,24 +51,71 @@ impl State {
                 .expect("Retrieve compositor state"),
 
             globals,
-            eqh: event_queue_handle,
+            wgpu_states: HashMap::new(),
         }
     }
 }
 
 delegate_output!(State);
+
 impl OutputHandler for State {
     fn output_state(&mut self) -> &mut OutputState {
         &mut self.output_state
     }
 
+    #[instrument(skip_all)]
     fn new_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
-        todo!()
+        let (width, height) = self
+            .output_state
+            .info(&output)
+            .expect("Retrieve output size (width and height)")
+            .logical_size
+            .map(|(width, height)| (width as u32, height as u32))
+            .expect("Output has logical size");
+
+        let wl_surface = self.compositor_state.create_surface(qh);
+        let wl_handle = WaylandHandle::new(conn.clone(), wl_surface.clone());
+
+        let layer = {
+            let layer_shell = LayerShell::bind(&self.globals, qh).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)");
+
+            let layer = layer_shell.create_layer_surface(
+                qh,
+                wl_surface.clone(),
+                Layer::Background,
+                Some("Music visualizer background"),
+                Some(&output),
+            );
+
+            layer.set_anchor(Anchor::BOTTOM);
+            layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+            layer.set_size(width, height);
+
+            // > After creating a layer_surface object and setting it up, the client must perform an initial commit without any buffer attached.
+            //
+            // https://wayland.app/protocols/wlr-layer-shell-unstable-v1#zwlr_layer_shell_v1:request:get_layer_surface
+            layer.commit();
+            layer
+        };
+
+        debug!("Adding new output to vibe.");
+
+        let wgpu_state = VibeOutputState::new(wl_handle, layer, width, height);
+        self.wgpu_states.insert(output, wgpu_state);
     }
 
-    fn update_output(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _output: WlOutput) {}
+    #[instrument(skip_all)]
+    fn update_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
+        debug!("Updating new output to vibe.");
 
-    fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _output: WlOutput) {
+        // just overwrite the output
+        self.new_output(conn, qh, output);
+    }
+
+    #[instrument(skip_all)]
+    fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
+        debug!("Removing new output to vibe.");
+        self.wgpu_states.remove(&output);
     }
 }
 

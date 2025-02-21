@@ -11,6 +11,12 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
 xdg = "2.5"
 
+shady = { version = "2.0", default-features = false, features = [
+  "time",
+  "resolution",
+  "audio",
+] }
+
 [profile.release-lto]
 inherits = "release"
 codegen-units = 1
