@@ -37,7 +37,7 @@ pub struct State {
 
     pub globals: GlobalList,
 
-    pub wgpu_states: HashMap<WlOutput, VibeOutputState>,
+    pub wgpu_states: Vec<(WlOutput, WlSurface, VibeOutputState)>,
 }
 
 impl State {
@@ -51,7 +51,7 @@ impl State {
                 .expect("Retrieve compositor state"),
 
             globals,
-            wgpu_states: HashMap::new(),
+            wgpu_states: Vec::new(),
         }
     }
 }
@@ -101,21 +101,33 @@ impl OutputHandler for State {
         debug!("Adding new output to vibe.");
 
         let wgpu_state = VibeOutputState::new(wl_handle, layer, width, height);
-        self.wgpu_states.insert(output, wgpu_state);
+        self.wgpu_states.push((output, wl_surface, wgpu_state));
     }
 
     #[instrument(skip_all)]
     fn update_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
         debug!("Updating new output to vibe.");
 
-        // just overwrite the output
+        // remove the old entry
+        self.output_destroyed(conn, qh, output.clone());
+
+        // just append the output again
         self.new_output(conn, qh, output);
     }
 
     #[instrument(skip_all)]
     fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
         debug!("Removing new output to vibe.");
-        self.wgpu_states.remove(&output);
+
+        let mut i = 0;
+        for (out, _surface, _state) in self.wgpu_states.iter() {
+            if *out == output {
+                break;
+            }
+            i += 1;
+        }
+
+        self.wgpu_states.remove(i);
     }
 }
 
@@ -139,17 +151,46 @@ impl CompositorHandler for State {
     ) {
     }
 
-    fn frame(&mut self, conn: &Connection, qh: &QueueHandle<Self>, surface: &WlSurface, time: u32) {
-        todo!("The stuff with render pass ")
+    fn frame(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        surface: &WlSurface,
+        _time: u32,
+    ) {
+        for (_out, sur, state) in self.wgpu_states.iter_mut() {
+            if sur == surface {
+                match state.render() {
+                    Ok(_) => {
+                        state.prepare_next_frame();
+                    }
+                    Err(wgpu::SurfaceError::OutOfMemory) => {
+                        unreachable!("Out of memory");
+                    }
+                    Err(wgpu::SurfaceError::Timeout) => {
+                        tracing::error!("A frame took too long to be present");
+                    }
+                    Err(err) => tracing::warn!("{}", err),
+                }
+                if let Err(err) = state.render() {
+                    tracing::error!("{}", err);
+                }
+            }
+        }
     }
 
     fn surface_enter(
         &mut self,
         _conn: &Connection,
         _qh: &QueueHandle<Self>,
-        _surface: &WlSurface,
-        _output: &WlOutput,
+        surface: &WlSurface,
+        output: &WlOutput,
     ) {
+        for (out, sur, _state) in self.wgpu_states.iter_mut() {
+            if sur == surface {
+                *out = output.clone();
+            }
+        }
     }
 
     fn surface_leave(
@@ -196,12 +237,24 @@ impl LayerShellHandler for State {
 
     fn configure(
         &mut self,
-        conn: &Connection,
-        qh: &QueueHandle<Self>,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
         layer: &LayerSurface,
         configure: LayerSurfaceConfigure,
-        serial: u32,
+        _serial: u32,
     ) {
-        todo!("Surface size changed")
+        if let Some(state) = self
+            .wgpu_states
+            .iter_mut()
+            .map(|(_out, _surface, state)| state)
+            .find(|state| &state.layer == layer)
+        {
+            let new_width = configure.new_size.0;
+            let new_height = configure.new_size.1;
+
+            if new_width > 0 && new_height > 0 {
+                state.resize(new_width, new_height);
+            }
+        }
     }
 }

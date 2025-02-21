@@ -16,7 +16,7 @@ pub struct VibeOutputState {
     shady: Shady,
     pipeline: Option<ShadyRenderPipeline>,
 
-    layer: LayerSurface,
+    pub layer: LayerSurface,
 }
 
 impl VibeOutputState {
@@ -95,5 +95,40 @@ impl VibeOutputState {
 
             layer,
         }
+    }
+
+    pub fn prepare_next_frame(&mut self) {
+        self.shady.update_audio_buffer(&mut self.queue);
+        self.shady.update_time_buffer(&mut self.queue);
+    }
+
+    pub fn resize(&mut self, width: u32, height: u32) {
+        debug_assert!(width > 0);
+        debug_assert!(height > 0);
+
+        self.config.width = width;
+        self.config.height = height;
+
+        self.surface.configure(&self.device, &self.config);
+    }
+
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
+        if let Some(pipeline) = &self.pipeline {
+            let output = self.surface.get_current_texture()?;
+            let view = output
+                .texture
+                .create_view(&wgpu::TextureViewDescriptor::default());
+
+            let mut encoder = self
+                .device
+                .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+
+            self.shady.add_render_pass(&mut encoder, &view, pipeline);
+            self.queue.submit(std::iter::once(encoder.finish()));
+
+            output.present();
+        }
+
+        Ok(())
     }
 }
