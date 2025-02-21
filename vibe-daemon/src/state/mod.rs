@@ -31,23 +31,23 @@ pub struct State {
     pub registry_state: RegistryState,
     pub output_state: OutputState,
     pub compositor_state: CompositorState,
-
-    pub globals: GlobalList,
+    pub layer_shell: LayerShell,
 
     pub wgpu_states: Vec<(WlOutput, VibeOutputState)>,
 }
 
 impl State {
+    #[instrument(skip_all)]
     pub fn new(globals: GlobalList, event_queue_handle: QueueHandle<Self>) -> Self {
         Self {
             run: true,
 
+            layer_shell: LayerShell::bind(&globals, &event_queue_handle).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)"),
             registry_state: RegistryState::new(&globals),
             output_state: OutputState::new(&globals, &event_queue_handle),
             compositor_state: CompositorState::bind(&globals, &event_queue_handle)
                 .expect("Retrieve compositor state"),
 
-            globals,
             wgpu_states: Vec::new(),
         }
     }
@@ -56,6 +56,7 @@ impl State {
 delegate_output!(State);
 
 impl OutputHandler for State {
+    #[instrument(skip_all)]
     fn output_state(&mut self) -> &mut OutputState {
         &mut self.output_state
     }
@@ -72,18 +73,18 @@ impl OutputHandler for State {
 
         let layer = {
             let surface = self.compositor_state.create_surface(qh);
-            let layer_shell = LayerShell::bind(&self.globals, qh).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)");
 
-            let layer = layer_shell.create_layer_surface(
+            let layer = self.layer_shell.create_layer_surface(
                 qh,
                 surface,
-                Layer::Top,
+                Layer::Background,
                 Some("Music visualizer background"),
                 Some(&output),
             );
 
             layer.set_anchor(Anchor::BOTTOM);
             layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+            debug!("Surface size: {} x {}", width, height);
             layer.set_size(width, height);
 
             // > After creating a layer_surface object and setting it up, the client must perform an initial commit without any buffer attached.
@@ -112,7 +113,7 @@ impl OutputHandler for State {
 
     #[instrument(skip_all)]
     fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
-        debug!("Removing new output to vibe.");
+        debug!("Removing output to vibe.");
 
         let mut i = 0;
         for (out, _state) in self.wgpu_states.iter() {
@@ -128,6 +129,7 @@ impl OutputHandler for State {
 
 delegate_compositor!(State);
 impl CompositorHandler for State {
+    #[instrument(skip_all)]
     fn scale_factor_changed(
         &mut self,
         _conn: &Connection,
@@ -137,6 +139,7 @@ impl CompositorHandler for State {
     ) {
     }
 
+    #[instrument(skip_all)]
     fn transform_changed(
         &mut self,
         _conn: &Connection,
@@ -154,12 +157,14 @@ impl CompositorHandler for State {
         surface: &WlSurface,
         _time: u32,
     ) {
+        tracing::debug!("HELLOOOOOOOOOOOOOOOOOOOOO");
         for (_out, state) in self.wgpu_states.iter_mut() {
             let sur = state.layer.wl_surface();
             if sur == surface {
+                state.prepare_next_frame();
                 match state.render() {
                     Ok(_) => {
-                        state.prepare_next_frame();
+                        state.request_redraw(qh);
                     }
                     Err(wgpu::SurfaceError::OutOfMemory) => {
                         unreachable!("Out of memory");
@@ -169,12 +174,6 @@ impl CompositorHandler for State {
                     }
                     Err(err) => tracing::warn!("{}", err),
                 }
-
-                // request next frame
-                state
-                    .layer
-                    .wl_surface()
-                    .frame(qh, state.layer.wl_surface().clone());
 
                 break;
             }
@@ -229,7 +228,7 @@ impl LayerShellHandler for State {
     fn configure(
         &mut self,
         _conn: &Connection,
-        _qh: &QueueHandle<Self>,
+        qh: &QueueHandle<Self>,
         layer: &LayerSurface,
         configure: LayerSurfaceConfigure,
         _serial: u32,
@@ -246,6 +245,9 @@ impl LayerShellHandler for State {
             if new_width > 0 && new_height > 0 {
                 state.resize(new_width, new_height);
             }
+
+            // do the initial rendering step
+            state.request_redraw(qh);
         }
     }
 }

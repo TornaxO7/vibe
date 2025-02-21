@@ -6,13 +6,15 @@ use raw_window_handle::{
 };
 use shady::{Shady, ShadyRenderPipeline};
 use smithay_client_toolkit::{
-    reexports::client::{Connection, Proxy},
+    reexports::client::{Connection, Proxy, QueueHandle},
     shell::{wlr_layer::LayerSurface, WaylandSurface},
 };
 use wgpu::{
     naga::{front::glsl::Options, ShaderStage},
     Device, Queue, ShaderSource, Surface, SurfaceConfiguration,
 };
+
+use super::State;
 
 pub struct VibeOutputState {
     device: Device,
@@ -124,6 +126,14 @@ impl VibeOutputState {
         self.shady.update_time_buffer(&mut self.queue);
     }
 
+    pub fn request_redraw(&self, qh: &QueueHandle<State>) {
+        let surface = self.layer.wl_surface();
+
+        surface.damage(0, 0, self.config.width as i32, self.config.height as i32);
+        surface.frame(qh, surface.clone());
+        self.layer.commit();
+    }
+
     pub fn resize(&mut self, width: u32, height: u32) {
         debug_assert!(width > 0);
         debug_assert!(height > 0);
@@ -132,6 +142,9 @@ impl VibeOutputState {
         self.config.height = height;
 
         self.surface.configure(&self.device, &self.config);
+
+        self.shady.set_resolution(width, height);
+        self.shady.update_resolution_buffer(&mut self.queue);
     }
 
     pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
