@@ -1,12 +1,18 @@
+use std::ptr::NonNull;
+
 use pollster::FutureExt;
+use raw_window_handle::{
+    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
+};
 use shady::{Shady, ShadyRenderPipeline};
-use smithay_client_toolkit::shell::wlr_layer::LayerSurface;
+use smithay_client_toolkit::{
+    reexports::client::{Connection, Proxy},
+    shell::{wlr_layer::LayerSurface, WaylandSurface},
+};
 use wgpu::{
     naga::{front::glsl::Options, ShaderStage},
     Device, Queue, ShaderSource, Surface, SurfaceConfiguration,
 };
-
-use super::wayland_handle::WaylandHandle;
 
 pub struct VibeOutputState {
     device: Device,
@@ -20,13 +26,28 @@ pub struct VibeOutputState {
 }
 
 impl VibeOutputState {
-    pub fn new(wl_handle: WaylandHandle, layer: LayerSurface, width: u32, height: u32) -> Self {
+    pub fn new(conn: &Connection, layer: LayerSurface, width: u32, height: u32) -> Self {
         let instance = wgpu::Instance::default();
 
         // static lifetime: Well, our WlSurface also has a static lifetime, so it should be fine... I hope... ;-;
-        let surface: Surface<'static> = instance
-            .create_surface(wl_handle.into_surface_target())
-            .unwrap();
+        let surface: Surface<'static> = {
+            let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
+                NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
+            ));
+
+            let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
+                NonNull::new(layer.wl_surface().id().as_ptr() as *mut _).unwrap(),
+            ));
+
+            unsafe {
+                instance
+                    .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                        raw_display_handle,
+                        raw_window_handle,
+                    })
+                    .unwrap()
+            }
+        };
 
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
@@ -73,7 +94,8 @@ impl VibeOutputState {
         let shady = Shady::new(shady::ShadyDescriptor { device: &device });
 
         let pipeline = {
-            let shader_code = std::fs::read_to_string("/home/tornax/shaders/music.glsl").unwrap();
+            let shader_code =
+                std::fs::read_to_string("/home/tornax/shaders/music_vibe.glsl").unwrap();
             let source = wgpu::naga::front::glsl::Frontend::default()
                 .parse(&Options::from(ShaderStage::Fragment), &shader_code)
                 .unwrap();

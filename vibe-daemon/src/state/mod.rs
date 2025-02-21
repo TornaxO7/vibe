@@ -1,7 +1,4 @@
 mod vibe_output_state;
-mod wayland_handle;
-
-use std::collections::HashMap;
 
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
@@ -16,6 +13,7 @@ use smithay_client_toolkit::{
         Connection, QueueHandle,
     },
     registry::{ProvidesRegistryState, RegistryState},
+    registry_handlers,
     shell::{
         wlr_layer::{
             Anchor, KeyboardInteractivity, Layer, LayerShell, LayerShellHandler, LayerSurface,
@@ -26,7 +24,6 @@ use smithay_client_toolkit::{
 };
 use tracing::{debug, instrument};
 use vibe_output_state::VibeOutputState;
-use wayland_handle::WaylandHandle;
 
 pub struct State {
     pub run: bool,
@@ -37,7 +34,7 @@ pub struct State {
 
     pub globals: GlobalList,
 
-    pub wgpu_states: Vec<(WlOutput, WlSurface, VibeOutputState)>,
+    pub wgpu_states: Vec<(WlOutput, VibeOutputState)>,
 }
 
 impl State {
@@ -73,16 +70,14 @@ impl OutputHandler for State {
             .map(|(width, height)| (width as u32, height as u32))
             .expect("Output has logical size");
 
-        let wl_surface = self.compositor_state.create_surface(qh);
-        let wl_handle = WaylandHandle::new(conn.clone(), wl_surface.clone());
-
         let layer = {
+            let surface = self.compositor_state.create_surface(qh);
             let layer_shell = LayerShell::bind(&self.globals, qh).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)");
 
             let layer = layer_shell.create_layer_surface(
                 qh,
-                wl_surface.clone(),
-                Layer::Background,
+                surface,
+                Layer::Top,
                 Some("Music visualizer background"),
                 Some(&output),
             );
@@ -98,10 +93,10 @@ impl OutputHandler for State {
             layer
         };
 
-        debug!("Adding new output to vibe.");
+        debug!("Adding new output to {}.", crate::APP_NAME);
 
-        let wgpu_state = VibeOutputState::new(wl_handle, layer, width, height);
-        self.wgpu_states.push((output, wl_surface, wgpu_state));
+        let wgpu_state = VibeOutputState::new(conn, layer, width, height);
+        self.wgpu_states.push((output, wgpu_state));
     }
 
     #[instrument(skip_all)]
@@ -120,7 +115,7 @@ impl OutputHandler for State {
         debug!("Removing new output to vibe.");
 
         let mut i = 0;
-        for (out, _surface, _state) in self.wgpu_states.iter() {
+        for (out, _state) in self.wgpu_states.iter() {
             if *out == output {
                 break;
             }
@@ -151,14 +146,16 @@ impl CompositorHandler for State {
     ) {
     }
 
+    #[instrument(skip_all)]
     fn frame(
         &mut self,
         _conn: &Connection,
-        _qh: &QueueHandle<Self>,
+        qh: &QueueHandle<Self>,
         surface: &WlSurface,
         _time: u32,
     ) {
-        for (_out, sur, state) in self.wgpu_states.iter_mut() {
+        for (_out, state) in self.wgpu_states.iter_mut() {
+            let sur = state.layer.wl_surface();
             if sur == surface {
                 match state.render() {
                     Ok(_) => {
@@ -172,13 +169,19 @@ impl CompositorHandler for State {
                     }
                     Err(err) => tracing::warn!("{}", err),
                 }
-                if let Err(err) = state.render() {
-                    tracing::error!("{}", err);
-                }
+
+                // request next frame
+                state
+                    .layer
+                    .wl_surface()
+                    .frame(qh, state.layer.wl_surface().clone());
+
+                break;
             }
         }
     }
 
+    #[instrument(skip_all)]
     fn surface_enter(
         &mut self,
         _conn: &Connection,
@@ -186,13 +189,16 @@ impl CompositorHandler for State {
         surface: &WlSurface,
         output: &WlOutput,
     ) {
-        for (out, sur, _state) in self.wgpu_states.iter_mut() {
+        for (out, state) in self.wgpu_states.iter_mut() {
+            let sur = state.layer.wl_surface();
             if sur == surface {
                 *out = output.clone();
+                break;
             }
         }
     }
 
+    #[instrument(skip_all)]
     fn surface_leave(
         &mut self,
         _conn: &Connection,
@@ -209,32 +215,17 @@ impl ProvidesRegistryState for State {
         &mut self.registry_state
     }
 
-    fn runtime_add_global(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _name: u32,
-        _interface: &str,
-        _version: u32,
-    ) {
-    }
-
-    fn runtime_remove_global(
-        &mut self,
-        _conn: &Connection,
-        _qh: &QueueHandle<Self>,
-        _name: u32,
-        _interface: &str,
-    ) {
-    }
+    registry_handlers![OutputState];
 }
 
 delegate_layer!(State);
 impl LayerShellHandler for State {
+    #[instrument(skip_all)]
     fn closed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _layer: &LayerSurface) {
         self.run = false;
     }
 
+    #[instrument(skip_all)]
     fn configure(
         &mut self,
         _conn: &Connection,
@@ -246,7 +237,7 @@ impl LayerShellHandler for State {
         if let Some(state) = self
             .wgpu_states
             .iter_mut()
-            .map(|(_out, _surface, state)| state)
+            .map(|(_out, state)| state)
             .find(|state| &state.layer == layer)
         {
             let new_width = configure.new_size.0;

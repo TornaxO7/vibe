@@ -14,6 +14,8 @@ tracing-subscriber.workspace = true
 xdg.workspace = true
 
 smithay-client-toolkit = "0.19"
+wayland-backend = { version = "0.3", features = ["client_system"] }
+
 wgpu = "24.0"
 pollster = "0.4"
 raw-window-handle = "0.6"
