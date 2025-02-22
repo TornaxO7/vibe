@@ -41,6 +41,9 @@
                 vulkan-loader
                 vulkan-validation-layers
                 vulkan-tools
+
+                mold
+                clang
               ];
             in
             pkgs.mkShell rec {

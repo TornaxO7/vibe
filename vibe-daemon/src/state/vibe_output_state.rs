@@ -54,6 +54,7 @@ impl VibeOutputState {
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 compatible_surface: Some(&surface),
+                power_preference: wgpu::PowerPreference::LowPower,
                 ..Default::default()
             })
             .block_on()
@@ -63,6 +64,8 @@ impl VibeOutputState {
             .request_device(&wgpu::DeviceDescriptor::default(), None)
             .block_on()
             .unwrap();
+
+        tracing::debug!("Adapter: {}", adapter.get_info().name);
 
         let config = {
             let surface_caps = surface.get_capabilities(&adapter);
@@ -76,9 +79,14 @@ impl VibeOutputState {
             let alpha_mode = surface_caps
                 .alpha_modes
                 .iter()
-                .find(|&&a| a == wgpu::CompositeAlphaMode::Auto)
+                .find(|f| {
+                    matches!(
+                        f,
+                        wgpu::CompositeAlphaMode::PreMultiplied | wgpu::CompositeAlphaMode::Inherit
+                    )
+                })
                 .copied()
-                .unwrap_or(surface_caps.alpha_modes[0]);
+                .expect(&format!("Your device doesn't support a working composite alpha mode. Available composite alpha modes: {:?}", surface_caps.alpha_modes));
 
             wgpu::SurfaceConfiguration {
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -97,7 +105,7 @@ impl VibeOutputState {
 
         let pipeline = {
             let shader_code =
-                std::fs::read_to_string("/home/tornax/shaders/music_vibe.glsl").unwrap();
+                std::fs::read_to_string("/home/tornax/shaders/music_vibe.glsl.back").unwrap();
             let source = wgpu::naga::front::glsl::Frontend::default()
                 .parse(&Options::from(ShaderStage::Fragment), &shader_code)
                 .unwrap();

@@ -24,16 +24,16 @@ fn main() -> anyhow::Result<()> {
         (state, event_queue)
     };
 
-    let mut listener = SocketListener::new()?;
+    // let mut listener = SocketListener::new()?;
 
     while state.run {
-        event_queue.dispatch_pending(&mut state).unwrap();
+        event_queue.blocking_dispatch(&mut state).unwrap();
 
-        if let Some(action) = listener.get_next_action() {
-            match action {
-                Action::Exit => state.run = false,
-            };
-        }
+        // if let Some(action) = listener.get_next_action() {
+        //     match action {
+        //         Action::Exit => state.run = false,
+        //     };
+        // }
     }
 
     Ok(())

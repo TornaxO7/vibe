@@ -79,6 +79,7 @@ impl OutputHandler for State {
                 Some(&output),
             );
 
+            layer.set_exclusive_zone(0);
             layer.set_anchor(Anchor::BOTTOM);
             layer.set_keyboard_interactivity(KeyboardInteractivity::None);
             debug!("Surface size: {} x {}", width, height);
