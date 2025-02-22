@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=Vibe
+Comment=A A music visualizer and shader wallpaper setter.
+Type=Application
+Icon=de.tornaxo7.vibe
+Exec=vibe %F
+Terminal=false
+StartupNotify=true
+Categories=COSMIC
+Keywords=COSMIC
+MimeType=
