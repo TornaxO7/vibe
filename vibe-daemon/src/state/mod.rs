@@ -1,5 +1,7 @@
 mod vibe_output_state;
 
+use std::{collections::HashMap, io};
+
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry,
@@ -22,8 +24,10 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use tracing::{debug, instrument};
+use tracing::{debug, error, instrument};
+use vibe_daemon::config::OutputConfig;
 use vibe_output_state::VibeOutputState;
+use wgpu::naga::{self, front::glsl::Options, ShaderStage};
 
 pub struct State {
     pub run: bool,
@@ -32,22 +36,30 @@ pub struct State {
     pub compositor_state: CompositorState,
     pub layer_shell: LayerShell,
 
-    pub wgpu_states: Vec<(WlOutput, VibeOutputState)>,
+    output_configs: HashMap<String, OutputConfig>,
+    wgpu_states: Vec<(WlOutput, VibeOutputState)>,
 }
 
 impl State {
     #[instrument(skip_all)]
-    pub fn new(globals: GlobalList, event_queue_handle: QueueHandle<Self>) -> Self {
-        Self {
+    pub fn new(globals: GlobalList, event_queue_handle: QueueHandle<Self>) -> io::Result<Self> {
+        let layer_shell = LayerShell::bind(&globals, &event_queue_handle).expect(concat![
+            "Your compositor doesn't support the wlr_layer_shell protocol :(\n",
+            "A list of compositors which support wlr_layer_shell can be seen here: <https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support>"
+        ]);
+
+        Ok(Self {
             run: true,
-            layer_shell: LayerShell::bind(&globals, &event_queue_handle).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)"),
+
+            layer_shell,
             registry_state: RegistryState::new(&globals),
             output_state: OutputState::new(&globals, &event_queue_handle),
             compositor_state: CompositorState::bind(&globals, &event_queue_handle)
                 .expect("Retrieve compositor state"),
 
             wgpu_states: Vec::new(),
-        }
+            output_configs: HashMap::new(),
+        })
     }
 }
 
@@ -60,48 +72,88 @@ impl OutputHandler for State {
 
     #[instrument(skip_all)]
     fn new_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
-        let (width, height) = self
+        let output_info = self
             .output_state
             .info(&output)
-            .expect("Retrieve output size (width and height)")
-            .logical_size
-            .map(|(width, height)| (width as u32, height as u32))
-            .expect("Output has logical size");
+            .expect("Retrieve information of new output");
 
-        let layer = {
-            let surface = self.compositor_state.create_surface(qh);
+        match output_info.name {
+            Some(name) => match vibe_daemon::config::load(&name) {
+                Ok(Some(config)) => {
+                    let (width, height) = output_info
+                        .logical_size
+                        .map(|(width, height)| (width as u32, height as u32))
+                        .expect("Output has logical size");
 
-            let layer = self.layer_shell.create_layer_surface(
-                qh,
-                surface,
-                Layer::Background,
-                Some("Music visualizer background"),
-                Some(&output),
-            );
+                    let layer = {
+                        let surface = self.compositor_state.create_surface(qh);
 
-            layer.set_exclusive_zone(0);
-            layer.set_anchor(Anchor::BOTTOM);
-            layer.set_keyboard_interactivity(KeyboardInteractivity::None);
-            debug!("Surface size: {} x {}", width, height);
-            layer.set_size(width, height);
+                        let layer = self.layer_shell.create_layer_surface(
+                            qh,
+                            surface,
+                            Layer::Background,
+                            Some("Music visualizer background"),
+                            Some(&output),
+                        );
 
-            // > After creating a layer_surface object and setting it up, the client must perform an initial commit without any buffer attached.
-            //
-            // https://wayland.app/protocols/wlr-layer-shell-unstable-v1#zwlr_layer_shell_v1:request:get_layer_surface
-            layer.commit();
-            layer
+                        layer.set_exclusive_zone(0);
+                        layer.set_anchor(Anchor::BOTTOM);
+                        layer.set_keyboard_interactivity(KeyboardInteractivity::None);
+                        debug!("Surface size: {} x {}", width, height);
+                        layer.set_size(width, height);
+
+                        // > After creating a layer_surface object and setting it up, the client must perform an initial commit without any buffer attached.
+                        //
+                        // https://wayland.app/protocols/wlr-layer-shell-unstable-v1#zwlr_layer_shell_v1:request:get_layer_surface
+                        layer.commit();
+                        layer
+                    };
+
+                    let shader = match &config.shader_code {
+                        vibe_daemon::config::ShaderCode::Wgsl(code) => {
+                            match naga::front::wgsl::parse_str(code) {
+                                Ok(module) => module,
+                                Err(err) => {
+                                    error!("Couldn't parse wgsl shader: {}\nSkip shader...", err);
+                                    return;
+                                }
+                            }
+                        }
+                        vibe_daemon::config::ShaderCode::Glsl(code) => {
+                            let mut parser = naga::front::glsl::Frontend::default();
+
+                            match parser.parse(&Options::from(ShaderStage::Fragment), code) {
+                                Ok(module) => module,
+                                Err(err) => {
+                                    error!("Couldn't parse glsl shader: {}\nSkip shader...", err);
+                                    return;
+                                }
+                            }
+                        }
+                    };
+
+                    let wgpu_state = VibeOutputState::new(conn, layer, width, height, shader);
+
+                    self.output_configs.insert(name, config);
+                    self.wgpu_states.push((output, wgpu_state));
+                }
+                Ok(None) => tracing::warn!("The output '{}' doesn't have a config.", name),
+                Err(err) => tracing::error!(
+                    "Couldn't try to load the config of the output '{}': {}",
+                    err,
+                    name
+                ),
+            },
+            None => unreachable!(concat![
+                "Ooooooooof... your compositor doesn't provide a name for an output.\n",
+                "",
+                "Please create an issue about this one. I hoped that this wouldn't happen ;-;"
+            ]),
         };
-
-        debug!("Adding new output to {}.", vibe_daemon::APP_NAME);
-
-        let wgpu_state = VibeOutputState::new(conn, layer, width, height);
-        self.wgpu_states.push((output, wgpu_state));
     }
 
     #[instrument(skip_all)]
     fn update_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
-        debug!("Updating new output to vibe.");
-
         // remove the old entry
         self.output_destroyed(conn, qh, output.clone());
 
@@ -111,8 +163,6 @@ impl OutputHandler for State {
 
     #[instrument(skip_all)]
     fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
-        debug!("Removing output to vibe.");
-
         let mut i = 0;
         for (out, _state) in self.wgpu_states.iter() {
             if *out == output {

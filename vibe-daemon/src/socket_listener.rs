@@ -6,7 +6,7 @@ use std::{
     thread::{self, JoinHandle},
 };
 
-use tracing::{debug, error};
+use tracing::{debug, error, info};
 use vibe_daemon::Message;
 
 use crate::Action;
@@ -23,24 +23,23 @@ impl SocketListener {
 
         let listener = {
             let socket_path = vibe_daemon::get_socket_path();
-            debug!("Daemon socket path: {}", socket_path.to_string_lossy());
+            if socket_path.exists() {
+                std::fs::remove_file(&socket_path)?;
+            }
+            info!("Daemon listening at: {}", socket_path.to_string_lossy());
 
-            let listener = UnixListener::bind(socket_path.clone()).map_err(|err| {
-                std::io::Error::new(
-                    err.kind(),
-                    format!("Socket {}\n{}\nYou can remove the file if you are sure that the vibe daemon isn't already running.", socket_path.to_string_lossy(), err),
-                )
-            })?;
+            thread::spawn({
+                let actions_clone = actions.clone();
+                let listener = UnixListener::bind(&socket_path)?;
 
-            let actions_clone = actions.clone();
-
-            thread::spawn(move || {
-                for stream in listener.incoming() {
-                    match stream {
-                        Ok(stream) => handle_client(stream, actions_clone.clone()),
-                        Err(err) => {
-                            error!("{}", err);
-                            break;
+                move || {
+                    for stream in listener.incoming() {
+                        match stream {
+                            Ok(stream) => handle_client(stream, actions_clone.clone()),
+                            Err(err) => {
+                                error!("{}", err);
+                                break;
+                            }
                         }
                     }
                 }
@@ -77,7 +76,7 @@ fn handle_client(stream: UnixStream, actions: Arc<Mutex<VecDeque<Action>>>) {
             }
         };
 
-        let msg: Message = match ron::from_str(&line) {
+        let msg: Message = match toml::from_str(&line) {
             Ok(msg) => msg,
             Err(err) => {
                 error!("{}", err);

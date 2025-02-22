@@ -3,7 +3,7 @@ members = ["vibe-daemon", "vibe"]
 resolver = "2"
 
 [workspace.dependencies]
-ron = "0.8"
+toml = { version = "0.8", features = ["parse", "display"] }
 serde = { version = "1", features = ["derive"] }
 
 tracing = "0.1"

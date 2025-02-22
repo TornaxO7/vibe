@@ -9,10 +9,7 @@ use smithay_client_toolkit::{
     reexports::client::{Connection, Proxy, QueueHandle},
     shell::{wlr_layer::LayerSurface, WaylandSurface},
 };
-use wgpu::{
-    naga::{front::glsl::Options, ShaderStage},
-    Device, Queue, ShaderSource, Surface, SurfaceConfiguration,
-};
+use wgpu::{naga::Module, Device, Queue, ShaderSource, Surface, SurfaceConfiguration};
 
 use super::State;
 
@@ -28,7 +25,13 @@ pub struct VibeOutputState {
 }
 
 impl VibeOutputState {
-    pub fn new(conn: &Connection, layer: LayerSurface, width: u32, height: u32) -> Self {
+    pub fn new(
+        conn: &Connection,
+        layer: LayerSurface,
+        width: u32,
+        height: u32,
+        shader_module: Module,
+    ) -> Self {
         let instance = wgpu::Instance::default();
 
         // static lifetime: Well, our WlSurface also has a static lifetime, so it should be fine... I hope... ;-;
@@ -103,19 +106,11 @@ impl VibeOutputState {
 
         let shady = Shady::new(shady::ShadyDescriptor { device: &device });
 
-        let pipeline = {
-            let shader_code =
-                std::fs::read_to_string("/home/tornax/shaders/music_vibe.glsl.back").unwrap();
-            let source = wgpu::naga::front::glsl::Frontend::default()
-                .parse(&Options::from(ShaderStage::Fragment), &shader_code)
-                .unwrap();
-
-            Some(shady::create_render_pipeline(
-                &device,
-                ShaderSource::Naga(std::borrow::Cow::Owned(source)),
-                &config.format,
-            ))
-        };
+        let pipeline = Some(shady::create_render_pipeline(
+            &device,
+            ShaderSource::Naga(std::borrow::Cow::Owned(shader_module)),
+            &config.format,
+        ));
 
         Self {
             device,
