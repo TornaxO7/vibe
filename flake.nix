@@ -44,7 +44,10 @@
               ];
             in
             pkgs.mkShell rec {
-              packages = [ rust-toolchain ];
+              packages = with pkgs; [
+                # for manual communiaction with the daemon socket
+                netcat
+              ] ++ [ rust-toolchain ];
 
               buildInputs = dependencies;
 
