@@ -13,6 +13,8 @@ tracing-subscriber.workspace = true
 
 xdg.workspace = true
 
+anyhow.workspace = true
+
 smithay-client-toolkit = "0.19"
 wayland-backend = { version = "0.3", features = ["client_system"] }
 

@@ -26,8 +26,6 @@ use tracing::{debug, instrument};
 use vibe_output_state::VibeOutputState;
 
 pub struct State {
-    pub run: bool,
-
     pub registry_state: RegistryState,
     pub output_state: OutputState,
     pub compositor_state: CompositorState,
@@ -40,8 +38,6 @@ impl State {
     #[instrument(skip_all)]
     pub fn new(globals: GlobalList, event_queue_handle: QueueHandle<Self>) -> Self {
         Self {
-            run: true,
-
             layer_shell: LayerShell::bind(&globals, &event_queue_handle).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)"),
             registry_state: RegistryState::new(&globals),
             output_state: OutputState::new(&globals, &event_queue_handle),
@@ -54,7 +50,6 @@ impl State {
 }
 
 delegate_output!(State);
-
 impl OutputHandler for State {
     #[instrument(skip_all)]
     fn output_state(&mut self) -> &mut OutputState {
@@ -94,7 +89,7 @@ impl OutputHandler for State {
             layer
         };
 
-        debug!("Adding new output to {}.", crate::APP_NAME);
+        debug!("Adding new output to {}.", vibe_daemon::APP_NAME);
 
         let wgpu_state = VibeOutputState::new(conn, layer, width, height);
         self.wgpu_states.push((output, wgpu_state));
@@ -157,7 +152,6 @@ impl CompositorHandler for State {
         surface: &WlSurface,
         _time: u32,
     ) {
-        tracing::debug!("HELLOOOOOOOOOOOOOOOOOOOOO");
         for (_out, state) in self.wgpu_states.iter_mut() {
             let sur = state.layer.wl_surface();
             if sur == surface {

@@ -9,6 +9,8 @@ serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+anyhow = "1"
+
 xdg = "2.5"
 
 shady = { version = "2.0", default-features = false, features = [
