@@ -1,8 +1,6 @@
 mod socket_listener;
 mod state;
 
-use std::{sync::mpsc, thread, time::Duration};
-
 use socket_listener::SocketListener;
 use state::State;
 
@@ -18,8 +16,6 @@ enum Action {
 fn main() -> anyhow::Result<()> {
     init_logging();
 
-    let (tx, rx) = mpsc::channel();
-
     let (mut state, mut event_queue) = {
         let conn = Connection::connect_to_env().expect("Connect to wayland server");
         let (globals, event_queue) = registry_queue_init(&conn).expect("Init registry queue");
@@ -28,25 +24,17 @@ fn main() -> anyhow::Result<()> {
         (state, event_queue)
     };
 
-    let socket_listener_handle = {
-        let mut listener = SocketListener::new(tx)?;
-        thread::spawn(move || listener.run())
-    };
+    let mut listener = SocketListener::new()?;
 
-    let mut run = true;
-    while run {
+    while state.run {
         event_queue.dispatch_pending(&mut state).unwrap();
 
-        match rx.try_recv() {
-            Ok(action) => match action {
-                Action::Exit => run = false,
-            },
-            Err(mpsc::TryRecvError::Empty) => {}
-            Err(mpsc::TryRecvError::Disconnected) => unreachable!("Communication shouldn't be closed between the socket listener and the state/renderer"),
-        };
+        if let Some(action) = listener.get_next_action() {
+            match action {
+                Action::Exit => state.run = false,
+            };
+        }
     }
-
-    socket_listener_handle.join().unwrap();
 
     Ok(())
 }

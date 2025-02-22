@@ -26,6 +26,7 @@ use tracing::{debug, instrument};
 use vibe_output_state::VibeOutputState;
 
 pub struct State {
+    pub run: bool,
     pub registry_state: RegistryState,
     pub output_state: OutputState,
     pub compositor_state: CompositorState,
@@ -38,6 +39,7 @@ impl State {
     #[instrument(skip_all)]
     pub fn new(globals: GlobalList, event_queue_handle: QueueHandle<Self>) -> Self {
         Self {
+            run: true,
             layer_shell: LayerShell::bind(&globals, &event_queue_handle).expect("Compositor does not implement the wlr_layer_shell protocol. (https://wayland.app/protocols/wlr-layer-shell-unstable-v1)"),
             registry_state: RegistryState::new(&globals),
             output_state: OutputState::new(&globals, &event_queue_handle),
