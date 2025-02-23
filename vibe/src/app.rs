@@ -4,7 +4,7 @@ use crate::config::Config;
 use crate::fl;
 use cosmic::app::{context_drawer, Core, Task};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
-use cosmic::iced::{Alignment, Length, Subscription};
+use cosmic::iced::{Alignment, Length, Padding, Subscription};
 use cosmic::widget::segmented_button::Entity;
 use cosmic::widget::{self, menu, nav_bar};
 use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Element};
@@ -225,6 +225,7 @@ impl Application for AppModel {
                     .label(format!("Amount of bars (>= {})", SectionAmountBars::AMOUNT_MIN_BARS))
                     .on_submit(Message::Todo)
                     .on_input(move |new_input| Message::SetAmountBars(new_input))
+                    .padding(Padding::new(10.))
                     .helper_text("Set the amount of bars which should be passed to the shader (in order to display them).");
 
                 if !state.is_valid {
@@ -234,7 +235,9 @@ impl Application for AppModel {
                 amount_bars
             };
 
-            column.push(amount_bars)
+            column
+                .push(amount_bars)
+                .push(widget::divider::horizontal::heavy())
         } else {
             let title = widget::text::title1("hello there")
                 .width(Length::Fill)
