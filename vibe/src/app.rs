@@ -6,7 +6,7 @@ use cosmic::app::{context_drawer, Core, Task};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 use cosmic::iced::{Alignment, Length, Padding, Subscription};
 use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::{self, menu, nav_bar};
+use cosmic::widget::{self, menu, nav_bar, TextInput};
 use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Element};
 use futures_util::SinkExt;
 use notify::event::{CreateKind, RemoveKind};
@@ -49,10 +49,69 @@ impl From<&OutputConfig> for SectionAmountBars {
     }
 }
 
+#[derive(Debug, Default, Clone)]
+struct SectionFrequencyRange {
+    min: String,
+    max: String,
+    is_valid: bool,
+}
+
+impl SectionFrequencyRange {
+    const MIN_FREQ: NonZeroUsize = NonZeroUsize::new(1).unwrap();
+    const MAX_FREQ: NonZeroUsize = NonZeroUsize::new(20_000).unwrap();
+
+    pub fn set_min(&mut self, new_input: String) {
+        self.is_valid = new_input
+            .parse::<NonZeroUsize>()
+            .map(|num| {
+                let is_within_valid_range = (Self::MIN_FREQ..Self::MAX_FREQ).contains(&num);
+                let is_smaller_than_max = self
+                    .max
+                    .parse::<NonZeroUsize>()
+                    .map(|max| num < max)
+                    .unwrap_or(false);
+
+                is_within_valid_range && is_smaller_than_max
+            })
+            .unwrap_or(false);
+
+        self.min = new_input;
+    }
+
+    pub fn set_max(&mut self, new_input: String) {
+        self.is_valid = new_input
+            .parse::<NonZeroUsize>()
+            .map(|num| {
+                let is_within_valid_range = (Self::MIN_FREQ..Self::MAX_FREQ).contains(&num);
+                let is_bigger_than_min = self
+                    .min
+                    .parse::<NonZeroUsize>()
+                    .map(|min| num > min)
+                    .unwrap_or(false);
+
+                is_within_valid_range && is_bigger_than_min
+            })
+            .unwrap_or(false);
+
+        self.max = new_input;
+    }
+}
+
+impl From<&OutputConfig> for SectionFrequencyRange {
+    fn from(value: &OutputConfig) -> Self {
+        Self {
+            min: value.frequency_range.start.to_string(),
+            max: value.frequency_range.end.to_string(),
+            is_valid: true,
+        }
+    }
+}
+
 /// Holds the state of each input field within the config page of an output.
 #[derive(Debug, Default, Clone)]
 struct OutputSectionState {
     amount_bars: SectionAmountBars,
+    freq_range: SectionFrequencyRange,
 }
 
 /// The application model stores app-specific state used to describe its interface and
@@ -86,6 +145,8 @@ pub enum Message {
     RemoveConfigs(Vec<OutputName>),
 
     SetAmountBars(String),
+    SetMinFreq(String),
+    SetMaxFreq(String),
     Todo,
 }
 
@@ -215,7 +276,6 @@ impl Application for AppModel {
         let column = widget::column().width(Length::Fill).height(Length::Fill);
 
         let id = self.nav.active();
-        debug!("{:?}", self.output_configs.get(&id));
         let an_output_is_selected = self.output_configs.get(&id).is_some();
         let column = if an_output_is_selected {
             let amount_bars = {
@@ -235,9 +295,48 @@ impl Application for AppModel {
                 amount_bars
             };
 
+            let freq_range = {
+                let state = self.output_section_state.freq_range.clone();
+
+                let min_text = {
+                    let mut min_text: TextInput<'_, Message> =
+                        widget::text_input("Minimum (default: 50 (Hz))", state.min)
+                            .on_input(move |input| Message::SetMinFreq(input))
+                            .label("Min frequency (>= 20 (Hz))");
+
+                    if !state.is_valid {
+                        min_text = min_text.error("Invalid value");
+                    }
+
+                    min_text
+                };
+
+                let max_text = {
+                    let mut max_text: TextInput<'_, Message> =
+                        widget::text_input("Maximum (default 20.000 (Hz))", state.max)
+                            .on_input(move |input| Message::SetMaxFreq(input))
+                            .label("Max frequency (<= 20.000 (Hz))");
+
+                    if !state.is_valid {
+                        max_text = max_text.error("Invalid value");
+                    }
+
+                    max_text
+                };
+
+                let freq_range = widget::flex_row(vec![
+                    widget::text::text("Frequency range").into(),
+                    min_text.into(),
+                    max_text.into(),
+                ]);
+
+                freq_range
+            };
+
             column
                 .push(amount_bars)
-                .push(widget::divider::horizontal::heavy())
+                .push(widget::divider::horizontal::default())
+                .push(freq_range)
         } else {
             let title = widget::text::title1("hello there")
                 .width(Length::Fill)
@@ -349,6 +448,8 @@ impl Application for AppModel {
             Message::SetAmountBars(input) => {
                 self.output_section_state.amount_bars.set_input(input);
             }
+            Message::SetMinFreq(input) => self.output_section_state.freq_range.set_min(input),
+            Message::SetMaxFreq(input) => self.output_section_state.freq_range.set_max(input),
 
             Message::AddConfigs(output_names) => {
                 for output_name in output_names {
@@ -406,6 +507,7 @@ impl Application for AppModel {
 
         if let Some(config) = self.output_configs.get(&id) {
             self.output_section_state.amount_bars = SectionAmountBars::from(config);
+            self.output_section_state.freq_range = SectionFrequencyRange::from(config);
         }
 
         self.update_title()
