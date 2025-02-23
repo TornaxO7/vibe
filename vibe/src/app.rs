@@ -49,70 +49,10 @@ impl From<&OutputConfig> for SectionAmountBars {
     }
 }
 
-/*
-#[derive(Debug, Default, Clone)]
-struct SectionFrequencyRange {
-    min: String,
-    max: String,
-    is_valid: bool,
-}
-
-impl SectionFrequencyRange {
-    const MIN_FREQ: NonZeroUsize = NonZeroUsize::new(1).unwrap();
-    const MAX_FREQ: NonZeroUsize = NonZeroUsize::new(20_000).unwrap();
-
-    pub fn set_min(&mut self, new_input: String) {
-        self.is_valid = new_input
-            .parse::<NonZeroUsize>()
-            .map(|num| {
-                let is_within_valid_range = (Self::MIN_FREQ..Self::MAX_FREQ).contains(&num);
-                let is_smaller_than_max = self
-                    .max
-                    .parse::<NonZeroUsize>()
-                    .map(|max| num < max)
-                    .unwrap_or(false);
-
-                is_within_valid_range && is_smaller_than_max
-            })
-            .unwrap_or(false);
-
-        self.min = new_input;
-    }
-
-    pub fn set_max(&mut self, new_input: String) {
-        self.is_valid = new_input
-            .parse::<NonZeroUsize>()
-            .map(|num| {
-                let is_within_valid_range = (Self::MIN_FREQ..Self::MAX_FREQ).contains(&num);
-                let is_bigger_than_min = self
-                    .min
-                    .parse::<NonZeroUsize>()
-                    .map(|min| num > min)
-                    .unwrap_or(false);
-
-                is_within_valid_range && is_bigger_than_min
-            })
-            .unwrap_or(false);
-
-        self.max = new_input;
-    }
-}
-
-impl From<&OutputConfig> for SectionFrequencyRange {
-    fn from(value: &OutputConfig) -> Self {
-        Self {
-            min: value.frequency_range.start.to_string(),
-            max: value.frequency_range.end.to_string(),
-            is_valid: true,
-        }
-    }
-}
-*/
-
 #[derive(Debug, Default)]
 struct SectionShaderCode {
     selected: usize,
-    code: text_editor::Content,
+    content: text_editor::Content,
 }
 
 impl SectionShaderCode {
@@ -125,16 +65,16 @@ impl From<&OutputConfig> for SectionShaderCode {
             match code {
                 ShaderCode::Wgsl(code) => Self {
                     selected: 0,
-                    code: text_editor::Content::with_text(code),
+                    content: text_editor::Content::with_text(code),
                 },
                 ShaderCode::Glsl(code) => Self {
                     selected: 1,
-                    code: text_editor::Content::with_text(code),
+                    content: text_editor::Content::with_text(code),
                 },
             }
         } else {
             Self {
-                code: text_editor::Content::new(),
+                content: text_editor::Content::new(),
                 selected: 0,
             }
         }
@@ -179,8 +119,6 @@ pub enum Message {
     RemoveConfigs(Vec<OutputName>),
 
     SetAmountBars(String),
-    // SetMinFreq(String),
-    // SetMaxFreq(String),
     EditShaderCode(text_editor::Action),
     SelectShaderLang(usize),
     Todo,
@@ -210,11 +148,6 @@ impl Application for AppModel {
 
     /// Initializes the application with any given flags and startup commands.
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        // nav.insert()
-        //     .text(fl!("page-id", num = 3))
-        //     .data::<Page>(Page::Page3)
-        //     .icon(icon::from_name("applications-games-symbolic"));
-
         // Construct the app model with the runtime's core.
         let mut app = AppModel {
             core,
@@ -331,48 +264,20 @@ impl Application for AppModel {
                 amount_bars
             };
 
-            // let freq_range = {
-            //     let state = self.output_section_state.freq_range.clone();
+            let selected_shader_language = {
+                let state = &self.output_section_state.editor;
 
-            //     let min_text = {
-            //         let mut min_text: TextInput<'_, Message> =
-            //             widget::text_input("Minimum (default: 50 (Hz))", state.min)
-            //                 .on_input(move |input| Message::SetMinFreq(input))
-            //                 .label("Min frequency (>= 20 (Hz))");
-
-            //         if !state.is_valid {
-            //             min_text = min_text.error("Invalid value");
-            //         }
-
-            //         min_text
-            //     };
-
-            //     let max_text = {
-            //         let mut max_text: TextInput<'_, Message> =
-            //             widget::text_input("Maximum (default 20.000 (Hz))", state.max)
-            //                 .on_input(move |input| Message::SetMaxFreq(input))
-            //                 .label("Max frequency (<= 20.000 (Hz))");
-
-            //         if !state.is_valid {
-            //             max_text = max_text.error("Invalid value");
-            //         }
-
-            //         max_text
-            //     };
-
-            //     let freq_range = widget::flex_row(vec![
-            //         widget::text::text("Frequency range").into(),
-            //         min_text.into(),
-            //         max_text.into(),
-            //     ]);
-
-            //     freq_range
-            // };
+                widget::dropdown(
+                    SectionShaderCode::SELECTIONS,
+                    Some(state.selected),
+                    |index| Message::SelectShaderLang(index),
+                )
+            };
 
             let shader_editor = {
                 let state = &self.output_section_state.editor;
 
-                widget::text_editor(&state.code)
+                widget::text_editor(&state.content)
                     .placeholder("Write the shader!")
                     .on_action(Message::EditShaderCode)
             };
@@ -380,9 +285,7 @@ impl Application for AppModel {
             column
                 .push(amount_bars)
                 .push(widget::divider::horizontal::default())
-                // .push(freq_range)
-                // .push(widget::divider::horizontal::default())
-                .push(widget::divider::horizontal::default())
+                .push(selected_shader_language)
                 .push(shader_editor)
         } else {
             let title = widget::text::title1("hello there")
@@ -494,7 +397,7 @@ impl Application for AppModel {
             }
 
             Message::EditShaderCode(action) => {
-                self.output_section_state.editor.code.perform(action)
+                self.output_section_state.editor.content.perform(action)
             }
             Message::SelectShaderLang(index) => self.output_section_state.editor.selected = index,
             Message::SetAmountBars(input) => {
