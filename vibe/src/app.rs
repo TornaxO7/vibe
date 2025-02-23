@@ -6,7 +6,7 @@ use cosmic::app::{context_drawer, Core, Task};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 use cosmic::iced::{Alignment, Length, Padding, Subscription};
 use cosmic::widget::segmented_button::Entity;
-use cosmic::widget::{self, menu, nav_bar, TextInput};
+use cosmic::widget::{self, menu, nav_bar, text_editor};
 use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Element};
 use futures_util::SinkExt;
 use notify::event::{CreateKind, RemoveKind};
@@ -14,7 +14,7 @@ use notify::{EventKind, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::num::NonZeroUsize;
 use tracing::{debug, error, info};
-use vibe_daemon::config::OutputConfig;
+use vibe_daemon::config::{OutputConfig, ShaderCode};
 
 const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 const APP_ICON: &[u8] = include_bytes!("../resources/icons/hicolor/scalable/apps/icon.svg");
@@ -49,6 +49,7 @@ impl From<&OutputConfig> for SectionAmountBars {
     }
 }
 
+/*
 #[derive(Debug, Default, Clone)]
 struct SectionFrequencyRange {
     min: String,
@@ -106,12 +107,45 @@ impl From<&OutputConfig> for SectionFrequencyRange {
         }
     }
 }
+*/
+
+#[derive(Debug, Default)]
+struct SectionShaderCode {
+    selected: usize,
+    code: text_editor::Content,
+}
+
+impl SectionShaderCode {
+    const SELECTIONS: &[&str] = &["WGSL", "GLSL"];
+}
+
+impl From<&OutputConfig> for SectionShaderCode {
+    fn from(value: &OutputConfig) -> Self {
+        if let Some(code) = &value.shader_code {
+            match code {
+                ShaderCode::Wgsl(code) => Self {
+                    selected: 0,
+                    code: text_editor::Content::with_text(code),
+                },
+                ShaderCode::Glsl(code) => Self {
+                    selected: 1,
+                    code: text_editor::Content::with_text(code),
+                },
+            }
+        } else {
+            Self {
+                code: text_editor::Content::new(),
+                selected: 0,
+            }
+        }
+    }
+}
 
 /// Holds the state of each input field within the config page of an output.
-#[derive(Debug, Default, Clone)]
+#[derive(Debug, Default)]
 struct OutputSectionState {
     amount_bars: SectionAmountBars,
-    freq_range: SectionFrequencyRange,
+    editor: SectionShaderCode,
 }
 
 /// The application model stores app-specific state used to describe its interface and
@@ -145,8 +179,10 @@ pub enum Message {
     RemoveConfigs(Vec<OutputName>),
 
     SetAmountBars(String),
-    SetMinFreq(String),
-    SetMaxFreq(String),
+    // SetMinFreq(String),
+    // SetMaxFreq(String),
+    EditShaderCode(text_editor::Action),
+    SelectShaderLang(usize),
     Todo,
 }
 
@@ -295,48 +331,59 @@ impl Application for AppModel {
                 amount_bars
             };
 
-            let freq_range = {
-                let state = self.output_section_state.freq_range.clone();
+            // let freq_range = {
+            //     let state = self.output_section_state.freq_range.clone();
 
-                let min_text = {
-                    let mut min_text: TextInput<'_, Message> =
-                        widget::text_input("Minimum (default: 50 (Hz))", state.min)
-                            .on_input(move |input| Message::SetMinFreq(input))
-                            .label("Min frequency (>= 20 (Hz))");
+            //     let min_text = {
+            //         let mut min_text: TextInput<'_, Message> =
+            //             widget::text_input("Minimum (default: 50 (Hz))", state.min)
+            //                 .on_input(move |input| Message::SetMinFreq(input))
+            //                 .label("Min frequency (>= 20 (Hz))");
 
-                    if !state.is_valid {
-                        min_text = min_text.error("Invalid value");
-                    }
+            //         if !state.is_valid {
+            //             min_text = min_text.error("Invalid value");
+            //         }
 
-                    min_text
-                };
+            //         min_text
+            //     };
 
-                let max_text = {
-                    let mut max_text: TextInput<'_, Message> =
-                        widget::text_input("Maximum (default 20.000 (Hz))", state.max)
-                            .on_input(move |input| Message::SetMaxFreq(input))
-                            .label("Max frequency (<= 20.000 (Hz))");
+            //     let max_text = {
+            //         let mut max_text: TextInput<'_, Message> =
+            //             widget::text_input("Maximum (default 20.000 (Hz))", state.max)
+            //                 .on_input(move |input| Message::SetMaxFreq(input))
+            //                 .label("Max frequency (<= 20.000 (Hz))");
 
-                    if !state.is_valid {
-                        max_text = max_text.error("Invalid value");
-                    }
+            //         if !state.is_valid {
+            //             max_text = max_text.error("Invalid value");
+            //         }
 
-                    max_text
-                };
+            //         max_text
+            //     };
 
-                let freq_range = widget::flex_row(vec![
-                    widget::text::text("Frequency range").into(),
-                    min_text.into(),
-                    max_text.into(),
-                ]);
+            //     let freq_range = widget::flex_row(vec![
+            //         widget::text::text("Frequency range").into(),
+            //         min_text.into(),
+            //         max_text.into(),
+            //     ]);
 
-                freq_range
+            //     freq_range
+            // };
+
+            let shader_editor = {
+                let state = &self.output_section_state.editor;
+
+                widget::text_editor(&state.code)
+                    .placeholder("Write the shader!")
+                    .on_action(Message::EditShaderCode)
             };
 
             column
                 .push(amount_bars)
                 .push(widget::divider::horizontal::default())
-                .push(freq_range)
+                // .push(freq_range)
+                // .push(widget::divider::horizontal::default())
+                .push(widget::divider::horizontal::default())
+                .push(shader_editor)
         } else {
             let title = widget::text::title1("hello there")
                 .width(Length::Fill)
@@ -445,12 +492,16 @@ impl Application for AppModel {
             Message::Todo => {
                 todo!()
             }
+
+            Message::EditShaderCode(action) => {
+                self.output_section_state.editor.code.perform(action)
+            }
+            Message::SelectShaderLang(index) => self.output_section_state.editor.selected = index,
             Message::SetAmountBars(input) => {
                 self.output_section_state.amount_bars.set_input(input);
             }
-            Message::SetMinFreq(input) => self.output_section_state.freq_range.set_min(input),
-            Message::SetMaxFreq(input) => self.output_section_state.freq_range.set_max(input),
-
+            // Message::SetMinFreq(input) => self.output_section_state.freq_range.set_min(input),
+            // Message::SetMaxFreq(input) => self.output_section_state.freq_range.set_max(input),
             Message::AddConfigs(output_names) => {
                 for output_name in output_names {
                     let (config, _config_path) = match vibe_daemon::config::load(&output_name) {
@@ -507,7 +558,8 @@ impl Application for AppModel {
 
         if let Some(config) = self.output_configs.get(&id) {
             self.output_section_state.amount_bars = SectionAmountBars::from(config);
-            self.output_section_state.freq_range = SectionFrequencyRange::from(config);
+            // self.output_section_state.freq_range = SectionFrequencyRange::from(config);
+            self.output_section_state.editor = SectionShaderCode::from(config);
         }
 
         self.update_title()
