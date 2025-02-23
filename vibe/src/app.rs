@@ -35,7 +35,7 @@ pub struct AppModel {
     // Configuration data that persists between application runs.
     config: Config,
 
-    output_configs: HashMap<PathBuf, OutputConfig>,
+    output_configs: HashMap<OutputName, OutputConfig>,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -45,8 +45,8 @@ pub enum Message {
     ToggleContextPage(ContextPage),
     UpdateConfig(Config),
     LaunchUrl(String),
-    AddConfigs(Vec<PathBuf>),
-    RemoveConfigs(Vec<PathBuf>),
+    AddConfigs(Vec<OutputName>),
+    RemoveConfigs(Vec<OutputName>),
 }
 
 /// Create a COSMIC application from the app model
@@ -129,14 +129,15 @@ impl Application for AppModel {
                     }
                 };
 
-                let paths: Vec<PathBuf> = dir_walker
+                let output_names: Vec<String> = dir_walker
                     .into_iter()
                     .filter(|entry| entry.is_ok())
                     .map(|entry| entry.unwrap().path())
                     .filter(|path| path.is_file())
+                    .map(|path| path.file_stem().unwrap().to_string_lossy().into_owned())
                     .collect();
 
-                cosmic::app::message::app(Message::AddConfigs(paths))
+                cosmic::app::message::app(Message::AddConfigs(output_names))
             });
 
             set_window_title.chain(collect_configs)
@@ -213,10 +214,34 @@ impl Application for AppModel {
                                 Ok(event) => {
                                     if event.kind == EventKind::Create(CreateKind::File) {
                                         info!("Found new output configs: {:#?}", &event.paths);
-                                        let _ = channel.send(Message::AddConfigs(event.paths));
+                                        let output_names = event
+                                            .paths
+                                            .into_iter()
+                                            .filter(|path| path.is_file())
+                                            .map(|path| {
+                                                path.file_stem()
+                                                    .unwrap()
+                                                    .to_string_lossy()
+                                                    .into_owned()
+                                            })
+                                            .collect();
+
+                                        let _ = channel.send(Message::AddConfigs(output_names));
                                     } else if event.kind == EventKind::Remove(RemoveKind::File) {
                                         info!("Output got removed at {:#?}", &event.paths);
-                                        let _ = channel.send(Message::RemoveConfigs(event.paths));
+                                        let output_names = event
+                                            .paths
+                                            .into_iter()
+                                            .filter(|path| path.is_file())
+                                            .map(|path| {
+                                                path.file_stem()
+                                                    .unwrap()
+                                                    .to_string_lossy()
+                                                    .into_owned()
+                                            })
+                                            .collect();
+
+                                        let _ = channel.send(Message::RemoveConfigs(output_names));
                                     }
                                 }
                                 Err(err) => {
@@ -262,11 +287,23 @@ impl Application for AppModel {
                 _ = open::that_detached(REPOSITORY);
             }
 
-            Message::AddConfigs(_new_configs) => {
-                todo!()
+            Message::AddConfigs(output_names) => {
+                for output_name in output_names {
+                    let (config, _config_path) = match vibe_daemon::config::load(&output_name) {
+                        Ok(config) => config.expect("Output name has config"),
+                        Err(err) => {
+                            error!("Couldn't load config of output '{}': {}", output_name, err);
+                            continue;
+                        }
+                    };
+
+                    self.output_configs.insert(output_name, config);
+                }
             }
-            Message::RemoveConfigs(_removed_configs) => {
-                todo!()
+            Message::RemoveConfigs(output_names) => {
+                for output_name in output_names {
+                    self.output_configs.remove(&output_name);
+                }
             }
 
             Message::ToggleContextPage(context_page) => {
