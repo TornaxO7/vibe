@@ -3,20 +3,20 @@
 use crate::config::Config;
 use crate::fl;
 use cosmic::app::{context_drawer, Core, Task};
-use cosmic::cctk::wayland_client::globals::registry_queue_init;
-use cosmic::cctk::wayland_client::Connection;
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::widget::{self, icon, menu, nav_bar};
 use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Apply, Element};
 use futures_util::SinkExt;
+use notify::event::CreateKind;
+use notify::{EventKind, RecursiveMode, Watcher};
 use std::collections::HashMap;
+use std::path::PathBuf;
+use tracing::{debug, error, info};
 
 const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 const APP_ICON: &[u8] = include_bytes!("../resources/icons/hicolor/scalable/apps/icon.svg");
-
-type OutputName = String;
 
 /// The application model stores app-specific state used to describe its interface and
 /// drive its logic.
@@ -40,8 +40,7 @@ pub enum Message {
     ToggleContextPage(ContextPage),
     UpdateConfig(Config),
     LaunchUrl(String),
-    NewOutputs(Vec<OutputName>),
-    RemovedOutputs(Vec<OutputName>),
+    NewConfigs(Vec<PathBuf>),
 }
 
 /// Create a COSMIC application from the app model
@@ -173,8 +172,35 @@ impl Application for AppModel {
             // Create a subscription which emits updates through a channel.
             Subscription::run_with_id(
                 std::any::TypeId::of::<OutputListener>(),
-                cosmic::iced::stream::channel(4, move |mut _channel| async move {
-                    futures_util::future::pending().await
+                cosmic::iced::stream::channel(4, {
+                    move |mut channel| {
+                        let mut watcher = notify::recommended_watcher(
+                            move |watcher_event: notify::Result<notify::Event>| match watcher_event
+                            {
+                                Ok(event) => {
+                                    if event.kind == EventKind::Create(CreateKind::File) {
+                                        info!("Found new output configs: {:#?}", &event.paths);
+                                        let _ = channel.send(Message::NewConfigs(event.paths));
+                                    }
+                                }
+                                Err(err) => {
+                                    error!("Watch error: {}", err);
+                                }
+                            },
+                        )
+                        .expect("Create output config listener");
+
+                        let config_path = vibe_daemon::config_directory();
+
+                        async move {
+                            debug!("Start watcher in directory: {:?}", &config_path);
+                            watcher
+                                .watch(&config_path, RecursiveMode::NonRecursive)
+                                .unwrap();
+
+                            futures_util::future::pending().await
+                        }
+                    }
                 }),
             ),
             // Watch for application configuration changes.
@@ -200,12 +226,7 @@ impl Application for AppModel {
                 _ = open::that_detached(REPOSITORY);
             }
 
-            Message::NewOutputs(new_outputs) => {
-                todo!()
-            }
-            Message::RemovedOutputs(removed_outputs) => {
-                todo!()
-            }
+            Message::NewConfigs(_new_configs) => {}
 
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
