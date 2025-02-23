@@ -5,7 +5,7 @@ use socket_listener::SocketListener;
 use state::State;
 
 use smithay_client_toolkit::reexports::client::{globals::registry_queue_init, Connection};
-use tracing::{debug, level_filters::LevelFilter};
+use tracing::info;
 use tracing_subscriber::EnvFilter;
 
 #[derive(Debug)]
@@ -41,13 +41,11 @@ fn main() -> anyhow::Result<()> {
 fn init_logging() {
     tracing_subscriber::fmt()
         .with_env_filter(
-            EnvFilter::builder()
-                .with_default_directive(LevelFilter::INFO.into())
-                .from_env_lossy(),
+            EnvFilter::try_from_default_env().unwrap_or(EnvFilter::new("vibe_daemon=info")),
         )
         .without_time()
         .pretty()
         .init();
 
-    debug!("Logger initialised");
+    info!("Logger initialised");
 }

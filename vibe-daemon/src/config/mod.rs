@@ -17,7 +17,7 @@ pub enum ShaderCode {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct OutputConfig {
-    pub shader_code: ShaderCode,
+    pub shader_code: Option<ShaderCode>,
 
     /// The amount of bars
     pub amount_bars: NonZeroUsize,
@@ -26,12 +26,28 @@ pub struct OutputConfig {
     pub frequency_range: Range<NonZeroU32>,
 }
 
+impl Default for OutputConfig {
+    fn default() -> Self {
+        Self {
+            shader_code: Some(ShaderCode::Glsl(
+                include_str!("./default_shader.glsl").to_string(),
+            )),
+            amount_bars: NonZeroUsize::new(60).unwrap(),
+            frequency_range: NonZeroU32::new(50).unwrap()..NonZeroU32::new(10_000).unwrap(),
+        }
+    }
+}
+
 impl OutputConfig {
-    pub fn save(&self, wl_output_name: impl AsRef<str>) -> io::Result<()> {
+    #[must_use]
+    pub fn save(&self, wl_output_name: impl AsRef<str>) -> io::Result<PathBuf> {
         let file_path = get_file_path(wl_output_name);
-        std::fs::write(file_path, toml::to_string(self).unwrap())
+        std::fs::write(&file_path, toml::to_string(self).unwrap())?;
+
+        Ok(file_path)
     }
 
+    #[must_use]
     pub fn load(wl_output_name: impl AsRef<str>) -> io::Result<Self> {
         let file_path = get_file_path(wl_output_name);
         let content = std::fs::read_to_string(file_path)?;
@@ -39,7 +55,7 @@ impl OutputConfig {
     }
 }
 
-pub fn load(output_name: impl AsRef<str>) -> io::Result<Option<OutputConfig>> {
+pub fn load(output_name: impl AsRef<str>) -> io::Result<Option<(OutputConfig, PathBuf)>> {
     let config_dir = std::fs::read_dir(crate::config_directory())?;
 
     for entry in config_dir {
@@ -47,9 +63,9 @@ pub fn load(output_name: impl AsRef<str>) -> io::Result<Option<OutputConfig>> {
         let path = entry.path();
 
         if path.is_file() && path.file_stem() == Some(output_name.as_ref().as_ref()) {
-            let content = std::fs::read_to_string(path)?;
+            let content = std::fs::read_to_string(&path)?;
 
-            return Ok(toml::from_str(&content).unwrap());
+            return Ok(Some((toml::from_str(&content).unwrap(), path)));
         }
     }
 
