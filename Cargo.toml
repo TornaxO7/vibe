@@ -1,23 +1,20 @@
-[workspace]
-members = ["vibe-daemon", "vibe"]
-resolver = "2"
+[package]
+name = "vibe"
+version = "0.0.1"
+edition = "2021"
+authors = ["TornaxO7 <tornax@pm.me>"]
+description = "A desktop music visualizer"
+license = "GPL-2.0"
+repository = "https://github.com/TornaxO7/vibe"
 
-[workspace.dependencies]
-toml = { version = "0.8", features = ["parse", "display"] }
-serde = { version = "1", features = ["derive"] }
-
+[dependencies]
+raw-window-handle = "0.6"
+smithay-client-toolkit = "0.19"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-anyhow = "1"
-
+wayland-client = "0.31"
+wgpu = "24.0"
 xdg = "2.5"
-
-shady = { version = "2.0", default-features = false, features = [
-  "time",
-  "resolution",
-  "audio",
-] }
 
 [profile.release-lto]
 inherits = "release"
