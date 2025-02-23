@@ -28,8 +28,14 @@ struct SectionAmountBars {
 }
 
 impl SectionAmountBars {
+    // Just a guess
+    const AMOUNT_MIN_BARS: NonZeroUsize = NonZeroUsize::new(10).unwrap();
+
     pub fn set_input(&mut self, new_input: String) {
-        self.is_valid = new_input.parse::<NonZeroUsize>().is_ok();
+        self.is_valid = new_input
+            .parse::<NonZeroUsize>()
+            .map(|num| num >= Self::AMOUNT_MIN_BARS)
+            .unwrap_or(false);
         self.input = new_input;
     }
 }
@@ -212,18 +218,21 @@ impl Application for AppModel {
         debug!("{:?}", self.output_configs.get(&id));
         let an_output_is_selected = self.output_configs.get(&id).is_some();
         let column = if an_output_is_selected {
-            let mut amount_bars = widget::text_input(
-                "Amount bars",
-                self.output_section_state.amount_bars.input.clone(),
-            )
-            .label("Amount of bars (>= 1)")
-            .on_submit(Message::Todo)
-            .on_input(move |new_input| Message::SetAmountBars(new_input))
-            .helper_text("Set the amount of bars which should be passed to the shader (in order to display them).");
+            let amount_bars = {
+                let state = self.output_section_state.amount_bars.clone();
 
-            if !self.output_section_state.amount_bars.is_valid {
-                amount_bars = amount_bars.error("Your input isn't a positive integer!");
-            }
+                let mut amount_bars = widget::text_input("Amount bars", state.input)
+                    .label(format!("Amount of bars (>= {})", SectionAmountBars::AMOUNT_MIN_BARS))
+                    .on_submit(Message::Todo)
+                    .on_input(move |new_input| Message::SetAmountBars(new_input))
+                    .helper_text("Set the amount of bars which should be passed to the shader (in order to display them).");
+
+                if !state.is_valid {
+                    amount_bars = amount_bars.error("Your input isn't a positive integer!");
+                }
+
+                amount_bars
+            };
 
             column.push(amount_bars)
         } else {
