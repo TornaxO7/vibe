@@ -6,7 +6,6 @@ use tracing_subscriber::EnvFilter;
 mod app;
 mod config;
 mod i18n;
-mod state;
 
 fn main() -> cosmic::iced::Result {
     init_logging();

@@ -2,7 +2,6 @@
 
 use crate::config::Config;
 use crate::fl;
-use crate::state::State;
 use cosmic::app::{context_drawer, Core, Task};
 use cosmic::cctk::wayland_client::globals::registry_queue_init;
 use cosmic::cctk::wayland_client::Connection;
@@ -170,30 +169,12 @@ impl Application for AppModel {
     fn subscription(&self) -> Subscription<Self::Message> {
         struct OutputListener;
 
-        let conn = Connection::connect_to_env().unwrap();
-        let (globals, mut event_queue) = registry_queue_init(&conn).unwrap();
-        let qh = event_queue.handle();
-        let mut state = State::new(&globals, qh);
-
         Subscription::batch(vec![
             // Create a subscription which emits updates through a channel.
             Subscription::run_with_id(
                 std::any::TypeId::of::<OutputListener>(),
-                cosmic::iced::stream::channel(4, move |mut channel| async move {
-                    loop {
-                        event_queue.blocking_dispatch(&mut state).unwrap();
-
-                        if !state.added_outputs.is_empty() {
-                            let _ = channel.send(Message::NewOutputs(state.added_outputs.clone()));
-                            state.added_outputs.clear();
-                        }
-
-                        if !state.removed_outputs.is_empty() {
-                            let _ = channel
-                                .send(Message::RemovedOutputs(state.removed_outputs.clone()));
-                            state.removed_outputs.clear();
-                        }
-                    }
+                cosmic::iced::stream::channel(4, move |mut _channel| async move {
+                    futures_util::future::pending().await
                 }),
             ),
             // Watch for application configuration changes.
