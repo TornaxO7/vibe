@@ -4,15 +4,15 @@ use crate::config::Config;
 use crate::fl;
 use cosmic::app::{context_drawer, Core, Task};
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
-use cosmic::iced::alignment::{Horizontal, Vertical};
 use cosmic::iced::{Alignment, Length, Subscription};
-use cosmic::widget::{self, icon, menu, nav_bar};
-use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Apply, Element};
+use cosmic::widget::segmented_button::Entity;
+use cosmic::widget::{self, menu, nav_bar};
+use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Element};
 use futures_util::SinkExt;
 use notify::event::{CreateKind, RemoveKind};
 use notify::{EventKind, RecursiveMode, Watcher};
 use std::collections::HashMap;
-use std::path::PathBuf;
+use std::num::NonZeroUsize;
 use tracing::{debug, error, info};
 use vibe_daemon::config::OutputConfig;
 
@@ -20,6 +20,34 @@ const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 const APP_ICON: &[u8] = include_bytes!("../resources/icons/hicolor/scalable/apps/icon.svg");
 
 type OutputName = String;
+
+#[derive(Debug, Default, Clone)]
+struct SectionAmountBars {
+    input: String,
+    is_valid: bool,
+}
+
+impl SectionAmountBars {
+    pub fn set_input(&mut self, new_input: String) {
+        self.is_valid = new_input.parse::<NonZeroUsize>().is_ok();
+        self.input = new_input;
+    }
+}
+
+impl From<&OutputConfig> for SectionAmountBars {
+    fn from(value: &OutputConfig) -> Self {
+        Self {
+            input: value.amount_bars.to_string(),
+            is_valid: true,
+        }
+    }
+}
+
+/// Holds the state of each input field within the config page of an output.
+#[derive(Debug, Default, Clone)]
+struct OutputSectionState {
+    amount_bars: SectionAmountBars,
+}
 
 /// The application model stores app-specific state used to describe its interface and
 /// drive its logic.
@@ -35,7 +63,10 @@ pub struct AppModel {
     // Configuration data that persists between application runs.
     config: Config,
 
-    output_configs: HashMap<OutputName, OutputConfig>,
+    output_section_state: OutputSectionState,
+
+    nav_ids: HashMap<OutputName, Entity>,
+    output_configs: HashMap<Entity, OutputConfig>,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -47,6 +78,9 @@ pub enum Message {
     LaunchUrl(String),
     AddConfigs(Vec<OutputName>),
     RemoveConfigs(Vec<OutputName>),
+
+    SetAmountBars(String),
+    Todo,
 }
 
 /// Create a COSMIC application from the app model
@@ -73,34 +107,22 @@ impl Application for AppModel {
 
     /// Initializes the application with any given flags and startup commands.
     fn init(core: Core, _flags: Self::Flags) -> (Self, Task<Self::Message>) {
-        // Create a nav bar with three page items.
-        let mut nav = nav_bar::Model::default();
-
-        nav.insert()
-            .text(fl!("page-id", num = 1))
-            .data::<Page>(Page::Page1)
-            .icon(icon::from_name("applications-science-symbolic"))
-            .activate();
-
-        nav.insert()
-            .text(fl!("page-id", num = 2))
-            .data::<Page>(Page::Page2)
-            .icon(icon::from_name("applications-system-symbolic"));
-
-        nav.insert()
-            .text(fl!("page-id", num = 3))
-            .data::<Page>(Page::Page3)
-            .icon(icon::from_name("applications-games-symbolic"));
-
-        let output_configs = HashMap::new();
+        // nav.insert()
+        //     .text(fl!("page-id", num = 3))
+        //     .data::<Page>(Page::Page3)
+        //     .icon(icon::from_name("applications-games-symbolic"));
 
         // Construct the app model with the runtime's core.
         let mut app = AppModel {
             core,
             context_page: ContextPage::default(),
-            nav,
+            nav: nav_bar::Model::default(),
+            nav_ids: HashMap::new(),
             key_binds: HashMap::new(),
-            output_configs,
+            output_configs: HashMap::new(),
+
+            output_section_state: OutputSectionState::default(),
+
             // Optional configuration file for an application.
             config: cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
                 .map(|context| match Config::get_entry(&context) {
@@ -116,9 +138,9 @@ impl Application for AppModel {
                 .unwrap_or_default(),
         };
 
-        // Create a startup command that sets the window title.
-        let command = {
+        let startup_commands = {
             let set_window_title = app.update_title();
+
             let collect_configs = Task::future(async {
                 let config_dir = vibe_daemon::config_directory();
 
@@ -143,7 +165,7 @@ impl Application for AppModel {
             set_window_title.chain(collect_configs)
         };
 
-        (app, command)
+        (app, startup_commands)
     }
 
     /// Elements to pack at the start of the header bar.
@@ -184,13 +206,35 @@ impl Application for AppModel {
     /// Application events will be processed through the view. Any messages emitted by
     /// events received by widgets will be passed to the update method.
     fn view(&self) -> Element<Self::Message> {
-        widget::text::title1(fl!("welcome"))
-            .apply(widget::container)
-            .width(Length::Fill)
-            .height(Length::Fill)
-            .align_x(Horizontal::Center)
-            .align_y(Vertical::Center)
-            .into()
+        let column = widget::column().width(Length::Fill).height(Length::Fill);
+
+        let id = self.nav.active();
+        debug!("{:?}", self.output_configs.get(&id));
+        let an_output_is_selected = self.output_configs.get(&id).is_some();
+        let column = if an_output_is_selected {
+            let mut amount_bars = widget::text_input(
+                "Amount bars",
+                self.output_section_state.amount_bars.input.clone(),
+            )
+            .label("Amount of bars (>= 1)")
+            .on_submit(Message::Todo)
+            .on_input(move |new_input| Message::SetAmountBars(new_input))
+            .helper_text("Set the amount of bars which should be passed to the shader (in order to display them).");
+
+            if !self.output_section_state.amount_bars.is_valid {
+                amount_bars = amount_bars.error("Your input isn't a positive integer!");
+            }
+
+            column.push(amount_bars)
+        } else {
+            let title = widget::text::title1("hello there")
+                .width(Length::Fill)
+                .center();
+
+            column.push(title)
+        };
+
+        column.into()
     }
 
     /// Register subscriptions for this application.
@@ -207,7 +251,7 @@ impl Application for AppModel {
                 std::any::TypeId::of::<OutputListener>(),
                 cosmic::iced::stream::channel(4, {
                     move |mut channel| {
-                        // look after new output configs which are getting added or removed by the daemon
+                        // look after output configs which are getting added or removed by the daemon
                         let mut watcher = notify::recommended_watcher(
                             move |watcher_event: notify::Result<notify::Event>| match watcher_event
                             {
@@ -287,6 +331,13 @@ impl Application for AppModel {
                 _ = open::that_detached(REPOSITORY);
             }
 
+            Message::Todo => {
+                todo!()
+            }
+            Message::SetAmountBars(input) => {
+                self.output_section_state.amount_bars.set_input(input);
+            }
+
             Message::AddConfigs(output_names) => {
                 for output_name in output_names {
                     let (config, _config_path) = match vibe_daemon::config::load(&output_name) {
@@ -297,12 +348,16 @@ impl Application for AppModel {
                         }
                     };
 
-                    self.output_configs.insert(output_name, config);
+                    let id = self.nav.insert().text(output_name.clone()).id();
+                    self.nav_ids.insert(output_name.clone(), id);
+                    self.output_configs.insert(id, config);
                 }
             }
             Message::RemoveConfigs(output_names) => {
                 for output_name in output_names {
-                    self.output_configs.remove(&output_name);
+                    let id = self.nav_ids.remove(&output_name).unwrap();
+                    self.nav.remove(id);
+                    self.output_configs.remove(&id);
                 }
             }
 
@@ -336,6 +391,10 @@ impl Application for AppModel {
     fn on_nav_select(&mut self, id: nav_bar::Id) -> Task<Self::Message> {
         // Activate the page in the model.
         self.nav.activate(id);
+
+        if let Some(config) = self.output_configs.get(&id) {
+            self.output_section_state.amount_bars = SectionAmountBars::from(config);
+        }
 
         self.update_title()
     }
@@ -391,13 +450,6 @@ impl AppModel {
             Task::none()
         }
     }
-}
-
-/// The page to display in the application.
-pub enum Page {
-    Page1,
-    Page2,
-    Page3,
 }
 
 /// The context page to display in the context drawer.

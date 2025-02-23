@@ -15,7 +15,7 @@ pub enum ShaderCode {
     Glsl(String),
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct OutputConfig {
     pub shader_code: Option<ShaderCode>,
 
