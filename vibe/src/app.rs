@@ -9,14 +9,17 @@ use cosmic::iced::{Alignment, Length, Subscription};
 use cosmic::widget::{self, icon, menu, nav_bar};
 use cosmic::{cosmic_theme, theme, Application, ApplicationExt, Apply, Element};
 use futures_util::SinkExt;
-use notify::event::CreateKind;
+use notify::event::{CreateKind, RemoveKind};
 use notify::{EventKind, RecursiveMode, Watcher};
 use std::collections::HashMap;
 use std::path::PathBuf;
 use tracing::{debug, error, info};
+use vibe_daemon::config::OutputConfig;
 
 const REPOSITORY: &str = env!("CARGO_PKG_REPOSITORY");
 const APP_ICON: &[u8] = include_bytes!("../resources/icons/hicolor/scalable/apps/icon.svg");
+
+type OutputName = String;
 
 /// The application model stores app-specific state used to describe its interface and
 /// drive its logic.
@@ -31,6 +34,8 @@ pub struct AppModel {
     key_binds: HashMap<menu::KeyBind, MenuAction>,
     // Configuration data that persists between application runs.
     config: Config,
+
+    output_configs: HashMap<PathBuf, OutputConfig>,
 }
 
 /// Messages emitted by the application and its widgets.
@@ -40,7 +45,8 @@ pub enum Message {
     ToggleContextPage(ContextPage),
     UpdateConfig(Config),
     LaunchUrl(String),
-    NewConfigs(Vec<PathBuf>),
+    AddConfigs(Vec<PathBuf>),
+    RemoveConfigs(Vec<PathBuf>),
 }
 
 /// Create a COSMIC application from the app model
@@ -86,12 +92,15 @@ impl Application for AppModel {
             .data::<Page>(Page::Page3)
             .icon(icon::from_name("applications-games-symbolic"));
 
+        let output_configs = HashMap::new();
+
         // Construct the app model with the runtime's core.
         let mut app = AppModel {
             core,
             context_page: ContextPage::default(),
             nav,
             key_binds: HashMap::new(),
+            output_configs,
             // Optional configuration file for an application.
             config: cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
                 .map(|context| match Config::get_entry(&context) {
@@ -108,7 +117,30 @@ impl Application for AppModel {
         };
 
         // Create a startup command that sets the window title.
-        let command = app.update_title();
+        let command = {
+            let set_window_title = app.update_title();
+            let collect_configs = Task::future(async {
+                let config_dir = vibe_daemon::config_directory();
+
+                let dir_walker = match std::fs::read_dir(config_dir) {
+                    Ok(walker) => walker,
+                    Err(err) => {
+                        panic!("Couldn't create directory walker to load the configs frorm the output-config directory: {}", err);
+                    }
+                };
+
+                let paths: Vec<PathBuf> = dir_walker
+                    .into_iter()
+                    .filter(|entry| entry.is_ok())
+                    .map(|entry| entry.unwrap().path())
+                    .filter(|path| path.is_file())
+                    .collect();
+
+                cosmic::app::message::app(Message::AddConfigs(paths))
+            });
+
+            set_window_title.chain(collect_configs)
+        };
 
         (app, command)
     }
@@ -174,13 +206,17 @@ impl Application for AppModel {
                 std::any::TypeId::of::<OutputListener>(),
                 cosmic::iced::stream::channel(4, {
                     move |mut channel| {
+                        // look after new output configs which are getting added or removed by the daemon
                         let mut watcher = notify::recommended_watcher(
                             move |watcher_event: notify::Result<notify::Event>| match watcher_event
                             {
                                 Ok(event) => {
                                     if event.kind == EventKind::Create(CreateKind::File) {
                                         info!("Found new output configs: {:#?}", &event.paths);
-                                        let _ = channel.send(Message::NewConfigs(event.paths));
+                                        let _ = channel.send(Message::AddConfigs(event.paths));
+                                    } else if event.kind == EventKind::Remove(RemoveKind::File) {
+                                        info!("Output got removed at {:#?}", &event.paths);
+                                        let _ = channel.send(Message::RemoveConfigs(event.paths));
                                     }
                                 }
                                 Err(err) => {
@@ -226,7 +262,12 @@ impl Application for AppModel {
                 _ = open::that_detached(REPOSITORY);
             }
 
-            Message::NewConfigs(_new_configs) => {}
+            Message::AddConfigs(_new_configs) => {
+                todo!()
+            }
+            Message::RemoveConfigs(_removed_configs) => {
+                todo!()
+            }
 
             Message::ToggleContextPage(context_page) => {
                 if self.context_page == context_page {
