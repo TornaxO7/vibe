@@ -81,6 +81,11 @@ impl OutputHandler for State {
             },
         };
 
+        if !config.enable {
+            info!("Output is disabled. Skipping output.");
+            return;
+        }
+
         let layer_surface = {
             let wl_surface = self.compositor_state.create_surface(qh);
             self.layer_shell.create_layer_surface(

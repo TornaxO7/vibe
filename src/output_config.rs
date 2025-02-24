@@ -17,6 +17,7 @@ pub enum ShaderCode {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
+    pub enable: bool,
     pub amount_bars: NonZeroUsize,
     pub shader_code: ShaderCode,
 }
@@ -26,6 +27,7 @@ impl OutputConfig {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {
+            enable: true,
             amount_bars: crate::DEFAULT_AMOUNT_BARS,
             shader_code: ShaderCode::Glsl(include_str!("./shaders/default.glsl").to_string()),
         };
