@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use shady::{Shady, ShadyRenderPipeline};
 use std::{borrow::Cow, ptr::NonNull};
-use tracing::info;
 
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
