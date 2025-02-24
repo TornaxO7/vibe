@@ -8,7 +8,7 @@ A desktop [glava] like desktop music visualizer by using shaders!
 
 # State
 
-Probably not really user friendly. Still under active development.
+Currently not really user friendly. Still under active development.
 
 # Usage
 
