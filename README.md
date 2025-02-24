@@ -1,4 +1,4 @@
-# (Cosmic-) Vibe
+# Vibe
 
 A desktop [glava] like desktop music visualizer by using shaders!
 
