@@ -1,5 +1,5 @@
 [package]
-name = "vibe"
+name = "vibe-daemon"
 version = "0.0.1"
 edition = "2021"
 authors = ["TornaxO7 <tornax@pm.me>"]
@@ -8,13 +8,23 @@ license = "GPL-2.0"
 repository = "https://github.com/TornaxO7/vibe"
 
 [dependencies]
+anyhow = "1"
+
+bytemuck = "1.21"
+pollster = "0.4"
 raw-window-handle = "0.6"
-smithay-client-toolkit = "0.19"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
 wayland-client = "0.31"
-wgpu = "24.0"
+wayland-backend = { version = "0.3", features = ["client_system"] }
+smithay-client-toolkit = "0.19"
+
+wgpu = { version = "24.0", features = ["glsl", "naga-ir"] }
 xdg = "2.5"
+shady-audio = "4.0.2"
+toml = { version = "0.8", features = ["parse", "display"] }
+serde = { version = "1", features = ["derive"] }
 
 [profile.release-lto]
 inherits = "release"
