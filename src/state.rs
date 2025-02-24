@@ -61,6 +61,7 @@ impl OutputHandler for State {
     }
 
     fn new_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
+        info!("Detected new output.");
         let info = self.output_state.info(&output).expect("Get output info");
 
         let config = match crate::output_config::load(&info) {
@@ -104,6 +105,7 @@ impl OutputHandler for State {
     fn update_output(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, _output: WlOutput) {}
 
     fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
+        info!("An output was removed.");
         self.outputs.remove(&output);
     }
 }
