@@ -71,7 +71,7 @@ impl OutputCtx {
     }
 
     pub fn surface(&self) -> &wgpu::Surface<'static> {
-        &self.shader_ctx.surface()
+        self.shader_ctx.surface()
     }
 
     pub fn request_redraw(&self, qh: &QueueHandle<State>) {

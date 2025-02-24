@@ -87,7 +87,7 @@ impl ShaderCtx {
             ShaderCode::Glsl(code) => {
                 let mut frontend = glsl::Frontend::default();
                 frontend
-                    .parse(&glsl::Options::from(ShaderStage::Fragment), &code)
+                    .parse(&glsl::Options::from(ShaderStage::Fragment), code)
                     .map_err(|err| anyhow!("{}", err.emit_to_string(code)))?
             }
         };
