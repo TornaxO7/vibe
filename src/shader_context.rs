@@ -1,6 +1,7 @@
 use anyhow::anyhow;
-use shady_audio::{config::ShadyAudioConfig, fetcher::SystemAudioFetcher, ShadyAudio};
-use std::{borrow::Cow, ptr::NonNull, time::Instant};
+use shady::{Shady, ShadyRenderPipeline};
+use std::{borrow::Cow, ptr::NonNull};
+use tracing::info;
 
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
@@ -9,8 +10,7 @@ use smithay_client_toolkit::shell::{wlr_layer::LayerSurface, WaylandSurface};
 use wayland_client::{Connection, Proxy};
 use wgpu::{
     naga::{front::glsl, ShaderStage},
-    BindGroup, BindGroupLayoutEntry, BindingType, Buffer, BufferBindingType, BufferDescriptor,
-    BufferUsages, PresentMode, RenderPipeline, ShaderStages, Surface, SurfaceConfiguration,
+    PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
 
 use crate::{
@@ -20,15 +20,8 @@ use crate::{
 };
 
 pub struct ShaderCtx {
-    audio: Buffer,
-    resolution: Buffer,
-    time: Buffer,
-
-    instant: Instant,
-    shady: ShadyAudio,
-
-    bind_group: BindGroup,
-    pipeline: RenderPipeline,
+    shady: Shady,
+    pipeline: ShadyRenderPipeline,
     surface: Surface<'static>,
     config: SurfaceConfiguration,
 }
@@ -41,35 +34,14 @@ impl ShaderCtx {
         gpu: &GpuCtx,
         config: &OutputConfig,
     ) -> anyhow::Result<Self> {
-        let shady = ShadyAudio::new(
-            SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap(),
-            ShadyAudioConfig {
-                amount_bars: config.amount_bars,
-                ..Default::default()
-            },
-        )
-        .unwrap();
-
-        let audio = gpu.device().create_buffer(&BufferDescriptor {
-            label: None,
-            size: (std::mem::size_of::<f32>() * usize::from(config.amount_bars)) as u64,
-            usage: BufferUsages::STORAGE | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let resolution = gpu.device().create_buffer(&BufferDescriptor {
-            label: None,
-            size: std::mem::size_of::<[f32; 2]>() as u64,
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
-        let time = gpu.device().create_buffer(&BufferDescriptor {
-            label: None,
-            size: std::mem::size_of::<f32>() as u64,
-            usage: BufferUsages::UNIFORM | BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        let shady = {
+            let mut shady = Shady::new(shady::ShadyDescriptor {
+                device: gpu.device(),
+            });
+            shady.set_audio_bars(gpu.device(), config.amount_bars);
+            shady.set_resolution(size.width, size.height);
+            shady
+        };
 
         let surface: Surface<'static> = {
             let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
@@ -112,128 +84,26 @@ impl ShaderCtx {
         };
         surface.configure(gpu.device(), &surface_config);
 
-        let vertex_module = gpu
-            .device()
-            .create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: None,
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("./shaders/vertex_shader.wgsl").into(),
-                ),
-            });
-
         let fragment_module = match &config.shader_code {
             ShaderCode::Glsl(code) => {
                 let mut frontend = glsl::Frontend::default();
-                let module = frontend
+                frontend
                     .parse(&glsl::Options::from(ShaderStage::Fragment), &code)
-                    .map_err(|err| anyhow!("{}", err.emit_to_string(code)))?;
-
-                gpu.device()
-                    .create_shader_module(wgpu::ShaderModuleDescriptor {
-                        label: None,
-                        source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
-                    })
+                    .map_err(|err| anyhow!("{}", err.emit_to_string(code)))?
             }
         };
 
-        let (pipeline, bind_group) = {
-            let bind_group_layout =
-                gpu.device()
-                    .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                        label: None,
-                        entries: &[
-                            // iAudio
-                            bind_group_layout_entry(
-                                0,
-                                BufferBindingType::Storage { read_only: true },
-                            ),
-                            // iResolution
-                            bind_group_layout_entry(1, BufferBindingType::Uniform),
-                            // iTime
-                            bind_group_layout_entry(2, BufferBindingType::Uniform),
-                        ],
-                    });
-
-            let pipeline_layout =
-                gpu.device()
-                    .create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                        label: None,
-                        bind_group_layouts: &[&bind_group_layout],
-                        push_constant_ranges: &[],
-                    });
-
-            let pipeline = gpu
-                .device()
-                .create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                    label: None,
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &vertex_module,
-                        entry_point: Some("vertex_main"),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[crate::vertices::BUFFER_LAYOUT],
-                    },
-                    primitive: wgpu::PrimitiveState {
-                        topology: wgpu::PrimitiveTopology::TriangleList,
-                        strip_index_format: None,
-                        front_face: wgpu::FrontFace::Ccw,
-                        cull_mode: Some(wgpu::Face::Back),
-                        unclipped_depth: false,
-                        polygon_mode: wgpu::PolygonMode::Fill,
-                        conservative: false,
-                    },
-                    depth_stencil: None,
-                    multisample: wgpu::MultisampleState {
-                        count: 1,
-                        mask: !0,
-                        alpha_to_coverage_enabled: false,
-                    },
-                    fragment: Some(wgpu::FragmentState {
-                        module: &fragment_module,
-                        entry_point: Some("main"),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: surface_config.format,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::ALL,
-                        })],
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    }),
-                    multiview: None,
-                    cache: None,
-                });
-
-            let bind_group = gpu.device().create_bind_group(&wgpu::BindGroupDescriptor {
-                label: None,
-                layout: &bind_group_layout,
-                entries: &[
-                    wgpu::BindGroupEntry {
-                        binding: 0,
-                        resource: audio.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 1,
-                        resource: resolution.as_entire_binding(),
-                    },
-                    wgpu::BindGroupEntry {
-                        binding: 2,
-                        resource: time.as_entire_binding(),
-                    },
-                ],
-            });
-
-            (pipeline, bind_group)
-        };
+        let pipeline = shady::create_render_pipeline(
+            gpu.device(),
+            ShaderSource::Naga(Cow::Owned(fragment_module)),
+            &surface_config.format,
+        );
 
         Ok(Self {
             shady,
-            audio,
-            time,
-            resolution,
             surface,
             config: surface_config,
             pipeline,
-            bind_group,
-            instant: Instant::now(),
         })
     }
 
@@ -244,12 +114,15 @@ impl ShaderCtx {
 
             self.surface.configure(gpu.device(), &self.config);
 
-            gpu.queue().write_buffer(
-                &self.resolution,
-                0,
-                bytemuck::cast_slice(&[self.config.width as f32, self.config.height as f32]),
-            );
+            self.shady
+                .set_resolution(self.config.width, self.config.height);
+            self.shady.update_resolution_buffer(gpu.queue());
         }
+    }
+
+    pub fn update_buffers(&mut self, queue: &wgpu::Queue) {
+        self.shady.update_audio_buffer(queue);
+        self.shady.update_time_buffer(queue);
     }
 
     pub fn size(&self) -> Size {
@@ -260,37 +133,7 @@ impl ShaderCtx {
         &self.surface
     }
 
-    pub fn pipeline(&self) -> &RenderPipeline {
-        &self.pipeline
-    }
-
-    pub fn bind_group(&self) -> &BindGroup {
-        &self.bind_group
-    }
-
-    pub fn update_buffers(&mut self, queue: &wgpu::Queue) {
-        // iAudio
-        {
-            let bars = self.shady.get_bars();
-            queue.write_buffer(&self.audio, 0, bytemuck::cast_slice(bars));
-        }
-        // iTime
-        {
-            let time = self.instant.elapsed().as_secs_f32();
-            queue.write_buffer(&self.time, 0, bytemuck::cast_slice(&time.to_ne_bytes()));
-        }
-    }
-}
-
-fn bind_group_layout_entry(binding: u32, ty: BufferBindingType) -> BindGroupLayoutEntry {
-    BindGroupLayoutEntry {
-        binding,
-        visibility: ShaderStages::FRAGMENT,
-        ty: BindingType::Buffer {
-            ty,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
+    pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+        self.shady.add_render_pass(encoder, view, &self.pipeline);
     }
 }

@@ -1,6 +1,7 @@
 use std::{ffi::OsStr, io, num::NonZeroUsize, path::PathBuf, sync::OnceLock};
 
 use serde::{Deserialize, Serialize};
+use shady::TemplateLang;
 use smithay_client_toolkit::output::OutputInfo;
 use xdg::BaseDirectories;
 
@@ -29,7 +30,11 @@ impl OutputConfig {
         let new = Self {
             enable: true,
             amount_bars: crate::DEFAULT_AMOUNT_BARS,
-            shader_code: ShaderCode::Glsl(include_str!("./shaders/default.glsl").to_string()),
+            shader_code: ShaderCode::Glsl(
+                TemplateLang::Glsl
+                    .generate_to_string(Some(include_str!("./shaders/default.glsl")))
+                    .unwrap(),
+            ),
         };
 
         new.save(name)?;

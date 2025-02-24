@@ -70,6 +70,10 @@ impl OutputCtx {
         &self.layer_surface
     }
 
+    pub fn surface(&self) -> &wgpu::Surface<'static> {
+        &self.shader_ctx.surface()
+    }
+
     pub fn request_redraw(&self, qh: &QueueHandle<State>) {
         let surface = self.layer_surface.wl_surface();
 
@@ -92,7 +96,7 @@ impl OutputCtx {
         self.shader_ctx.update_buffers(queue);
     }
 
-    pub fn shader_ctx(&self) -> &ShaderCtx {
-        &self.shader_ctx
+    pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
+        self.shader_ctx.add_render_pass(encoder, view);
     }
 }

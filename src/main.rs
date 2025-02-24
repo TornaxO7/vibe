@@ -4,7 +4,6 @@ mod output_context;
 mod output_wgpu_context;
 mod shader_context;
 mod state;
-mod vertices;
 
 use std::num::NonZeroUsize;
 
