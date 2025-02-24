@@ -1,7 +1,6 @@
 use anyhow::anyhow;
 use shady_audio::{config::ShadyAudioConfig, fetcher::SystemAudioFetcher, ShadyAudio};
 use std::{borrow::Cow, ptr::NonNull, time::Instant};
-use tracing::info;
 
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
