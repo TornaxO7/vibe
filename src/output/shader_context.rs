@@ -15,7 +15,7 @@ use wgpu::{
     PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
 
-use crate::gpu_context::GpuCtx;
+use crate::gpu::GpuCtx;
 
 use super::{
     config::{OutputConfig, ShaderCode},
