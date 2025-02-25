@@ -37,6 +37,8 @@ rustPlatform.buildRustPackage rec {
     vulkan-tools
   ];
 
+  RUSTFLAGS = "-Clink-args=-Wl,-rpath,${lib.makeLibraryPath buildInputs}";
+
   buildType = "debug";
 
   cargoLock.lockFile = ../Cargo.lock;

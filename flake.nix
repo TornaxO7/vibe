@@ -43,7 +43,7 @@
                   buildInputs = vibe.buildInputs;
                   nativeBuildInputs = vibe.nativeBuildInputs;
 
-                  LD_LIBRARY_PATH = lib.makeLibraryPath vibe.buildInputs;
+                  RUSTFLAGS = vibe.RUSTFLAGS;
                 };
             };
         };
