@@ -42,13 +42,6 @@ jobs:
           git remote set-url origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}
           git commit -am "Automated formatting"
           git push
-  check:
-    if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
-    steps:
-      - uses: TornaxO7/rust-template@v2-ci-actions
-      - name: Check for build errors
-        run: cargo check --verbose
 
   clippy:
     if: github.event.pull_request.draft == false
