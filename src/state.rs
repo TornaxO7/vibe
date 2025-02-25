@@ -61,21 +61,25 @@ impl OutputHandler for State {
     }
 
     fn new_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
-        info!("Detected new output.");
         let info = self.output_state.info(&output).expect("Get output info");
+        let name = info.name.clone().unwrap();
+        info!("Detected output: '{}'", &name);
 
         let config = match crate::output_config::load(&info) {
             Some(config) => {
-                info!("Reusing stored config file.");
+                info!("Reusing config of output '{}'.", name);
                 config
             }
             None => match OutputConfig::new(&info) {
                 Ok(config) => {
-                    info!("Created new default config file for output");
+                    info!("Created new default config file for output: '{}'", name);
                     config
                 }
                 Err(err) => {
-                    error!("Couldn't create new config: {}", err);
+                    error!(
+                        "Couldn't create new config for output '{}': {}. Skipping output...",
+                        name, err
+                    );
                     return;
                 }
             },
