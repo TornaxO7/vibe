@@ -1,4 +1,5 @@
-mod gpu_context;
+mod config;
+mod gpu;
 mod output;
 mod state;
 
@@ -10,7 +11,6 @@ use tracing_subscriber::EnvFilter;
 use wayland_client::{globals::registry_queue_init, Connection};
 
 const DEFAULT_AMOUNT_BARS: NonZeroUsize = NonZeroUsize::new(60).unwrap();
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
 fn main() -> anyhow::Result<()> {
     init_logging();

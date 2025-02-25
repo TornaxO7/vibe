@@ -1,8 +1,11 @@
+mod config;
+
+pub use config::GraphicsConfig;
+
+use crate::output::OutputCtx;
 use pollster::FutureExt;
 use tracing::info;
 use wgpu::{Adapter, Device, Instance, Queue};
-
-use crate::output::OutputCtx;
 
 pub struct GpuCtx {
     instance: Instance,
@@ -12,10 +15,13 @@ pub struct GpuCtx {
 }
 
 impl GpuCtx {
-    pub fn new() -> Self {
+    pub fn new(config: &GraphicsConfig) -> Self {
         let instance = Instance::new(&wgpu::InstanceDescriptor::default());
         let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions::default())
+            .request_adapter(&wgpu::RequestAdapterOptions {
+                power_preference: config.power_preference,
+                ..Default::default()
+            })
             .block_on()
             .unwrap();
 

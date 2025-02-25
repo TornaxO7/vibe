@@ -19,7 +19,7 @@ use wayland_client::{
 };
 
 use crate::{
-    gpu_context::GpuCtx,
+    gpu::GpuCtx,
     output::config::OutputConfig,
     output::{OutputCtx, Size},
 };
@@ -39,7 +39,21 @@ pub struct State {
 
 impl State {
     pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> Self {
-        let gpu = GpuCtx::new();
+        let vibe_config = match crate::config::load() {
+            Ok(conf) => conf,
+            Err(err) => {
+                warn!("Couldn't load config file: {}", err);
+                warn!("Creating new default config file.");
+                let conf = crate::config::Config::default();
+
+                if let Err(err) = conf.save() {
+                    error!("Couldn't save config file: {}", err);
+                }
+
+                conf
+            }
+        };
+        let gpu = GpuCtx::new(&vibe_config.graphics_config);
 
         Self {
             run: true,
@@ -96,7 +110,7 @@ impl OutputHandler for State {
                 qh,
                 wl_surface,
                 Layer::Background,
-                Some(format!("{} background", crate::APP_NAME)),
+                Some(format!("{} background", vibe_daemon::APP_NAME)),
                 Some(&output),
             )
         };

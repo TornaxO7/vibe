@@ -10,7 +10,7 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{Connection, QueueHandle};
 
-use crate::{gpu_context::GpuCtx, state::State};
+use crate::{gpu::GpuCtx, state::State};
 use config::OutputConfig;
 use shader_context::ShaderCtx;
 
