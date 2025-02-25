@@ -13,8 +13,12 @@ Probably not really user friendly at the moment but useable. Still under active 
 # Usage
 
 1. Install `pavucontrol` (or any other tool to see which programs are currently recording and change the source).
-2. Compile and run the binary with `cargo run --release`
-3. Your microphone is very likely be catched as the audio source.
+2. You will need to install some development library headers:
+```
+sudo apt install librust-wayland-client-dev librust-alsa-sys-dev libxkbcommon-dev
+```
+3. Compile and run the binary with `cargo run --release`
+4. Your microphone is very likely be catched as the audio source.
    To fix that open up `pavucontrol` and set the audio source (see: https://github.com/TornaxO7/shady?tab=readme-ov-file#shady-audio-doesnt-listen-to-my-systems-audio)
 
 If you'd like to tweak around:
