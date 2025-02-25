@@ -1,3 +1,6 @@
+pub mod config;
+mod shader_context;
+
 use smithay_client_toolkit::{
     output::OutputInfo,
     shell::{
@@ -7,9 +10,9 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{Connection, QueueHandle};
 
-use crate::{
-    gpu_context::GpuCtx, output_config::OutputConfig, shader_context::ShaderCtx, state::State,
-};
+use crate::{gpu_context::GpuCtx, state::State};
+use config::OutputConfig;
+use shader_context::ShaderCtx;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Size {

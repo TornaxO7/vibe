@@ -2,7 +2,7 @@ use pollster::FutureExt;
 use tracing::info;
 use wgpu::{Adapter, Device, Instance, Queue};
 
-use crate::output_context::OutputCtx;
+use crate::output::OutputCtx;
 
 pub struct GpuCtx {
     instance: Instance,

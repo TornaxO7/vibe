@@ -20,8 +20,8 @@ use wayland_client::{
 
 use crate::{
     gpu_context::GpuCtx,
-    output_config::OutputConfig,
-    output_context::{OutputCtx, Size},
+    output::config::OutputConfig,
+    output::{OutputCtx, Size},
 };
 
 pub struct State {
@@ -65,7 +65,7 @@ impl OutputHandler for State {
         let name = info.name.clone().unwrap();
         info!("Detected output: '{}'", &name);
 
-        let config = match crate::output_config::load(&info) {
+        let config = match crate::output::config::load(&info) {
             Some(config) => {
                 info!("Reusing config of output '{}'.", name);
                 config

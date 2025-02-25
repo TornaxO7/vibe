@@ -12,10 +12,11 @@ use wgpu::{
     PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
 
-use crate::{
-    gpu_context::GpuCtx,
-    output_config::{OutputConfig, ShaderCode},
-    output_context::Size,
+use crate::gpu_context::GpuCtx;
+
+use super::{
+    config::{OutputConfig, ShaderCode},
+    Size,
 };
 
 pub struct ShaderCtx {

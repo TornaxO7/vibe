@@ -1,8 +1,5 @@
 mod gpu_context;
-mod output_config;
-mod output_context;
-mod output_wgpu_context;
-mod shader_context;
+mod output;
 mod state;
 
 use std::num::NonZeroUsize;
