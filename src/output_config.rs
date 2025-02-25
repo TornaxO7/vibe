@@ -55,8 +55,8 @@ impl OutputConfig {
     }
 }
 
-pub fn load(info: &OutputInfo) -> Option<OutputConfig> {
-    let name = info.name.as_ref().unwrap();
+pub fn load(output_info: &OutputInfo) -> Option<OutputConfig> {
+    let name = output_info.name.as_ref().unwrap();
     let iterator = std::fs::read_dir(get_config_dir()).unwrap();
 
     for entry in iterator {
@@ -64,7 +64,7 @@ pub fn load(info: &OutputInfo) -> Option<OutputConfig> {
         let path = entry.path();
 
         if path.file_stem().unwrap() == OsStr::new(&name) {
-            let content = std::fs::read_to_string(path).unwrap();
+            let content = std::fs::read_to_string(&path).unwrap();
 
             return Some(toml::from_str(&content).unwrap());
         }
