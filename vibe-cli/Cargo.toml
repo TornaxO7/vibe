@@ -1,0 +1,20 @@
+[package]
+name = "vibe-cli"
+version = "0.0.1"
+edition = "2021"
+authors = ["TornaxO7 <tornax@pm.me>"]
+description = "Cli tool to communicate with the vibe-daemon."
+license = "GPL-2.0"
+repository = "https://github.com/TornaxO7/vibe-cli"
+
+[dependencies]
+anyhow.workspace = true
+
+tracing.workspace = true
+tracing-subscriber.workspace = true
+
+toml.workspace = true
+serde.workspace = true
+
+vibe-daemon = { path = "../vibe-daemon" }
+clap = { version = "4.5", features = ["derive", "cargo"] }

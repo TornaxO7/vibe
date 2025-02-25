@@ -1,3 +1,5 @@
+pub mod socket;
+
 use std::{path::PathBuf, sync::OnceLock};
 
 use xdg::BaseDirectories;
