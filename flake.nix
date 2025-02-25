@@ -22,26 +22,15 @@
             ];
           };
 
+          packages = rec {
+            default = vibe-daemon;
+            vibe-daemon = pkgs.callPackage (import ./nix/vibe-daemon-package.nix) { };
+          };
+
           devShells.default =
             let
               rust-toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
               dependencies = with pkgs; [
-                pkg-config
-                alsa-lib
-                wayland
-                libxkbcommon
-                libGL
-
-                xorg.libX11
-                xorg.libxcb
-                xorg.libXi
-                xorg.libXrandr
-                xorg.libXcursor
-
-                vulkan-loader
-                vulkan-validation-layers
-                vulkan-tools
-
                 mold
                 clang
               ];
@@ -52,7 +41,7 @@
                 netcat
               ] ++ [ rust-toolchain ];
 
-              buildInputs = dependencies;
+              buildInputs = self'.packages.vibe-daemon.buildInputs ++ dependencies;
 
               shellHook = ''
                 export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}
