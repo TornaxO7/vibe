@@ -21,7 +21,7 @@ use super::{
 
 pub struct ShaderCtx {
     shady: Shady,
-    pipeline: ShadyRenderPipeline,
+    pipelines: Vec<ShadyRenderPipeline>,
     surface: Surface<'static>,
     config: SurfaceConfiguration,
 }
@@ -84,26 +84,36 @@ impl ShaderCtx {
         };
         surface.configure(gpu.device(), &surface_config);
 
-        let fragment_module = match &config.shader_code {
-            ShaderCode::Glsl(code) => {
-                let mut frontend = glsl::Frontend::default();
-                frontend
-                    .parse(&glsl::Options::from(ShaderStage::Fragment), code)
-                    .map_err(|err| anyhow!("{}", err.emit_to_string(code)))?
-            }
-        };
+        let pipelines = {
+            let mut pipelines = Vec::new();
 
-        let pipeline = shady::create_render_pipeline(
-            gpu.device(),
-            ShaderSource::Naga(Cow::Owned(fragment_module)),
-            &surface_config.format,
-        );
+            for shader_code in config.shader_code.iter() {
+                let fragment_module = match shader_code {
+                    ShaderCode::Glsl(code) => {
+                        let mut frontend = glsl::Frontend::default();
+                        frontend
+                            .parse(&glsl::Options::from(ShaderStage::Fragment), code)
+                            .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
+                    }
+                }?;
+
+                let pipeline = shady::create_render_pipeline(
+                    gpu.device(),
+                    ShaderSource::Naga(Cow::Owned(fragment_module)),
+                    &surface_config.format,
+                );
+
+                pipelines.push(pipeline);
+            }
+
+            pipelines
+        };
 
         Ok(Self {
             shady,
             surface,
             config: surface_config,
-            pipeline,
+            pipelines,
         })
     }
 
@@ -134,6 +144,6 @@ impl ShaderCtx {
     }
 
     pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
-        self.shady.add_render_pass(encoder, view, &self.pipeline);
+        self.shady.add_render_pass(encoder, view, &self.pipelines);
     }
 }
