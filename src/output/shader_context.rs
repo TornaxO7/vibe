@@ -98,8 +98,9 @@ impl ShaderCtx {
                             .parse(&glsl::Options::from(ShaderStage::Fragment), code)
                             .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
                     }
-                    ShaderCode::Wgsl(code) => wgsl::parse_str(code)
-                        .map_err(|err| anyhow!("{}", err.emit_to_string(&code))),
+                    ShaderCode::Wgsl(code) => {
+                        wgsl::parse_str(code).map_err(|err| anyhow!("{}", err.emit_to_string(code)))
+                    }
                 }?;
 
                 let pipeline = shady::create_render_pipeline(
