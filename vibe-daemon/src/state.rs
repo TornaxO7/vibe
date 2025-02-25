@@ -34,11 +34,12 @@ pub struct State {
 
     gpu: GpuCtx,
 
+    qh: QueueHandle<Self>,
     outputs: HashMap<WlOutput, OutputCtx>,
 }
 
 impl State {
-    pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> Self {
+    pub fn new(globals: &GlobalList, qh: QueueHandle<Self>) -> Self {
         let vibe_config = match crate::config::load() {
             Ok(conf) => conf,
             Err(err) => {
@@ -57,11 +58,12 @@ impl State {
 
         Self {
             run: true,
-            compositor_state: CompositorState::bind(globals, qh).unwrap(),
-            output_state: OutputState::new(globals, qh),
+            compositor_state: CompositorState::bind(globals, &qh).unwrap(),
+            output_state: OutputState::new(globals, &qh),
             registry_state: RegistryState::new(globals),
-            layer_shell: LayerShell::bind(globals, qh).expect("Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required."),
+            layer_shell: LayerShell::bind(globals, &qh).expect("Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required."),
             gpu,
+            qh,
 
             outputs: HashMap::new(),
         }
@@ -160,6 +162,8 @@ impl CompositorHandler for State {
         surface: &WlSurface,
         _time: u32,
     ) {
+        tracing::debug!("Render");
+
         let output = self
             .outputs
             .values_mut()
@@ -229,4 +233,21 @@ impl ProvidesRegistryState for State {
     }
 
     registry_handlers![OutputState];
+}
+
+// Action management
+impl State {
+    pub fn action_redraw(&self) {
+        for output_ctx in self.outputs.values() {
+            output_ctx.request_redraw(&self.qh);
+        }
+    }
+
+    pub fn action_reload(&mut self) {
+        todo!()
+    }
+
+    pub fn action_exit(&mut self) {
+        self.run = false;
+    }
 }

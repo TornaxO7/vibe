@@ -39,9 +39,9 @@ fn main() -> anyhow::Result<()> {
     let args = Args::parse();
 
     let command = match args.command {
-        Command::Redraw => vibe_daemon::socket::Command::Redraw,
-        Command::Reload => vibe_daemon::socket::Command::Reload,
-        Command::Exit => vibe_daemon::socket::Command::Exit,
+        Command::Redraw => vibe_daemon::socket::Action::Redraw,
+        Command::Reload => vibe_daemon::socket::Action::Reload,
+        Command::Exit => vibe_daemon::socket::Action::Exit,
     };
 
     stream
@@ -50,7 +50,7 @@ fn main() -> anyhow::Result<()> {
 
     let should_close_connection = args.command != Command::Exit;
     if should_close_connection {
-        let close_command = toml::to_string(&vibe_daemon::socket::Command::Close).unwrap();
+        let close_command = toml::to_string(&vibe_daemon::socket::Action::Close).unwrap();
         stream.write(close_command.as_bytes())?;
     }
 

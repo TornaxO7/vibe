@@ -42,6 +42,7 @@ impl From<(u32, u32)> for Size {
 
 pub struct OutputCtx {
     shader_ctx: ShaderCtx,
+    name: String,
     layer_surface: LayerSurface,
 }
 
@@ -54,6 +55,7 @@ impl OutputCtx {
         config: OutputConfig,
     ) -> anyhow::Result<Self> {
         let size = Size::from(&info);
+        let name = info.name.clone().unwrap();
 
         layer_surface.set_exclusive_zone(-69); // nice, arbitrary chosen
         layer_surface.set_anchor(Anchor::BOTTOM);
@@ -65,6 +67,7 @@ impl OutputCtx {
 
         Ok(Self {
             shader_ctx,
+            name,
             layer_surface,
         })
     }
@@ -101,5 +104,11 @@ impl OutputCtx {
 
     pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
         self.shader_ctx.add_render_pass(encoder, view);
+    }
+}
+
+impl OutputCtx {
+    pub fn reload_config(&mut self) {
+        todo!()
     }
 }

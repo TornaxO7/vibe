@@ -4,15 +4,18 @@ use serde::{Deserialize, Serialize};
 
 const SOCKET_FILE_NAME: &str = "daemon.sock";
 
-#[derive(Debug, Serialize, Deserialize)]
-pub enum Command {
+#[derive(Debug, Serialize, Deserialize, Hash, PartialEq, Eq, Clone, Copy)]
+pub enum Action {
     /// Redraw every output again
     Redraw,
 
     /// Reload the config file of each output and of the daemon.
     Reload,
 
+    /// Close the connection
     Close,
+
+    /// Stop the daemon
     Exit,
 }
 
