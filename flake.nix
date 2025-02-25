@@ -22,30 +22,29 @@
             ];
           };
 
-          packages = rec {
-            default = vibe-daemon;
+          packages = {
             vibe-daemon = pkgs.callPackage (import ./nix/vibe-daemon-package.nix) { };
           };
 
-          devShells.default =
+          devShells =
             let
               rust-toolchain = pkgs.rust-bin.fromRustupToolchainFile ./rust-toolchain.toml;
-              dependencies = with pkgs; [
-                mold
-                clang
-              ];
             in
-            pkgs.mkShell rec {
-              packages = with pkgs; [
-                # for manual communiaction with the daemon socket
-                netcat
-              ] ++ [ rust-toolchain ];
+            {
+              default =
+                let
+                  vibe = pkgs.callPackage (import ./nix/vibe-daemon-package.nix) { };
+                in
+                pkgs.mkShell {
+                  packages = with pkgs; [
+                    netcat
+                  ] ++ [ rust-toolchain ];
 
-              buildInputs = self'.packages.vibe-daemon.buildInputs ++ dependencies;
+                  buildInputs = vibe.buildInputs;
+                  nativeBuildInputs = vibe.nativeBuildInputs;
 
-              shellHook = ''
-                export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}
-              '';
+                  LD_LIBRARY_PATH = lib.makeLibraryPath vibe.buildInputs;
+                };
             };
         };
       };
