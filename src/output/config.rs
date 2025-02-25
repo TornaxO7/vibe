@@ -20,7 +20,7 @@ pub enum ShaderCode {
 pub struct OutputConfig {
     pub enable: bool,
     pub amount_bars: NonZeroUsize,
-    pub shader_code: ShaderCode,
+    pub shader_code: Vec<ShaderCode>,
 }
 
 impl OutputConfig {
@@ -30,11 +30,18 @@ impl OutputConfig {
         let new = Self {
             enable: true,
             amount_bars: crate::DEFAULT_AMOUNT_BARS,
-            shader_code: ShaderCode::Glsl(
-                TemplateLang::Glsl
-                    .generate_to_string(Some(include_str!("./shaders/default.glsl")))
-                    .unwrap(),
-            ),
+            shader_code: vec![
+                ShaderCode::Glsl(
+                    TemplateLang::Glsl
+                        .generate_to_string(Some(include_str!("./shaders/default.glsl")))
+                        .unwrap(),
+                ),
+                ShaderCode::Glsl(
+                    TemplateLang::Glsl
+                        .generate_to_string(Some(include_str!("./shaders/default.glsl")))
+                        .unwrap(),
+                ),
+            ],
         };
 
         new.save(name)?;

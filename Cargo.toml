@@ -22,7 +22,7 @@ smithay-client-toolkit = "0.19"
 
 wgpu = { version = "24.0", features = ["glsl", "naga-ir"] }
 xdg = "2.5"
-shady = { version = "5.0", default-features = false, features = [
+shady = { version = "6.0", default-features = false, features = [
   "audio",
   "time",
   "resolution",
