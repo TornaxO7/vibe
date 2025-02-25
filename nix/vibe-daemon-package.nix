@@ -14,9 +14,17 @@
 }:
 let
   cargoToml = builtins.fromTOML (builtins.readFile ../Cargo.toml);
+in
+rustPlatform.buildRustPackage rec {
+  pname = cargoToml.package.name;
+  version = cargoToml.package.version;
 
-  dependencies = [
-    pkg-config
+  src = builtins.path {
+    path = ../.;
+  };
+
+  nativeBuildInputs = [ pkg-config ];
+  buildInputs = [
     alsa-lib
 
     wayland
@@ -28,17 +36,8 @@ let
     vulkan-validation-layers
     vulkan-tools
   ];
-in
-rustPlatform.buildRustPackage rec {
-  pname = cargoToml.package.name;
-  version = cargoToml.package.version;
 
-  src = builtins.path {
-    path = ../.;
-  };
-
-  buildInputs = dependencies;
-  nativeBuildInputs = dependencies;
+  LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
 
   cargoLock.lockFile = ../Cargo.lock;
 

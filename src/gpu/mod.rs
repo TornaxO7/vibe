@@ -23,7 +23,7 @@ impl GpuCtx {
                 ..Default::default()
             })
             .block_on()
-            .unwrap();
+            .expect("Couldn't find GPU device.");
 
         info!("Choosing for rendering: {}", adapter.get_info().name);
 
