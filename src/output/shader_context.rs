@@ -8,7 +8,10 @@ use raw_window_handle::{
 use smithay_client_toolkit::shell::{wlr_layer::LayerSurface, WaylandSurface};
 use wayland_client::{Connection, Proxy};
 use wgpu::{
-    naga::{front::glsl, ShaderStage},
+    naga::{
+        front::{glsl, wgsl},
+        ShaderStage,
+    },
     PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
 
@@ -94,6 +97,9 @@ impl ShaderCtx {
                         frontend
                             .parse(&glsl::Options::from(ShaderStage::Fragment), code)
                             .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
+                    }
+                    ShaderCode::Wgsl(code) => {
+                        wgsl::parse_str(code).map_err(|err| anyhow!("{}", err.emit_to_string(code)))
                     }
                 }?;
 

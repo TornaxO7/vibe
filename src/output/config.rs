@@ -11,9 +11,12 @@ const OUTPUT_CONFIG_DIR_NAME: &str = "output_configs";
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
+type Code = String;
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShaderCode {
-    Glsl(String),
+    Glsl(Code),
+    Wgsl(Code),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,9 +39,9 @@ impl OutputConfig {
                         .generate_to_string(Some(include_str!("./shaders/default.glsl")))
                         .unwrap(),
                 ),
-                ShaderCode::Glsl(
-                    TemplateLang::Glsl
-                        .generate_to_string(Some(include_str!("./shaders/default.glsl")))
+                ShaderCode::Wgsl(
+                    TemplateLang::Wgsl
+                        .generate_to_string(Some(include_str!("./shaders/default.wgsl")))
                         .unwrap(),
                 ),
             ],
