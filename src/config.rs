@@ -1,5 +1,7 @@
-use serde::{Deserialize, Serialize};
 use std::io;
+
+use anyhow::Context;
+use serde::{Deserialize, Serialize};
 
 use crate::gpu::GraphicsConfig;
 
@@ -17,7 +19,7 @@ impl Config {
     }
 }
 
-pub fn load() -> io::Result<Config> {
+pub fn load() -> anyhow::Result<Config> {
     let content = std::fs::read_to_string(vibe_daemon::get_config_path())?;
-    Ok(toml::from_str(&content).unwrap())
+    toml::from_str(&content).context("Your config file is invalid!")
 }

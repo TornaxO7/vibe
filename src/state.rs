@@ -1,5 +1,3 @@
-use std::collections::HashMap;
-
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry,
@@ -11,6 +9,7 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
+use std::collections::HashMap;
 use tracing::{error, info, warn};
 use wayland_client::{
     globals::GlobalList,
@@ -20,8 +19,7 @@ use wayland_client::{
 
 use crate::{
     gpu::GpuCtx,
-    output::config::OutputConfig,
-    output::{OutputCtx, Size},
+    output::{config::OutputConfig, OutputCtx, Size},
 };
 
 pub struct State {
@@ -38,24 +36,38 @@ pub struct State {
 }
 
 impl State {
-    pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> Self {
-        let vibe_config = match crate::config::load() {
-            Ok(conf) => conf,
-            Err(err) => {
-                warn!("Couldn't load config file: {}", err);
-                warn!("Creating new default config file.");
-                let conf = crate::config::Config::default();
+    pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> anyhow::Result<Self> {
+        let vibe_config = crate::config::load().unwrap_or_else(|err| {
+            let path = vibe_daemon::get_config_path();
+            let backup_path = {
+                let mut path = path.clone();
+                path.set_extension("back");
+                path
+            };
 
-                if let Err(err) = conf.save() {
-                    error!("Couldn't save config file: {}", err);
-                }
+            warn!(
+                "{:?} {} will be backup to {} and the default config will be saved and used.",
+                err,
+                path.to_string_lossy(),
+                backup_path.to_string_lossy()
+            );
 
-                conf
-            }
-        };
+            let config = crate::config::Config::default();
+            if let Err(err) = std::fs::copy(&path, &backup_path) {
+                warn!(
+                    "Couldn't backup config file: {}. Won't create new config file.",
+                    err
+                );
+            } else if let Err(err) = config.save() {
+                warn!("Couldn't create default config file: {}", err);
+            };
+
+            config
+        });
+
         let gpu = GpuCtx::new(&vibe_config.graphics_config);
 
-        Self {
+        Ok(Self  {
             run: true,
             compositor_state: CompositorState::bind(globals, qh).unwrap(),
             output_state: OutputState::new(globals, qh),
@@ -64,7 +76,7 @@ impl State {
             gpu,
 
             outputs: HashMap::new(),
-        }
+        })
     }
 }
 

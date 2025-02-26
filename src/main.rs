@@ -6,7 +6,6 @@ mod state;
 use std::num::NonZeroUsize;
 
 use state::State;
-use tracing::{debug, info};
 use tracing_subscriber::EnvFilter;
 use wayland_client::{globals::registry_queue_init, Connection};
 
@@ -19,7 +18,7 @@ fn main() -> anyhow::Result<()> {
         let conn = Connection::connect_to_env()?;
         let (globals, event_loop) = registry_queue_init(&conn)?;
         let qh = event_loop.handle();
-        let state = State::new(&globals, &qh);
+        let state = State::new(&globals, &qh)?;
 
         (state, event_loop)
     };
@@ -40,7 +39,4 @@ fn init_logging() {
         .without_time()
         .pretty()
         .init();
-
-    debug!("Debug logger initialised");
-    info!("Info logger initialised");
 }
