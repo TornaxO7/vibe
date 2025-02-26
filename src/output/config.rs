@@ -20,7 +20,7 @@ pub struct OutputConfig {
 }
 
 impl OutputConfig {
-    pub fn new(info: &OutputInfo) -> io::Result<Self> {
+    pub fn new(info: &OutputInfo) -> anyhow::Result<Self> {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {

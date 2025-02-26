@@ -1,3 +1,4 @@
+use anyhow::Context;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry,
@@ -55,11 +56,11 @@ impl State {
             let config = crate::config::Config::default();
             if let Err(err) = std::fs::copy(&path, &backup_path) {
                 warn!(
-                    "Couldn't backup config file: {}. Won't create new config file.",
+                    "Couldn't backup config file: {:?}. Won't create new config file.",
                     err
                 );
             } else if let Err(err) = config.save() {
-                warn!("Couldn't create default config file: {}", err);
+                warn!("Couldn't create default config file: {:?}", err);
             };
 
             config
@@ -72,7 +73,10 @@ impl State {
             compositor_state: CompositorState::bind(globals, qh).unwrap(),
             output_state: OutputState::new(globals, qh),
             registry_state: RegistryState::new(globals),
-            layer_shell: LayerShell::bind(globals, qh).expect("Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required."),
+            layer_shell: LayerShell::bind(globals, qh).context(concat![
+                "Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required for this program to run.\n",
+                "Here's a list of compositors which implements this protocol: <https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support>\n"
+            ])?,
             gpu,
 
             outputs: HashMap::new(),
@@ -88,7 +92,14 @@ impl OutputHandler for State {
 
     fn new_output(&mut self, conn: &Connection, qh: &QueueHandle<Self>, output: WlOutput) {
         let info = self.output_state.info(&output).expect("Get output info");
-        let name = info.name.clone().unwrap();
+        let name = info.name.clone().context(concat![
+            "Ok, this might sound stupid, but I hoped that every compositor would give each output a name...\n",
+            "but it looks like as if your compositor isn't doing that.\n",
+            "Please create an issue and tell which compositor you're using (and that you got this error (you can copy+paste this)).\n",
+            "\n",
+            "Sorry for the inconvenience."
+        ]).unwrap();
+
         info!("Detected output: '{}'", &name);
 
         let config = match crate::output::config::load(&info) {
@@ -103,7 +114,7 @@ impl OutputHandler for State {
                 }
                 Err(err) => {
                     error!(
-                        "Couldn't create new config for output '{}': {}. Skipping output...",
+                        "Couldn't create new config for output '{}': {:?}. Skipping output...",
                         name, err
                     );
                     return;
@@ -112,7 +123,7 @@ impl OutputHandler for State {
         };
 
         if !config.enable {
-            info!("Output is disabled. Skipping output.");
+            info!("Output is disabled. Skipping output '{}'", name);
             return;
         }
 
@@ -127,13 +138,14 @@ impl OutputHandler for State {
             )
         };
 
-        let ctx = match OutputCtx::new(conn, info, layer_surface, &self.gpu, config) {
+        let ctx = match OutputCtx::new(&name, conn, info, layer_surface, &self.gpu, config) {
             Ok(ctx) => ctx,
             Err(err) => {
-                error!("Couldn't prepare new registered output: {}", err);
+                error!("Skipping output '{}' because {:?}", name, err);
                 return;
             }
         };
+
         self.outputs.insert(output, ctx);
     }
 
