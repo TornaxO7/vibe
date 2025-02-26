@@ -1,4 +1,4 @@
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use shady::{Shady, ShadyRenderPipeline};
 use std::{borrow::Cow, ptr::NonNull};
 
@@ -31,6 +31,7 @@ pub struct ShaderCtx {
 
 impl ShaderCtx {
     pub fn new(
+        name: &str,
         conn: &Connection,
         size: Size,
         layer_surface: &LayerSurface,
@@ -90,17 +91,37 @@ impl ShaderCtx {
         let pipelines = {
             let mut pipelines = Vec::new();
 
-            for shader_code in config.shader_code.iter() {
+            for (i, shader_code) in config.shader_code.iter().enumerate() {
+                let shader_index = i + 1; // `i` starts with 0
+                let num_abbreviation = match shader_index {
+                    1 => "st",
+                    2 => "nd",
+                    3 => "rd",
+                    _ => "th",
+                };
+
                 let fragment_module = match shader_code {
                     ShaderCode::Glsl(code) => {
                         let mut frontend = glsl::Frontend::default();
                         frontend
                             .parse(&glsl::Options::from(ShaderStage::Fragment), code)
                             .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
+                            .with_context(|| {
+                                let shader_pos = i + 1; // `i` starts with 0
+                                format!(
+                                    "your {}{}shader (it's a glsl shader) of '{}' is invalid",
+                                    shader_pos, num_abbreviation, name
+                                )
+                            })
                     }
-                    ShaderCode::Wgsl(code) => {
-                        wgsl::parse_str(code).map_err(|err| anyhow!("{}", err.emit_to_string(code)))
-                    }
+                    ShaderCode::Wgsl(code) => wgsl::parse_str(code)
+                        .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
+                        .with_context(|| {
+                            format!(
+                                "your {}{} shader (it's a wgsl shader) of '{}' is invalid",
+                                shader_index, num_abbreviation, name
+                            )
+                        }),
                 }?;
 
                 let pipeline = shady::create_render_pipeline(
