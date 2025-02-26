@@ -25,7 +25,26 @@ sudo apt install librust-wayland-client-dev librust-alsa-sys-dev libxkbcommon-de
 4. Your microphone is very likely be catched as the audio source.
    To fix that open up `pavucontrol` and set the audio source (see: https://github.com/TornaxO7/shady?tab=readme-ov-file#shady-audio-doesnt-listen-to-my-systems-audio)
 
-# Output config file format
+# Configs
+
+## General config file
+
+`~/.config/vibe-daemon/config.toml` contains the config `vibe-daemon` itself and has the following options:
+
+```toml
+[graphics_config]
+# Decide which gpu vibe should prefer.
+# Can be either "low-power" (often your integrated GPU) or "high-performance" (your external GPU)
+power_preference = "low-power"
+
+# Set backend which you'd like to use. Can be any of those entries with `pub const <NAME>`: https://docs.rs/wgpu/latest/wgpu/struct.Backends.html#implementations
+# Note:
+#  - It's recommended to let it be `VULKAN`
+#  - Writing each letter CAPITALIZED is required!
+backend = "VULKAN"
+```
+
+## Output config file format
 
 If you'd like to tweak around:
 The config for each output can be seen in `~/.config/vibe-daemon/output_configs/<output-name>.toml`.
