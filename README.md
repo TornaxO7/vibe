@@ -8,7 +8,8 @@ A desktop [glava] like desktop music visualizer by using shaders!
 
 # State
 
-Stable. Just start the binary and "it should work".
+It's alpha sofware and "it works on my machine".
+However, it _should_ work _almost_ out of the box (you have to choose the audio source on which it should listen on).
 Feel free to create an issue if you encounter a bug or if you have a feature request!
 
 # Usage
