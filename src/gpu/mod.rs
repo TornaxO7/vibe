@@ -16,7 +16,7 @@ pub struct GpuCtx {
 
 impl GpuCtx {
     pub fn new(config: &GraphicsConfig) -> Self {
-        let instance = Instance::new(&wgpu::InstanceDescriptor::default());
+        let instance = Instance::new(&wgpu::InstanceDescriptor::from_env_or_default());
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: config.power_preference,
