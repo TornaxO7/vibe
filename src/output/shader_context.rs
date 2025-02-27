@@ -75,6 +75,18 @@ impl ShaderCtx {
                 .copied()
                 .unwrap();
 
+            if !surface_caps
+                .alpha_modes
+                .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
+            {
+                todo!(concat![
+                    "Ok, now this is getting tricky (great to hear that from a software, right?)\n",
+                    "Simply speaking: For the time being I'm expecting that the selected gpu supports the 'PreMultiplied'-'feature'\n",
+                    "but the selected gpu only supports: {:?}\n",
+                    "Please create an issue (or give the existing issue an upvote) that you've encountered this so I can priotize this problem."
+                ], &surface_caps.alpha_modes);
+            }
+
             wgpu::SurfaceConfiguration {
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
                 format,
