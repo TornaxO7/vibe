@@ -1,6 +1,11 @@
 pub mod config;
 mod shader_context;
 
+use std::ptr::NonNull;
+
+use raw_window_handle::{
+    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
+};
 use smithay_client_toolkit::{
     output::OutputInfo,
     shell::{
@@ -8,7 +13,8 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use wayland_client::{Connection, QueueHandle};
+use wayland_client::{Connection, Proxy, QueueHandle};
+use wgpu::Surface;
 
 use crate::{gpu::GpuCtx, state::State};
 use config::OutputConfig;
@@ -62,7 +68,28 @@ impl OutputCtx {
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.commit();
 
-        let shader_ctx = ShaderCtx::new(name, conn, size, &layer_surface, gpu, &config)?;
+        let shader_ctx = {
+            let surface: Surface<'static> = {
+                let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
+                    NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
+                ));
+
+                let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
+                    NonNull::new(layer_surface.wl_surface().id().as_ptr() as *mut _).unwrap(),
+                ));
+
+                unsafe {
+                    gpu.instance()
+                        .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                            raw_display_handle,
+                            raw_window_handle,
+                        })
+                        .unwrap()
+                }
+            };
+
+            ShaderCtx::new(name, size, gpu, surface, &config)?
+        };
 
         Ok(Self {
             shader_ctx,

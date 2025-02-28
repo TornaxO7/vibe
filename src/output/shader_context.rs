@@ -1,12 +1,7 @@
 use anyhow::{anyhow, Context};
 use shady::{Shady, ShadyRenderPipeline};
-use std::{borrow::Cow, ptr::NonNull};
+use std::borrow::Cow;
 
-use raw_window_handle::{
-    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
-};
-use smithay_client_toolkit::shell::{wlr_layer::LayerSurface, WaylandSurface};
-use wayland_client::{Connection, Proxy};
 use wgpu::{
     naga::{
         front::{glsl, wgsl},
@@ -32,10 +27,9 @@ pub struct ShaderCtx {
 impl ShaderCtx {
     pub fn new(
         name: &str,
-        conn: &Connection,
         size: Size,
-        layer_surface: &LayerSurface,
         gpu: &GpuCtx,
+        surface: Surface<'static>,
         config: &OutputConfig,
     ) -> anyhow::Result<Self> {
         let shady = {
@@ -45,25 +39,6 @@ impl ShaderCtx {
             shady.set_audio_bars(gpu.device(), config.amount_bars);
             shady.set_resolution(size.width, size.height);
             shady
-        };
-
-        let surface: Surface<'static> = {
-            let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
-                NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
-            ));
-
-            let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
-                NonNull::new(layer_surface.wl_surface().id().as_ptr() as *mut _).unwrap(),
-            ));
-
-            unsafe {
-                gpu.instance()
-                    .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                        raw_display_handle,
-                        raw_window_handle,
-                    })
-                    .unwrap()
-            }
         };
 
         let surface_config = {
