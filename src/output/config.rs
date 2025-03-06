@@ -26,18 +26,11 @@ impl OutputConfig {
         let new = Self {
             enable: true,
             amount_bars: crate::DEFAULT_AMOUNT_BARS,
-            shader_code: vec![
-                ShaderCode::Glsl(
-                    TemplateLang::Glsl
-                        .generate_to_string(Some(include_str!("./shaders/default.glsl")))
-                        .unwrap(),
-                ),
-                ShaderCode::Wgsl(
-                    TemplateLang::Wgsl
-                        .generate_to_string(Some(include_str!("./shaders/default.wgsl")))
-                        .unwrap(),
-                ),
-            ],
+            shader_code: vec![ShaderCode::Glsl(
+                TemplateLang::Glsl
+                    .generate_to_string(Some(include_str!("./shaders/default.glsl")))
+                    .unwrap(),
+            )],
         };
 
         new.save(name)?;
