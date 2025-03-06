@@ -41,7 +41,7 @@ impl State {
     pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> anyhow::Result<Self> {
         let Ok(layer_shell) = LayerShell::bind(globals, qh) else {
             error!(concat![
-                "Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required for this program to run.\n",
+                "Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required for this program to run. ",
                 "Here's a list of compositors which implements this protocol: <https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support>\n"
             ]);
 

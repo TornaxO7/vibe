@@ -1,6 +1,6 @@
 # Vibe
 
-A desktop [glava] like desktop music visualizer by using shaders!
+A desktop music visualizer inspired by [glava] and [shadertoy]!
 
 # Demo
 
@@ -8,11 +8,10 @@ A desktop [glava] like desktop music visualizer by using shaders!
 
 # State
 
-It's alpha sofware and "it works on my machine".
-I've implemented basically everything I wanted and I'm mostly looking for suggestions/further ideas on how
-to improve it or fix bugs. Feel free to create an issue if you have an idea/suggestion or found a bug.
+It works on my machine :) I've implemented basically everything I wanted and I'm mostly looking for feedback/suggestions/further ideas on how
+to improve it or fixing bugs. Feel free to create an issue if you have an idea/suggestion or found a bug (but I can't promise to tackle every idea/suggestion).
 
-**NOTE:** Since I mostly wrote this software for me, I didn't create a release package since it might contain a lot of bugs for others.
+**NOTE:** Since I mostly wrote this software for myself, I didn't create a releases since it might contain a lot of bugs for others.
 Also please consider that there could be breaking changes in the future with your config.
 
 # Usage
@@ -25,3 +24,4 @@ See [CONFIG.md](./CONFIG.md).
 
 [shady-toy]: https://github.com/TornaxO7/shady/tree/main/shady-toy
 [glava]: https://github.com/jarcode-foss/glava
+[shadertoy]: https://www.shadertoy.com/
