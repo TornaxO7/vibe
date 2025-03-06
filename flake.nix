@@ -22,7 +22,8 @@
             ];
           };
 
-          packages = {
+          packages = rec {
+            default = vibe-daemon;
             vibe-daemon = pkgs.callPackage (import ./nix/vibe-daemon-package.nix) { };
           };
 

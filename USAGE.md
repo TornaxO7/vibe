@@ -22,3 +22,13 @@ sudo apt install rustup librust-wayland-client-dev librust-alsa-sys-dev libxkbco
 ```
 sudo dnf install rustup rust-wayland-client-devel rust-alsa-sys-devel libxkbcommon-devel pavucontrol
 ```
+
+## `nix` (flakes)
+
+You can simply run the binary with the following command:
+
+```
+nix run github:TornaxO7/vibe
+```
+
+This flake also provides a package for it if you'd like to install it permanently. Take a look into the `flake.nix` for that.
