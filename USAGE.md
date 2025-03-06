@@ -1,6 +1,6 @@
 # Usage
 
-1. Install the dependencies (see the `Dependencies` section below).
+1. Install the dependencies (see the [`Dependencies`](https://github.com/TornaxO7/vibe/blob/main/USAGE.md#dependencies) section below).
 2. (optional) set the rust toolchain `rustup default stable`
 3. Compile and run the binary with `cargo run --release`.
 4. Your microphone is very likely be catched as the audio source.
