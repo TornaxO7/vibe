@@ -41,4 +41,4 @@ See [CONFIG.md](./CONFIG.md).
 [shadertoy]: https://www.shadertoy.com/
 [wgsl]: https://www.w3.org/TR/WGSL/
 [glsl]: https://www.khronos.org/opengl/wiki/Core_Language_(GLSL)
-[wlr-layer-shell]: https://wayland.app/protocols/wlr-layer-shell-unstable-v1
+[`wlr-layer-shell`]: https://wayland.app/protocols/wlr-layer-shell-unstable-v1
