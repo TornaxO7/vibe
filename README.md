@@ -17,14 +17,14 @@ for a list of compositors on which `vibe` should be able to run.
 
 # State
 
-It works on my machine and I've implemented basicaly everything I wanted and now I'm looking for some feedback. For example in form of
+It works on my machine and I've implemented basicaly everything I wanted and now I'm open for some feedback. For example in form of
 
 - finding bugs
 - suggestions or more ideas
 - better user experience
 
 Feel free to create an issue if you found a bug and/or an idea discussion if you'd like to suggest something.
-However I can't promise to work on every suggestion :>
+However I can't promise to work on every suggestion/bug :>
 
 **Note:** `vibe` isn't stable yet (maybe in the future?) so be prepared for breaking changes.
 
