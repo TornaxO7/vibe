@@ -1,9 +1,17 @@
 use std::io;
 
-use anyhow::Context;
 use serde::{Deserialize, Serialize};
 
 use crate::gpu::GraphicsConfig;
+
+#[derive(thiserror::Error, Debug)]
+pub enum ConfigError {
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    #[error("The config file format is invalid: {0}")]
+    Serde(#[from] toml::de::Error),
+}
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Config {
@@ -19,7 +27,7 @@ impl Config {
     }
 }
 
-pub fn load() -> anyhow::Result<Config> {
+pub fn load() -> Result<Config, ConfigError> {
     let content = std::fs::read_to_string(vibe_daemon::get_config_path())?;
-    toml::from_str(&content).context("Your config file is invalid!")
+    toml::from_str(&content).map_err(|err| err.into())
 }

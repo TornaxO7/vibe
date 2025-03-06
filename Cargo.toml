@@ -9,6 +9,7 @@ repository = "https://github.com/TornaxO7/vibe"
 
 [dependencies]
 anyhow = "1"
+thiserror = "2"
 
 bytemuck = "1.22"
 pollster = "0.4"

@@ -19,6 +19,7 @@ use wayland_client::{
 };
 
 use crate::{
+    config::ConfigError,
     gpu::GpuCtx,
     output::{config::OutputConfig, OutputCtx, Size},
 };
@@ -39,31 +40,46 @@ pub struct State {
 impl State {
     pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> anyhow::Result<Self> {
         let vibe_config = crate::config::load().unwrap_or_else(|err| {
-            let path = vibe_daemon::get_config_path();
-            let backup_path = {
-                let mut path = path.clone();
-                path.set_extension("back");
-                path
+            let config_path = vibe_daemon::get_config_path();
+            let default_config = crate::config::Config::default();
+
+            match err {
+                ConfigError::IO(io_err) =>
+                {
+                    match io_err.kind() {
+                        std::io::ErrorKind::NotFound => {
+                            if let Err(err) = default_config.save() {
+                                warn!("Couldn't save default config file: {:?}", err);
+                            }
+                        }
+                        _other => {
+                            warn!("{}. Fallback to default config file", io_err);
+                        }
+                    };
+                },
+                ConfigError::Serde(serde_err) => {
+                    let backup_path = {
+                        let mut path = config_path.clone();
+                        path.set_extension("back");
+                        path
+                    };
+
+                    warn!(
+                        "{:?} {} will be backup to {} and the default config will be saved and used.",
+                        serde_err,
+                        config_path.to_string_lossy(),
+                        backup_path.to_string_lossy()
+                    );
+
+                    if let Err(err) = std::fs::copy(&config_path, &backup_path) {
+                        warn!("Couldn't backup config file: {:?}. Won't create new config file.", err);
+                    } else if let Err(err) = default_config.save() {
+                        warn!("Couldn't create default config file: {:?}", err);
+                    };
+                }
             };
 
-            warn!(
-                "{:?} {} will be backup to {} and the default config will be saved and used.",
-                err,
-                path.to_string_lossy(),
-                backup_path.to_string_lossy()
-            );
-
-            let config = crate::config::Config::default();
-            if let Err(err) = std::fs::copy(&path, &backup_path) {
-                warn!(
-                    "Couldn't backup config file: {:?}. Won't create new config file.",
-                    err
-                );
-            } else if let Err(err) = config.save() {
-                warn!("Couldn't create default config file: {:?}", err);
-            };
-
-            config
+            default_config
         });
 
         let gpu = GpuCtx::new(&vibe_config.graphics_config);
