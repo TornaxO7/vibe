@@ -39,6 +39,15 @@ pub struct State {
 
 impl State {
     pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> anyhow::Result<Self> {
+        let Ok(layer_shell) = LayerShell::bind(globals, qh) else {
+            error!(concat![
+                "Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required for this program to run.\n",
+                "Here's a list of compositors which implements this protocol: <https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support>\n"
+            ]);
+
+            panic!("wlr_layer_shell protocol is not supported by compositor.");
+        };
+
         let vibe_config = crate::config::load().unwrap_or_else(|err| {
             let config_path = vibe_daemon::get_config_path();
             let default_config = crate::config::Config::default();
@@ -84,15 +93,12 @@ impl State {
 
         let gpu = GpuCtx::new(&vibe_config.graphics_config);
 
-        Ok(Self  {
+        Ok(Self {
             run: true,
             compositor_state: CompositorState::bind(globals, qh).unwrap(),
             output_state: OutputState::new(globals, qh),
             registry_state: RegistryState::new(globals),
-            layer_shell: LayerShell::bind(globals, qh).context(concat![
-                "Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required for this program to run.\n",
-                "Here's a list of compositors which implements this protocol: <https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support>\n"
-            ])?,
+            layer_shell,
             gpu,
 
             outputs: HashMap::new(),
