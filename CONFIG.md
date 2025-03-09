@@ -56,6 +56,11 @@ void main() {
 }
 """
 
+[[shader_code]]
+# You can also pick one of the pre-conifgured shaders: https://github.com/TornaxO7/vibe-shaders/
+# Just enter the directory name here.
+VibeShader = "galaxy_pulse"
+
 # this will be rendered next
 [[shader_code]]
 Wgsl = """
