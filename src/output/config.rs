@@ -1,15 +1,19 @@
+use anyhow::{anyhow, Context};
 use std::{ffi::OsStr, io, num::NonZeroUsize};
 
 use serde::{Deserialize, Serialize};
 use shady::TemplateLang;
 use smithay_client_toolkit::output::OutputInfo;
+use wgpu::naga::{front::glsl, Module, ShaderStage};
 
 type Code = String;
+type DirName = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShaderCode {
     Glsl(Code),
     Wgsl(Code),
+    VibeShader(DirName),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
