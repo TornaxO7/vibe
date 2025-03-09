@@ -17,6 +17,11 @@ raw-window-handle = "0.6"
 tracing = "0.1"
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
+  "blocking",
+] }
+
 wayland-client = "0.31"
 wayland-backend = { version = "0.3", features = ["client_system"] }
 smithay-client-toolkit = "0.19"

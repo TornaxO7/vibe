@@ -5,11 +5,13 @@ use shady::TemplateLang;
 use smithay_client_toolkit::output::OutputInfo;
 
 type Code = String;
+type DirName = String;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShaderCode {
     Glsl(Code),
     Wgsl(Code),
+    VibeShader(DirName),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

@@ -1,11 +1,13 @@
 use anyhow::{anyhow, Context};
+use reqwest::blocking::Client;
 use shady::{Shady, ShadyRenderPipeline};
 use std::borrow::Cow;
+use tracing::error;
 
 use wgpu::{
     naga::{
         front::{glsl, wgsl},
-        ShaderStage,
+        Module, ShaderStage,
     },
     PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
@@ -78,6 +80,8 @@ impl ShaderCtx {
         let pipelines = {
             let mut pipelines = Vec::new();
 
+            let client = Client::new();
+
             for (i, shader_code) in config.shader_code.iter().enumerate() {
                 let shader_index = i + 1; // `i` starts with 0
                 let num_abbreviation = match shader_index {
@@ -89,26 +93,34 @@ impl ShaderCtx {
 
                 let fragment_module = match shader_code {
                     ShaderCode::Glsl(code) => {
-                        let mut frontend = glsl::Frontend::default();
-                        frontend
-                            .parse(&glsl::Options::from(ShaderStage::Fragment), code)
-                            .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
-                            .with_context(|| {
-                                let shader_pos = i + 1; // `i` starts with 0
-                                format!(
-                                    "your {}{}shader (it's a glsl shader) of '{}' is invalid",
-                                    shader_pos, num_abbreviation, name
-                                )
-                            })
+                        get_glsl_module(code, shader_index, num_abbreviation, name)
                     }
-                    ShaderCode::Wgsl(code) => wgsl::parse_str(code)
-                        .map_err(|err| anyhow!("{}", err.emit_to_string(code)))
-                        .with_context(|| {
-                            format!(
-                                "your {}{} shader (it's a wgsl shader) of '{}' is invalid",
-                                shader_index, num_abbreviation, name
-                            )
-                        }),
+                    ShaderCode::Wgsl(code) => {
+                        get_wgsl_module(code, shader_index, num_abbreviation, name)
+                    }
+                    ShaderCode::VibeShader(dir_name) => {
+                        let url = format!("https://raw.githubusercontent.com/TornaxO7/vibe-shaders/refs/heads/main/{}/code.toml", dir_name);
+                        let body = client
+                            .get(url)
+                            .send()
+                            .context("Send http request to fetch shader code")?
+                            .text()
+                            .unwrap();
+                        let shader_code: ShaderCode = toml::from_str(&body)?;
+
+                        match shader_code {
+                            ShaderCode::Glsl(code) => {
+                                get_glsl_module(code, shader_index, num_abbreviation, name)
+                            }
+                            ShaderCode::Wgsl(code) => {
+                                get_wgsl_module(code, shader_index, num_abbreviation, name)
+                            }
+                            ShaderCode::VibeShader(_) => {
+                                error!("The shader in '{}' refers to another shader. Please create an issue this shouldn't happen! Going to skip this shader...", dir_name);
+                                continue;
+                            }
+                        }
+                    }
                 }?;
 
                 let pipeline = shady::create_render_pipeline(
@@ -160,4 +172,38 @@ impl ShaderCtx {
     pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
         self.shady.add_render_pass(encoder, view, &self.pipelines);
     }
+}
+
+fn get_glsl_module(
+    code: impl AsRef<str>,
+    shader_index: usize,
+    num_abbreviation: &str,
+    output_name: &str,
+) -> anyhow::Result<Module> {
+    let mut frontend = glsl::Frontend::default();
+    frontend
+        .parse(&glsl::Options::from(ShaderStage::Fragment), code.as_ref())
+        .map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
+        .with_context(|| {
+            format!(
+                "your {}{}shader (it's a glsl shader) of '{}' is invalid",
+                shader_index, num_abbreviation, output_name
+            )
+        })
+}
+
+fn get_wgsl_module(
+    code: impl AsRef<str>,
+    shader_index: usize,
+    num_abbreviation: &str,
+    output_name: &str,
+) -> anyhow::Result<Module> {
+    wgsl::parse_str(code.as_ref())
+        .map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
+        .with_context(|| {
+            format!(
+                "your {}{} shader (it's a wgsl shader) of '{}' is invalid",
+                shader_index, num_abbreviation, output_name
+            )
+        })
 }
