@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Context};
-use pollster::FutureExt;
+use reqwest::blocking::Client;
 use shady::{Shady, ShadyRenderPipeline};
 use std::borrow::Cow;
 use tracing::error;
@@ -80,6 +80,8 @@ impl ShaderCtx {
         let pipelines = {
             let mut pipelines = Vec::new();
 
+            let client = Client::new();
+
             for (i, shader_code) in config.shader_code.iter().enumerate() {
                 let shader_index = i + 1; // `i` starts with 0
                 let num_abbreviation = match shader_index {
@@ -98,14 +100,12 @@ impl ShaderCtx {
                     }
                     ShaderCode::VibeShader(dir_name) => {
                         let url = format!("https://raw.githubusercontent.com/TornaxO7/vibe-shaders/refs/heads/main/{}/code.toml", dir_name);
-
-                        let body = reqwest::get(url)
-                            .block_on()
-                            .unwrap()
+                        let body = client
+                            .get(url)
+                            .send()
+                            .context("Send http request to fetch shader code")?
                             .text()
-                            .block_on()
                             .unwrap();
-
                         let shader_code: ShaderCode = toml::from_str(&body)?;
 
                         match shader_code {
