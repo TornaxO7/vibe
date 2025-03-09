@@ -160,7 +160,15 @@ impl OutputHandler for State {
             )
         };
 
-        let ctx = match OutputCtx::new(&name, conn, info, layer_surface, &self.gpu, config) {
+        let ctx = match OutputCtx::new(
+            &name,
+            conn,
+            &self.compositor_state,
+            info,
+            layer_surface,
+            &self.gpu,
+            config,
+        ) {
             Ok(ctx) => ctx,
             Err(err) => {
                 error!("Skipping output '{}' because {:?}", name, err);
