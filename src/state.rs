@@ -255,16 +255,26 @@ impl LayerShellHandler for State {
         configure: LayerSurfaceConfigure,
         _serial: u32,
     ) {
+        tracing::debug!("Configure");
         let new_size = Size::from(configure.new_size);
 
-        let ctx = self
+        let output = self
             .outputs
             .values_mut()
             .find(|ctx| ctx.layer_surface() == layer)
             .unwrap();
 
-        ctx.resize(&self.gpu, new_size);
-        ctx.request_redraw(qh);
+        output.resize(&self.gpu, new_size);
+
+        // start rendering
+        match self.gpu.render(output) {
+            Ok(_) => output.request_redraw(qh),
+            Err(wgpu::SurfaceError::OutOfMemory) => unreachable!("Out of memory"),
+            Err(wgpu::SurfaceError::Timeout) => {
+                error!("A frame took too long to be present")
+            }
+            Err(err) => warn!("{}", err),
+        };
     }
 }
 

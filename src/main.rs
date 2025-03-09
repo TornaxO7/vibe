@@ -39,4 +39,6 @@ fn init_logging() {
         .without_time()
         .pretty()
         .init();
+
+    tracing::debug!("Debug logging enabled");
 }
