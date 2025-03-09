@@ -20,6 +20,8 @@ backend = "VULKAN"
 If you'd like to tweak around:
 The config for each output can be seen in `~/.config/vibe-daemon/output_configs/<output-name>.toml`.
 
+There you can add/remove/edit shaders of the given output. You can also add/use prewritten shaders from [vibe-shaders](https://github.com/TornaxO7/vibe-shaders/). See below for an example.
+
 The config file has the following format:
 
 ```toml
