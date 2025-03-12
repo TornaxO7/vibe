@@ -1,11 +1,11 @@
 pub mod config;
-mod shader_context;
 
 use std::ptr::NonNull;
 
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
 };
+use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
     compositor::{CompositorState, Region},
     output::OutputInfo,
@@ -14,12 +14,15 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
+use tracing::error;
 use wayland_client::{Connection, Proxy, QueueHandle};
-use wgpu::Surface;
+use wgpu::{PresentMode, Surface, SurfaceConfiguration};
 
-use crate::{gpu::GpuCtx, state::State};
+use crate::{
+    renderer::{Renderer, ShaderCtx},
+    state::State,
+};
 use config::OutputConfig;
-use shader_context::ShaderCtx;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
@@ -47,21 +50,36 @@ impl From<(u32, u32)> for Size {
     }
 }
 
+impl From<&SurfaceConfiguration> for Size {
+    fn from(value: &SurfaceConfiguration) -> Self {
+        Self {
+            width: value.width,
+            height: value.height,
+        }
+    }
+}
+
+/// Contains every relevant information for an output.
 pub struct OutputCtx {
-    shader_ctx: ShaderCtx,
+    shaders: Vec<ShaderCtx>,
+
+    surface_config: SurfaceConfiguration,
+
+    // don't know if this is required, but better drop the surface first
+    surface: Surface<'static>,
     layer_surface: LayerSurface,
 }
 
 impl OutputCtx {
     pub fn new(
-        name: &str,
         conn: &Connection,
         comp: &CompositorState,
         info: OutputInfo,
         layer_surface: LayerSurface,
-        gpu: &GpuCtx,
+        renderer: &Renderer,
+        sample_processor: &SampleProcessor,
         config: OutputConfig,
-    ) -> anyhow::Result<Self> {
+    ) -> Self {
         let size = Size::from(&info);
 
         {
@@ -74,47 +92,97 @@ impl OutputCtx {
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.commit();
 
-        let shader_ctx = {
-            let surface: Surface<'static> = {
-                let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
-                    NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
-                ));
+        let surface: Surface<'static> = {
+            let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
+                NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
+            ));
 
-                let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
-                    NonNull::new(layer_surface.wl_surface().id().as_ptr() as *mut _).unwrap(),
-                ));
+            let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
+                NonNull::new(layer_surface.wl_surface().id().as_ptr() as *mut _).unwrap(),
+            ));
 
-                unsafe {
-                    gpu.instance()
-                        .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                            raw_display_handle,
-                            raw_window_handle,
-                        })
-                        .unwrap()
-                }
-            };
-
-            ShaderCtx::new(name, size, gpu, surface, &config)?
+            unsafe {
+                renderer
+                    .instance()
+                    .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
+                        raw_display_handle,
+                        raw_window_handle,
+                    })
+                    .unwrap()
+            }
         };
 
-        Ok(Self {
-            shader_ctx,
+        let surface_config = {
+            let surface_caps = surface.get_capabilities(renderer.adapter());
+            let format = surface_caps
+                .formats
+                .iter()
+                .find(|f| f.is_srgb())
+                .copied()
+                .unwrap();
+
+            if !surface_caps
+                .alpha_modes
+                .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
+            {
+                todo!(concat![
+                    "Ok, now this is getting tricky (great to hear that from a software, right?)\n",
+                    "Simply speaking: For the time being I'm expecting that the selected gpu supports the 'PreMultiplied'-'feature'\n",
+                    "but the selected gpu only supports: {:?}\n",
+                    "Please create an issue (or give the existing issue an upvote) that you've encountered this so I can priotize this problem."
+                ], &surface_caps.alpha_modes);
+            }
+
+            let config = wgpu::SurfaceConfiguration {
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                format,
+                width: size.width,
+                height: size.height,
+                present_mode: PresentMode::AutoVsync,
+                alpha_mode: wgpu::CompositeAlphaMode::PreMultiplied,
+                view_formats: vec![],
+                desired_maximum_frame_latency: 3,
+            };
+
+            surface.configure(renderer.device(), &config);
+            config
+        };
+
+        let shaders = {
+            let mut shaders = Vec::with_capacity(config.shaders.len());
+
+            for shader_conf in config.shaders.iter() {
+                let shader = match ShaderCtx::new(
+                    shader_conf,
+                    renderer,
+                    sample_processor,
+                    surface_config.format,
+                ) {
+                    Ok(shader) => shader,
+                    Err(err) => {
+                        error!("Skipping shader due to error:\n\n{}", err);
+                        continue;
+                    }
+                };
+
+                shaders.push(shader);
+            }
+
+            shaders
+        };
+
+        Self {
+            surface_config,
+            surface,
             layer_surface,
-        })
-    }
-
-    pub fn layer_surface(&self) -> &LayerSurface {
-        &self.layer_surface
-    }
-
-    pub fn surface(&self) -> &wgpu::Surface<'static> {
-        self.shader_ctx.surface()
+            shaders,
+        }
     }
 
     pub fn request_redraw(&self, qh: &QueueHandle<State>) {
         let surface = self.layer_surface.wl_surface();
 
-        let size = self.shader_ctx.size();
+        let size = Size::from(&self.surface_config);
         surface.damage(
             0,
             0,
@@ -125,15 +193,28 @@ impl OutputCtx {
         self.layer_surface.commit();
     }
 
-    pub fn resize(&mut self, gpu: &GpuCtx, new_size: Size) {
-        self.shader_ctx.resize(gpu, new_size);
+    pub fn resize(&mut self, renderer: &Renderer, new_size: Size) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.surface_config.width = new_size.width;
+            self.surface_config.height = new_size.height;
+
+            self.surface
+                .configure(renderer.device(), &self.surface_config);
+        }
+    }
+}
+
+// getters
+impl OutputCtx {
+    pub fn shaders(&self) -> &[ShaderCtx] {
+        &self.shaders
     }
 
-    pub fn update_buffers(&mut self, queue: &wgpu::Queue) {
-        self.shader_ctx.update_buffers(queue);
+    pub fn layer_surface(&self) -> &LayerSurface {
+        &self.layer_surface
     }
 
-    pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
-        self.shader_ctx.add_render_pass(encoder, view);
+    pub fn surface(&self) -> &wgpu::Surface<'static> {
+        &self.surface
     }
 }

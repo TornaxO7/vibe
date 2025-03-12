@@ -1,11 +1,12 @@
 use std::{ffi::OsStr, io, num::NonZeroUsize};
 
 use serde::{Deserialize, Serialize};
-use shady::TemplateLang;
 use smithay_client_toolkit::output::OutputInfo;
 
 type Code = String;
 type DirName = String;
+
+const DEFAULT_AMOUNT_BARS: NonZeroUsize = NonZeroUsize::new(60).unwrap();
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ShaderCode {
@@ -15,10 +16,21 @@ pub enum ShaderCode {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShaderConf {
+    pub amount_bars: Option<NonZeroUsize>,
+    pub code: ShaderCode,
+}
+
+impl AsRef<ShaderConf> for ShaderConf {
+    fn as_ref(&self) -> &ShaderConf {
+        self
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
     pub enable: bool,
-    pub amount_bars: NonZeroUsize,
-    pub shader_code: Vec<ShaderCode>,
+    pub shaders: Vec<ShaderConf>,
 }
 
 impl OutputConfig {
@@ -27,12 +39,10 @@ impl OutputConfig {
 
         let new = Self {
             enable: true,
-            amount_bars: crate::DEFAULT_AMOUNT_BARS,
-            shader_code: vec![ShaderCode::Glsl(
-                TemplateLang::Glsl
-                    .generate_to_string(Some(include_str!("./shaders/default.glsl")))
-                    .unwrap(),
-            )],
+            shaders: vec![ShaderConf {
+                amount_bars: Some(DEFAULT_AMOUNT_BARS),
+                code: ShaderCode::Glsl(include_str!("./shaders/default.glsl").to_string()),
+            }],
         };
 
         new.save(name)?;

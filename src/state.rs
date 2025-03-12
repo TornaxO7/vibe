@@ -1,4 +1,5 @@
 use anyhow::Context;
+use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry,
@@ -20,8 +21,8 @@ use wayland_client::{
 
 use crate::{
     config::ConfigError,
-    gpu::GpuCtx,
     output::{config::OutputConfig, OutputCtx, Size},
+    renderer::Renderer,
 };
 
 pub struct State {
@@ -32,7 +33,8 @@ pub struct State {
     layer_shell: LayerShell,
     compositor_state: CompositorState,
 
-    gpu: GpuCtx,
+    renderer: Renderer,
+    sample_processor: SampleProcessor,
 
     outputs: HashMap<WlOutput, OutputCtx>,
 }
@@ -47,6 +49,9 @@ impl State {
 
             panic!("wlr_layer_shell protocol is not supported by compositor.");
         };
+
+        let sample_processor =
+            SampleProcessor::new(SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap());
 
         let vibe_config = crate::config::load().unwrap_or_else(|err| {
             let config_path = vibe_daemon::get_config_path();
@@ -91,7 +96,7 @@ impl State {
             default_config
         });
 
-        let gpu = GpuCtx::new(&vibe_config.graphics_config);
+        let renderer = Renderer::new(&vibe_config.graphics_config);
 
         Ok(Self {
             run: true,
@@ -99,7 +104,9 @@ impl State {
             output_state: OutputState::new(globals, qh),
             registry_state: RegistryState::new(globals),
             layer_shell,
-            gpu,
+            renderer,
+
+            sample_processor,
 
             outputs: HashMap::new(),
         })
@@ -160,21 +167,15 @@ impl OutputHandler for State {
             )
         };
 
-        let ctx = match OutputCtx::new(
-            &name,
+        let ctx = OutputCtx::new(
             conn,
             &self.compositor_state,
             info,
             layer_surface,
-            &self.gpu,
+            &self.renderer,
+            &self.sample_processor,
             config,
-        ) {
-            Ok(ctx) => ctx,
-            Err(err) => {
-                error!("Skipping output '{}' because {:?}", name, err);
-                return;
-            }
-        };
+        );
 
         self.outputs.insert(output, ctx);
     }
@@ -220,14 +221,18 @@ impl CompositorHandler for State {
             .find(|ctx| ctx.layer_surface().wl_surface() == surface)
             .unwrap();
 
-        match self.gpu.render(output) {
-            Ok(_) => output.request_redraw(qh),
+        match output.surface().get_current_texture() {
+            Ok(texture) => {
+                self.renderer.apply_render_pass(&texture, output.shaders());
+                texture.present();
+                output.request_redraw(qh);
+            }
             Err(wgpu::SurfaceError::OutOfMemory) => unreachable!("Out of memory"),
             Err(wgpu::SurfaceError::Timeout) => {
                 error!("A frame took too long to be present")
             }
             Err(err) => warn!("{}", err),
-        }
+        };
     }
 
     fn surface_enter(
@@ -272,11 +277,15 @@ impl LayerShellHandler for State {
             .find(|ctx| ctx.layer_surface() == layer)
             .unwrap();
 
-        output.resize(&self.gpu, new_size);
+        output.resize(&self.renderer, new_size);
 
         // start rendering
-        match self.gpu.render(output) {
-            Ok(_) => output.request_redraw(qh),
+        match output.surface().get_current_texture() {
+            Ok(texture) => {
+                self.renderer.apply_render_pass(&texture, output.shaders());
+                texture.present();
+                output.request_redraw(qh);
+            }
             Err(wgpu::SurfaceError::OutOfMemory) => unreachable!("Out of memory"),
             Err(wgpu::SurfaceError::Timeout) => {
                 error!("A frame took too long to be present")

@@ -1,6 +1,6 @@
 mod config;
-mod gpu;
 mod output;
+mod renderer;
 mod state;
 
 use std::num::NonZeroUsize;

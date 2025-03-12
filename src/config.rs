@@ -2,7 +2,7 @@ use std::io;
 
 use serde::{Deserialize, Serialize};
 
-use crate::gpu::GraphicsConfig;
+use crate::renderer::GraphicsConfig;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigError {
