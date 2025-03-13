@@ -27,28 +27,32 @@ The config file has the following format:
 ```toml
 # set to `false` if you don't want to have any shaders on the given output
 enable = true
-# set the amount of values which are going to be in `iAudio`.
-# The lower frquencies are in the lower indexes (0, 1, 2, etc.) and go up the bigger the index is.
+
+[[shaders]]
+
+# configure the audio buffer for the shader. Currently you can only set the amount of bars
+# you'd like to get in the shader
+[shader.audio]
 amount_bars = 60
 
 # now you can add any amount of shader code you'd like to render.
 # You can add any amount of `[[shader_code]]` which will be rendered.
 # This one gets rendered first
-[[shader_code]]
+[shader.code]
 # choose which shader language will be used. Can be either `Glsl` or `Wgsl`.
 # This just renders the screen red
 Glsl = """
-// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
-// So for example, if you are interested in the bass, choose the lower indices.
-layout(binding = 0) readonly buffer iAudio {
-    float[] freqs;
-};
+layout(set = 0, binding = 0) uniform float iTime;
 
 // x: width
 // y: height
-layout(binding = 1) uniform vec2 iResolution;
+layout(set = 1, binding = 0) uniform vec2 iResolution;
 
-layout(binding = 2) uniform float iTime;
+// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
+// So for example, if you are interested in the bass, choose the lower indices.
+layout(set = 2, binding = 0) readonly buffer iAudio {
+    float[] freqs;
+};
 
 // the color which the pixel should have
 layout(location = 0) out vec4 fragColor;
@@ -58,32 +62,41 @@ void main() {
 }
 """
 
-[[shader_code]]
+[[shaders]]
+
+[shader.audio]
+amount_bars = 60
+
+[shader.code]
 # You can also pick one of the pre-conifgured shaders: https://github.com/TornaxO7/vibe-shaders/
 # Just enter the directory name here.
 VibeShader = "galaxy_pulse"
 
 # this will be rendered next
-[[shader_code]]
+[[shaders]]
+
+[shader.audio]
+amount_bars = 60
+
+[shader.code]
 Wgsl = """
-// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
-// So for example, if you are interested in the bass, choose the lower indices.
 @group(0) @binding(0)
-var<storage, read> iAudio: array<f32, 20>;
+var<uniform> iTime: f32;
 
 // x: width
 // y: height
-@group(0) @binding(1)
+@group(1) @binding(0)
 var<uniform> iResolution: vec2<f32>;
 
-@group(0) @binding(2)
-var<uniform> iTime: f32;
+// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
+// So for example, if you are interested in the bass, choose the lower indices.
+@group(2) @binding(0)
+var<storage, read> iAudio: array<f32>;
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-   return vec4<f32>(1., 0., 0., 1.);
-}
-"""
+    return vec4<f32>(0.);
+}"""
 ```
 
 If you want to have a live-renderer to tweak around easier, just compile [shady-toy] with the following command: `cargo run --release --no-default-features --features=audio,resolution,time`.

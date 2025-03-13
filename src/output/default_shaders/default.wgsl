@@ -6,6 +6,8 @@ var<uniform> iTime: f32;
 @group(1) @binding(0)
 var<uniform> iResolution: vec2<f32>;
 
+// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
+// So for example, if you are interested in the bass, choose the lower indices.
 @group(2) @binding(0)
 var<storage, read> iAudio: array<f32>;
 
