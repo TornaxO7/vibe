@@ -1,7 +1,7 @@
 //! Module to generate templates which can be modified and used for [Shady].
 use std::fmt;
 
-use super::{resources::Resources, BIND_GROUP_INDEX, FRAGMENT_ENTRYPOINT};
+use super::{resources::GlobalResources, BIND_GROUP_INDEX, FRAGMENT_ENTRYPOINT};
 
 pub const DEFAULT_TEMPLATE_WGSL_BODY: &str = "
     let uv = pos.xy/iResolution.xy;
@@ -95,7 +95,7 @@ impl TemplateLang {
     ) -> Result<(), fmt::Error> {
         match self {
             TemplateLang::Wgsl => {
-                Resources::write_wgsl_template(writer, BIND_GROUP_INDEX)?;
+                GlobalResources::write_wgsl_template(writer, BIND_GROUP_INDEX)?;
 
                 writer.write_fmt(format_args!(
                     "
@@ -110,7 +110,7 @@ fn {}(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {{
             }
 
             TemplateLang::Glsl => {
-                Resources::write_glsl_template(writer)?;
+                GlobalResources::write_glsl_template(writer)?;
 
                 writer.write_fmt(format_args!(
                     "

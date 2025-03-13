@@ -1,13 +1,17 @@
 pub mod config;
+mod resources;
+mod shader;
 
-use std::ptr::NonNull;
+use std::borrow::Cow;
 
-use raw_window_handle::{
-    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
+use anyhow::{anyhow, Context};
+use resources::OutputResources;
+use shader::{
+    config::{ShaderCode, ShaderConf},
+    Shader, ShaderResources,
 };
 use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
-    compositor::{CompositorState, Region},
     output::OutputInfo,
     shell::{
         wlr_layer::{Anchor, KeyboardInteractivity, LayerSurface},
@@ -15,102 +19,52 @@ use smithay_client_toolkit::{
     },
 };
 use tracing::error;
-use wayland_client::{Connection, Proxy, QueueHandle};
-use wgpu::{PresentMode, Surface, SurfaceConfiguration};
-
-use crate::{
-    renderer::{Renderer, ShaderCtx},
-    state::State,
+use vibe_daemon::{
+    renderer::{RenderShader, Renderer},
+    resources::ResourceCollection,
+    types::size::Size,
 };
+use wayland_client::QueueHandle;
+use wgpu::{
+    naga::{
+        front::{glsl, wgsl},
+        Module, ShaderStage,
+    },
+    PresentMode, ShaderSource, Surface, SurfaceConfiguration,
+};
+
+use crate::state::{GlobalResources, State};
 use config::OutputConfig;
-
-#[derive(Debug, Clone, Copy)]
-pub struct Size {
-    pub width: u32,
-    pub height: u32,
-}
-
-impl From<&OutputInfo> for Size {
-    fn from(value: &OutputInfo) -> Self {
-        let (width, height) = value
-            .logical_size
-            .map(|(width, height)| (width as u32, height as u32))
-            .unwrap();
-
-        Self { width, height }
-    }
-}
-
-impl From<(u32, u32)> for Size {
-    fn from(value: (u32, u32)) -> Self {
-        Self {
-            width: value.0,
-            height: value.1,
-        }
-    }
-}
-
-impl From<&SurfaceConfiguration> for Size {
-    fn from(value: &SurfaceConfiguration) -> Self {
-        Self {
-            width: value.width,
-            height: value.height,
-        }
-    }
-}
 
 /// Contains every relevant information for an output.
 pub struct OutputCtx {
-    shaders: Vec<ShaderCtx>,
+    pub resources: OutputResources,
+    pub shaders: Vec<Shader>,
 
-    surface_config: SurfaceConfiguration,
-
-    // don't know if this is required, but better drop the surface first
+    // don't know if this is required, but better drop `surface` first before
+    // `layer_surface`
     surface: Surface<'static>,
     layer_surface: LayerSurface,
+    surface_config: SurfaceConfiguration,
 }
 
 impl OutputCtx {
     pub fn new(
-        conn: &Connection,
-        comp: &CompositorState,
         info: OutputInfo,
+        surface: Surface<'static>,
         layer_surface: LayerSurface,
         renderer: &Renderer,
         sample_processor: &SampleProcessor,
         config: OutputConfig,
+        global_resources: &GlobalResources,
     ) -> Self {
         let size = Size::from(&info);
 
-        {
-            let region = Region::new(comp).unwrap();
-            layer_surface.set_input_region(Some(region.wl_region()));
-        }
         layer_surface.set_exclusive_zone(-1); // nice! (arbitrary chosen :P hehe)
         layer_surface.set_anchor(Anchor::all());
         layer_surface.set_size(size.width, size.height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.commit();
-
-        let surface: Surface<'static> = {
-            let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
-                NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
-            ));
-
-            let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
-                NonNull::new(layer_surface.wl_surface().id().as_ptr() as *mut _).unwrap(),
-            ));
-
-            unsafe {
-                renderer
-                    .instance()
-                    .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                        raw_display_handle,
-                        raw_window_handle,
-                    })
-                    .unwrap()
-            }
-        };
 
         let surface_config = {
             let surface_caps = surface.get_capabilities(renderer.adapter());
@@ -148,22 +102,38 @@ impl OutputCtx {
             config
         };
 
+        let output_resources = OutputResources::new(renderer.device());
+
         let shaders = {
             let mut shaders = Vec::with_capacity(config.shaders.len());
 
             for shader_conf in config.shaders.iter() {
-                let shader = match ShaderCtx::new(
-                    shader_conf,
-                    renderer,
-                    sample_processor,
-                    surface_config.format,
-                ) {
-                    Ok(shader) => shader,
-                    Err(err) => {
-                        error!("Skipping shader due to error:\n\n{}", err);
-                        continue;
-                    }
+                let shader_resource =
+                    ShaderResources::new(renderer.device(), sample_processor, shader_conf);
+
+                let pipeline = {
+                    let shader_source = match get_shader_source(shader_conf) {
+                        Ok(source) => source,
+                        Err(err) => {
+                            error!("Couldn't parse shader:\n\n{}", err);
+                            continue;
+                        }
+                    };
+
+                    let bind_group_layouts = [
+                        output_resources.bind_group_layout(),
+                        global_resources.bind_group_layout(),
+                        shader_resource.bind_group_layout(),
+                    ];
+
+                    renderer.create_render_pipeline(
+                        shader_source,
+                        &bind_group_layouts,
+                        surface_config.format,
+                    )
                 };
+
+                let shader = Shader::new(shader_resource, pipeline);
 
                 shaders.push(shader);
             }
@@ -176,6 +146,7 @@ impl OutputCtx {
             surface,
             layer_surface,
             shaders,
+            resources: output_resources,
         }
     }
 
@@ -200,13 +171,16 @@ impl OutputCtx {
 
             self.surface
                 .configure(renderer.device(), &self.surface_config);
+
+            self.resources.set_resolution(new_size);
+            self.resources.update_ressource_buffers(renderer.queue());
         }
     }
 }
 
 // getters
 impl OutputCtx {
-    pub fn shaders(&self) -> &[ShaderCtx] {
+    pub fn render_shaders(&self) -> impl IntoIterator<Item = impl RenderShader + use<'_>> {
         &self.shaders
     }
 
@@ -217,4 +191,56 @@ impl OutputCtx {
     pub fn surface(&self) -> &wgpu::Surface<'static> {
         &self.surface
     }
+}
+
+// impl ResourceCollection for OutputCtx {
+//     fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+//         self.resources.bind_group_layout()
+//     }
+
+//     fn bind_group(&self) -> &wgpu::BindGroup {
+//         self.resources.bind_group()
+//     }
+
+//     fn update_ressource_buffers(&self, queue: &wgpu::Queue) {
+//         for shader in self.shaders.iter() {
+//             shader.update_render_buffers(queue);
+//         }
+//     }
+// }
+
+fn get_shader_source(shader_conf: &ShaderConf) -> anyhow::Result<ShaderSource> {
+    let fragment_module = match &shader_conf.code {
+        ShaderCode::Glsl(code) => get_glsl_module(code)?,
+        ShaderCode::Wgsl(code) => get_wgsl_module(code)?,
+        ShaderCode::VibeShader(dir_name) => {
+            let url = format!("https://raw.githubusercontent.com/TornaxO7/vibe-shaders/refs/heads/main/{}/code.toml", dir_name);
+            let body = reqwest::blocking::get(url)
+                .context("Send http request to fetch shader code")?
+                .text()
+                .unwrap();
+            let shader_code: ShaderCode = toml::from_str(&body)?;
+
+            match shader_code {
+                ShaderCode::Glsl(code) => get_glsl_module(code)?,
+                ShaderCode::Wgsl(code) => get_wgsl_module(code)?,
+                ShaderCode::VibeShader(_) => {
+                    anyhow::bail!("The shader in '{}' refers to another shader. Please create an issue this shouldn't happen! Going to skip this shader...", dir_name);
+                }
+            }
+        }
+    };
+
+    Ok(ShaderSource::Naga(Cow::Owned(fragment_module)))
+}
+
+fn get_glsl_module(code: impl AsRef<str>) -> anyhow::Result<Module> {
+    let mut frontend = glsl::Frontend::default();
+    frontend
+        .parse(&glsl::Options::from(ShaderStage::Fragment), code.as_ref())
+        .map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
+}
+
+fn get_wgsl_module(code: impl AsRef<str>) -> anyhow::Result<Module> {
+    wgsl::parse_str(code.as_ref()).map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
 }

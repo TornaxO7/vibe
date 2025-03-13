@@ -1,14 +1,14 @@
-// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
-// So for example, if you are interested in the bass, choose the lower indices.
-layout(binding = 0) readonly buffer iAudio {
-    float[] freqs;
-};
+layout(set = 0, binding = 0) uniform float iTime;
 
 // x: width
 // y: height
-layout(binding = 1) uniform vec2 iResolution;
+layout(set = 1, binding = 0) uniform vec2 iResolution;
 
-layout(binding = 2) uniform float iTime;
+// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
+// So for example, if you are interested in the bass, choose the lower indices.
+layout(set = 2, binding = 0) readonly buffer iAudio {
+    float[] freqs;
+};
 
 // the color which the pixel should have
 layout(location = 0) out vec4 fragColor;

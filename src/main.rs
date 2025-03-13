@@ -1,15 +1,10 @@
 mod config;
 mod output;
-mod renderer;
 mod state;
-
-use std::num::NonZeroUsize;
 
 use state::State;
 use tracing_subscriber::EnvFilter;
 use wayland_client::{globals::registry_queue_init, Connection};
-
-const DEFAULT_AMOUNT_BARS: NonZeroUsize = NonZeroUsize::new(60).unwrap();
 
 fn main() -> anyhow::Result<()> {
     init_logging();
