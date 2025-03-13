@@ -16,10 +16,13 @@ pub enum BindingValue {
 
 /// Represents a single buffer which can be then accessed in the shader.
 pub trait Resource {
+    /// Returns a bind group layout entry of the given resource.
     fn bind_group_layout_entry(&self) -> wgpu::BindGroupLayoutEntry;
 
+    /// Returns a bind group entry of the given resource.
     fn bind_group_entry(&self) -> wgpu::BindGroupEntry;
 
+    /// Tell the resource update the content of the buffer.
     fn update_buffer(&self, queue: &wgpu::Queue);
 }
 

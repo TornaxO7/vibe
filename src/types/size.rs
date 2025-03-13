@@ -1,6 +1,7 @@
 use smithay_client_toolkit::output::OutputInfo;
 use wgpu::SurfaceConfiguration;
 
+/// A simple `Size` struct which saves `width` and `height`.
 #[derive(Debug, Clone, Copy)]
 pub struct Size {
     pub width: u32,
