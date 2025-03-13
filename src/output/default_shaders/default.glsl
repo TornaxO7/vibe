@@ -1,3 +1,19 @@
+layout(set = 0, binding = 0) uniform float iTime;
+
+// x: width
+// y: height
+layout(set = 1, binding = 0) uniform vec2 iResolution;
+
+// It contains the 'presence' of a frequency. The lower the index the lower is its frequency and the other way round.
+// So for example, if you are interested in the bass, choose the lower indices.
+layout(set = 2, binding = 0) readonly buffer iAudio {
+    float[] freqs;
+};
+
+// the color which the pixel should have
+layout(location = 0) out vec4 fragColor;
+
+void main() {
     const float GAMMA = 2.2;
     const vec3 WHITE = vec3(1.);
 
@@ -26,3 +42,4 @@
         col.z = pow(col.z, GAMMA);
         fragColor = vec4(col, y);
     }
+}

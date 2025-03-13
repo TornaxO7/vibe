@@ -1,24 +1,14 @@
-use std::{ffi::OsStr, io, num::NonZeroUsize};
+use std::{ffi::OsStr, io};
 
 use serde::{Deserialize, Serialize};
-use shady::TemplateLang;
 use smithay_client_toolkit::output::OutputInfo;
 
-type Code = String;
-type DirName = String;
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ShaderCode {
-    Glsl(Code),
-    Wgsl(Code),
-    VibeShader(DirName),
-}
+use super::shader::config::ShaderConf;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
     pub enable: bool,
-    pub amount_bars: NonZeroUsize,
-    pub shader_code: Vec<ShaderCode>,
+    pub shaders: Vec<ShaderConf>,
 }
 
 impl OutputConfig {
@@ -27,12 +17,7 @@ impl OutputConfig {
 
         let new = Self {
             enable: true,
-            amount_bars: crate::DEFAULT_AMOUNT_BARS,
-            shader_code: vec![ShaderCode::Glsl(
-                TemplateLang::Glsl
-                    .generate_to_string(Some(include_str!("./shaders/default.glsl")))
-                    .unwrap(),
-            )],
+            shaders: vec![ShaderConf::default()],
         };
 
         new.save(name)?;

@@ -33,11 +33,7 @@ wgpu = { version = "24.0", default-features = false, features = [
   "serde",
 ] }
 xdg = "2.5"
-shady = { version = "6.0", default-features = false, features = [
-  "audio",
-  "time",
-  "resolution",
-] }
+shady-audio = "6"
 toml = { version = "0.8", features = ["parse", "display"] }
 serde = { version = "1", features = ["derive"] }
 

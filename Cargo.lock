@@ -1962,23 +1962,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "shady"
-version = "6.0.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d88ced15b5f55fd1f3ec4bcd2e23487c5d1570b966fda8a758fd345a582b41a3"
-dependencies = [
- "bytemuck",
- "shady-audio",
- "thiserror 2.0.12",
- "tracing",
- "wgpu",
-]
-
-[[package]]
 name = "shady-audio"
-version = "5.0.2"
+version = "6.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "cb34ff939d926fd5d3f2cabdd9e4ab66d77607a79e16700394e6f005cc53b510"
+checksum = "785b5e2273adf2ce17741a98baa85e2b64c9a487a5d5f0a12f6197c06e60e626"
 dependencies = [
  "apodize",
  "cpal",
@@ -2486,7 +2473,7 @@ dependencies = [
  "raw-window-handle",
  "reqwest",
  "serde",
- "shady",
+ "shady-audio",
  "smithay-client-toolkit",
  "thiserror 2.0.12",
  "toml",

@@ -1,120 +1,159 @@
 pub mod config;
-mod shader_context;
+mod resources;
+mod shader;
 
-use std::ptr::NonNull;
+use std::borrow::Cow;
 
-use raw_window_handle::{
-    RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
+use anyhow::{anyhow, Context};
+use resources::OutputResources;
+use shader::{
+    config::{ShaderCode, ShaderConf},
+    Shader, ShaderResources,
 };
+use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
-    compositor::{CompositorState, Region},
     output::OutputInfo,
     shell::{
         wlr_layer::{Anchor, KeyboardInteractivity, LayerSurface},
         WaylandSurface,
     },
 };
-use wayland_client::{Connection, Proxy, QueueHandle};
-use wgpu::Surface;
+use tracing::error;
+use vibe_daemon::{
+    renderer::{RenderShader, Renderer},
+    resources::ResourceCollection,
+    types::size::Size,
+};
+use wayland_client::QueueHandle;
+use wgpu::{
+    naga::{
+        front::{glsl, wgsl},
+        Module, ShaderStage,
+    },
+    PresentMode, ShaderSource, Surface, SurfaceConfiguration,
+};
 
-use crate::{gpu::GpuCtx, state::State};
+use crate::state::{GlobalResources, State};
 use config::OutputConfig;
-use shader_context::ShaderCtx;
 
-#[derive(Debug, Clone, Copy)]
-pub struct Size {
-    pub width: u32,
-    pub height: u32,
-}
-
-impl From<&OutputInfo> for Size {
-    fn from(value: &OutputInfo) -> Self {
-        let (width, height) = value
-            .logical_size
-            .map(|(width, height)| (width as u32, height as u32))
-            .unwrap();
-
-        Self { width, height }
-    }
-}
-
-impl From<(u32, u32)> for Size {
-    fn from(value: (u32, u32)) -> Self {
-        Self {
-            width: value.0,
-            height: value.1,
-        }
-    }
-}
-
+/// Contains every relevant information for an output.
 pub struct OutputCtx {
-    shader_ctx: ShaderCtx,
+    pub resources: OutputResources,
+    pub shaders: Vec<Shader>,
+
+    // don't know if this is required, but better drop `surface` first before
+    // `layer_surface`
+    surface: Surface<'static>,
     layer_surface: LayerSurface,
+    surface_config: SurfaceConfiguration,
 }
 
 impl OutputCtx {
     pub fn new(
-        name: &str,
-        conn: &Connection,
-        comp: &CompositorState,
         info: OutputInfo,
+        surface: Surface<'static>,
         layer_surface: LayerSurface,
-        gpu: &GpuCtx,
+        renderer: &Renderer,
+        sample_processor: &SampleProcessor,
         config: OutputConfig,
-    ) -> anyhow::Result<Self> {
+        global_resources: &GlobalResources,
+    ) -> Self {
         let size = Size::from(&info);
 
-        {
-            let region = Region::new(comp).unwrap();
-            layer_surface.set_input_region(Some(region.wl_region()));
-        }
         layer_surface.set_exclusive_zone(-1); // nice! (arbitrary chosen :P hehe)
         layer_surface.set_anchor(Anchor::all());
         layer_surface.set_size(size.width, size.height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.commit();
 
-        let shader_ctx = {
-            let surface: Surface<'static> = {
-                let raw_display_handle = RawDisplayHandle::Wayland(WaylandDisplayHandle::new(
-                    NonNull::new(conn.backend().display_ptr() as *mut _).unwrap(),
-                ));
+        let surface_config = {
+            let surface_caps = surface.get_capabilities(renderer.adapter());
+            let format = surface_caps
+                .formats
+                .iter()
+                .find(|f| f.is_srgb())
+                .copied()
+                .unwrap();
 
-                let raw_window_handle = RawWindowHandle::Wayland(WaylandWindowHandle::new(
-                    NonNull::new(layer_surface.wl_surface().id().as_ptr() as *mut _).unwrap(),
-                ));
+            if !surface_caps
+                .alpha_modes
+                .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
+            {
+                todo!(concat![
+                    "Ok, now this is getting tricky (great to hear that from a software, right?)\n",
+                    "Simply speaking: For the time being I'm expecting that the selected gpu supports the 'PreMultiplied'-'feature'\n",
+                    "but the selected gpu only supports: {:?}\n",
+                    "Please create an issue (or give the existing issue an upvote) that you've encountered this so I can priotize this problem."
+                ], &surface_caps.alpha_modes);
+            }
 
-                unsafe {
-                    gpu.instance()
-                        .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                            raw_display_handle,
-                            raw_window_handle,
-                        })
-                        .unwrap()
-                }
+            let config = wgpu::SurfaceConfiguration {
+                usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
+                format,
+                width: size.width,
+                height: size.height,
+                present_mode: PresentMode::AutoVsync,
+                alpha_mode: wgpu::CompositeAlphaMode::PreMultiplied,
+                view_formats: vec![],
+                desired_maximum_frame_latency: 3,
             };
 
-            ShaderCtx::new(name, size, gpu, surface, &config)?
+            surface.configure(renderer.device(), &config);
+            config
         };
 
-        Ok(Self {
-            shader_ctx,
+        let output_resources = OutputResources::new(renderer.device());
+
+        let shaders = {
+            let mut shaders = Vec::with_capacity(config.shaders.len());
+
+            for shader_conf in config.shaders.iter() {
+                let shader_resource =
+                    ShaderResources::new(renderer.device(), sample_processor, shader_conf);
+
+                let pipeline = {
+                    let shader_source = match get_shader_source(shader_conf) {
+                        Ok(source) => source,
+                        Err(err) => {
+                            error!("Couldn't parse shader:\n\n{}", err);
+                            continue;
+                        }
+                    };
+
+                    let bind_group_layouts = [
+                        output_resources.bind_group_layout(),
+                        global_resources.bind_group_layout(),
+                        shader_resource.bind_group_layout(),
+                    ];
+
+                    renderer.create_render_pipeline(
+                        shader_source,
+                        &bind_group_layouts,
+                        surface_config.format,
+                    )
+                };
+
+                let shader = Shader::new(shader_resource, pipeline);
+
+                shaders.push(shader);
+            }
+
+            shaders
+        };
+
+        Self {
+            surface_config,
+            surface,
             layer_surface,
-        })
-    }
-
-    pub fn layer_surface(&self) -> &LayerSurface {
-        &self.layer_surface
-    }
-
-    pub fn surface(&self) -> &wgpu::Surface<'static> {
-        self.shader_ctx.surface()
+            shaders,
+            resources: output_resources,
+        }
     }
 
     pub fn request_redraw(&self, qh: &QueueHandle<State>) {
         let surface = self.layer_surface.wl_surface();
 
-        let size = self.shader_ctx.size();
+        let size = Size::from(&self.surface_config);
         surface.damage(
             0,
             0,
@@ -125,15 +164,83 @@ impl OutputCtx {
         self.layer_surface.commit();
     }
 
-    pub fn resize(&mut self, gpu: &GpuCtx, new_size: Size) {
-        self.shader_ctx.resize(gpu, new_size);
+    pub fn resize(&mut self, renderer: &Renderer, new_size: Size) {
+        if new_size.width > 0 && new_size.height > 0 {
+            self.surface_config.width = new_size.width;
+            self.surface_config.height = new_size.height;
+
+            self.surface
+                .configure(renderer.device(), &self.surface_config);
+
+            self.resources.set_resolution(new_size);
+            self.resources.update_ressource_buffers(renderer.queue());
+        }
+    }
+}
+
+// getters
+impl OutputCtx {
+    pub fn render_shaders(&self) -> impl IntoIterator<Item = impl RenderShader + use<'_>> {
+        &self.shaders
     }
 
-    pub fn update_buffers(&mut self, queue: &wgpu::Queue) {
-        self.shader_ctx.update_buffers(queue);
+    pub fn layer_surface(&self) -> &LayerSurface {
+        &self.layer_surface
     }
 
-    pub fn add_render_pass(&self, encoder: &mut wgpu::CommandEncoder, view: &wgpu::TextureView) {
-        self.shader_ctx.add_render_pass(encoder, view);
+    pub fn surface(&self) -> &wgpu::Surface<'static> {
+        &self.surface
     }
+}
+
+// impl ResourceCollection for OutputCtx {
+//     fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
+//         self.resources.bind_group_layout()
+//     }
+
+//     fn bind_group(&self) -> &wgpu::BindGroup {
+//         self.resources.bind_group()
+//     }
+
+//     fn update_ressource_buffers(&self, queue: &wgpu::Queue) {
+//         for shader in self.shaders.iter() {
+//             shader.update_render_buffers(queue);
+//         }
+//     }
+// }
+
+fn get_shader_source(shader_conf: &ShaderConf) -> anyhow::Result<ShaderSource> {
+    let fragment_module = match &shader_conf.code {
+        ShaderCode::Glsl(code) => get_glsl_module(code)?,
+        ShaderCode::Wgsl(code) => get_wgsl_module(code)?,
+        ShaderCode::VibeShader(dir_name) => {
+            let url = format!("https://raw.githubusercontent.com/TornaxO7/vibe-shaders/refs/heads/main/{}/code.toml", dir_name);
+            let body = reqwest::blocking::get(url)
+                .context("Send http request to fetch shader code")?
+                .text()
+                .unwrap();
+            let shader_code: ShaderCode = toml::from_str(&body)?;
+
+            match shader_code {
+                ShaderCode::Glsl(code) => get_glsl_module(code)?,
+                ShaderCode::Wgsl(code) => get_wgsl_module(code)?,
+                ShaderCode::VibeShader(_) => {
+                    anyhow::bail!("The shader in '{}' refers to another shader. Please create an issue this shouldn't happen! Going to skip this shader...", dir_name);
+                }
+            }
+        }
+    };
+
+    Ok(ShaderSource::Naga(Cow::Owned(fragment_module)))
+}
+
+fn get_glsl_module(code: impl AsRef<str>) -> anyhow::Result<Module> {
+    let mut frontend = glsl::Frontend::default();
+    frontend
+        .parse(&glsl::Options::from(ShaderStage::Fragment), code.as_ref())
+        .map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
+}
+
+fn get_wgsl_module(code: impl AsRef<str>) -> anyhow::Result<Module> {
+    wgsl::parse_str(code.as_ref()).map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
 }

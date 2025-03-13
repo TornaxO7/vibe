@@ -1,8 +1,7 @@
 use std::io;
 
 use serde::{Deserialize, Serialize};
-
-use crate::gpu::GraphicsConfig;
+use vibe_daemon::renderer::GraphicsConfig;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigError {

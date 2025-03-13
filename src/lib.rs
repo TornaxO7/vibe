@@ -1,3 +1,7 @@
+pub mod renderer;
+pub mod resources;
+pub mod types;
+
 use std::{path::PathBuf, sync::OnceLock};
 
 use xdg::BaseDirectories;
