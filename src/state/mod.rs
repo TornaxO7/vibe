@@ -180,10 +180,20 @@ impl OutputHandler for State {
         info!("Detected output: '{}'", &name);
 
         let config = match crate::output::config::load(&info) {
-            Some(config) => {
-                info!("Reusing config of output '{}'.", name);
-                config
-            }
+            Some(res) => match res {
+                Ok(config) => {
+                    info!("Reusing config of output '{}'.", name);
+                    config
+                }
+                Err(err) => {
+                    error!(
+                        "Couldn't load config of output '{}'. Skipping output:{:?}",
+                        name, err
+                    );
+
+                    return;
+                }
+            },
             None => match OutputConfig::new(&info) {
                 Ok(config) => {
                     info!("Created new default config file for output: '{}'", name);

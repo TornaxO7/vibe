@@ -1,5 +1,6 @@
 use std::{ffi::OsStr, io};
 
+use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
 
@@ -38,7 +39,7 @@ impl OutputConfig {
     }
 }
 
-pub fn load(output_info: &OutputInfo) -> Option<OutputConfig> {
+pub fn load(output_info: &OutputInfo) -> Option<anyhow::Result<OutputConfig>> {
     let name = output_info.name.as_ref().unwrap();
     let iterator = std::fs::read_dir(vibe_daemon::get_output_config_dir()).unwrap();
 
@@ -49,7 +50,7 @@ pub fn load(output_info: &OutputInfo) -> Option<OutputConfig> {
         if path.file_stem().unwrap() == OsStr::new(&name) {
             let content = std::fs::read_to_string(&path).unwrap();
 
-            return Some(toml::from_str(&content).unwrap());
+            return Some(toml::from_str(&content).context(""));
         }
     }
 
