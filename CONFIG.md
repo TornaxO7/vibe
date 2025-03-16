@@ -28,16 +28,15 @@ The config file has the following format:
 # set to `false` if you don't want to have any shaders on the given output
 enable = true
 
+# You can add as many shaders as you like
 [[shaders]]
 
-# configure the audio buffer for the shader. Currently you can only set the amount of bars
+# configure the audio buffer for the first shader. Currently you can only set the amount of bars
 # you'd like to get in the shader
 [shader.audio]
 amount_bars = 60
 
-# now you can add any amount of shader code you'd like to render.
-# You can add any amount of `[[shader_code]]` which will be rendered.
-# This one gets rendered first
+# This is the code of the first shader
 [shader.code]
 # choose which shader language will be used. Can be either `Glsl` or `Wgsl`.
 # This just renders the screen red
@@ -62,6 +61,7 @@ void main() {
 }
 """
 
+# tell vibe that there's a second shader
 [[shaders]]
 
 [shader.audio]
@@ -72,7 +72,7 @@ amount_bars = 60
 # Just enter the directory name here.
 VibeShader = "galaxy_pulse"
 
-# this will be rendered next
+# ... and a third shader
 [[shaders]]
 
 [shader.audio]
