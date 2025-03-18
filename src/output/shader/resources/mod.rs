@@ -23,6 +23,7 @@ impl ShaderResources {
             device,
             processor,
             amount_bars: conf.audio.amount_bars,
+            freq_range: conf.audio.frequency_range.clone(),
             binding: Bindings::Audio as u32,
         });
 

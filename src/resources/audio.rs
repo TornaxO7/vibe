@@ -1,6 +1,7 @@
-use std::num::NonZeroUsize;
+use std::{num::NonZero, ops::Range};
 
 use shady_audio::{BarProcessor, Config, SampleProcessor};
+use tracing::error;
 
 use super::Resource;
 
@@ -11,7 +12,8 @@ const _DESCRIPTION: &str = "\
 pub struct AudioDesc<'a> {
     pub device: &'a wgpu::Device,
     pub processor: &'a SampleProcessor,
-    pub amount_bars: NonZeroUsize,
+    pub amount_bars: NonZero<usize>,
+    pub freq_range: Range<NonZero<u16>>,
     pub binding: u32,
 }
 
@@ -43,13 +45,28 @@ impl Audio {
             mapped_at_creation: false,
         });
 
-        let bar_processor = BarProcessor::new(
-            desc.processor,
-            Config {
-                amount_bars: desc.amount_bars,
-                ..Default::default()
-            },
-        );
+        let bar_processor = {
+            let mut bar_processor = BarProcessor::new(
+                desc.processor,
+                Config {
+                    amount_bars: desc.amount_bars,
+                    freq_range: desc.freq_range.clone(),
+                    ..Default::default()
+                },
+            );
+
+            // check if the frequency range is big enough
+            {
+                let buffer = bar_processor.process_bars(&desc.processor);
+
+                if buffer.len() < amount_bars {
+                    error!("Your given frequency range ({}Hz to {}Hz) is too small to display {} bars. Please either decrease the amount of bars or increase the frequency range!", desc.freq_range.start, desc.freq_range.end, desc.amount_bars);
+                    panic!("Invalid audio config");
+                }
+            }
+
+            bar_processor
+        };
 
         Self {
             bar_processor,
