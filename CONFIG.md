@@ -36,6 +36,11 @@ enable = true
 [shader.audio]
 amount_bars = 60
 
+# set the frequency range (in Hz) on which the visualizer should use.
+[shaders.audio.frequency_range]
+start = 50
+end = 10000
+
 # This is the code of the first shader
 [shader.code]
 # choose which shader language will be used. Can be either `Glsl` or `Wgsl`.
@@ -67,6 +72,10 @@ void main() {
 [shader.audio]
 amount_bars = 60
 
+[shaders.audio.frequency_range]
+start = 50
+end = 10000
+
 [shader.code]
 # You can also pick one of the pre-conifgured shaders: https://github.com/TornaxO7/vibe-shaders/
 # Just enter the directory name here.
@@ -77,6 +86,10 @@ VibeShader = "galaxy_pulse"
 
 [shader.audio]
 amount_bars = 60
+
+[shaders.audio.frequency_range]
+start = 50
+end = 10000
 
 [shader.code]
 Wgsl = """
