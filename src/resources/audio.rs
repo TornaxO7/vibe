@@ -57,7 +57,7 @@ impl Audio {
 
             // check if the frequency range is big enough
             {
-                let buffer = bar_processor.process_bars(&desc.processor);
+                let buffer = bar_processor.process_bars(desc.processor);
 
                 if buffer.len() < amount_bars {
                     error!("Your given frequency range ({}Hz to {}Hz) is too small to display {} bars. Please either decrease the amount of bars or increase the frequency range!", desc.freq_range.start, desc.freq_range.end, desc.amount_bars);
