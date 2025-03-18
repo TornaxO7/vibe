@@ -1,4 +1,7 @@
-use std::num::NonZeroUsize;
+use std::{
+    num::{NonZero, NonZeroUsize},
+    ops::Range,
+};
 
 use serde::{Deserialize, Serialize};
 
@@ -15,12 +18,14 @@ pub enum ShaderCode {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConf {
     pub amount_bars: NonZeroUsize,
+    pub frequency_range: Range<NonZero<u16>>,
 }
 
 impl Default for AudioConf {
     fn default() -> Self {
         Self {
             amount_bars: NonZeroUsize::new(60).unwrap(),
+            frequency_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
         }
     }
 }
