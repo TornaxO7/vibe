@@ -38,7 +38,7 @@
                 in
                 pkgs.mkShell {
                   packages = with pkgs; [
-                    netcat
+                    cargo-flamegraph
                   ] ++ [ rust-toolchain ];
 
                   buildInputs = vibe.buildInputs;
