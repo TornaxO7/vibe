@@ -1,145 +1,149 @@
-use std::{num::NonZero, time::Instant};
+use std::time::Instant;
 
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use super::{bind_group_entry, bind_group_layout_entry, Component};
+use crate::components::bind_group_entry;
 
-const SHADER_ENTRYPOINT: &str = "main";
+use super::{bind_group_layout_entry, Component};
 
-/// The x coords goes from -1 to 1.
-const VERTEX_SURFACE_WIDTH: f32 = 2.;
+const ENTRYPOINT: &str = "main";
 
-pub struct BarsDescriptor<'a> {
-    pub device: &'a wgpu::Device,
+type VertexPosition = [f32; 2];
+
+#[rustfmt::skip]
+const VERTICES: [VertexPosition; 4] = [
+    [1.0, 1.0],   // top right
+    [-1.0, 1.0],  // top left
+    [1.0, -1.0],  // bottom right
+    [-1.0, -1.0]  // bottom left
+];
+
+pub struct FragmentCanvasDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
-    pub audio_conf: shady_audio::Config,
-    pub texture_format: wgpu::TextureFormat,
+    pub audio_config: shady_audio::Config,
+
+    pub device: &'a wgpu::Device,
+
+    pub format: wgpu::TextureFormat,
+
+    /// Canvas/Resolution size: (width, height).
+    pub resolution: [u32; 2],
+
+    pub fragment_source: wgpu::ShaderSource<'a>,
 }
 
-pub struct Bars {
-    amount_bars: NonZero<u16>,
+pub struct FragmentCanvas {
     bar_processor: BarProcessor,
     time: Instant,
 
     freqs_buffer: wgpu::Buffer,
-    _column_width_buffer: wgpu::Buffer,
-    _padding_buffer: wgpu::Buffer,
     time_buffer: wgpu::Buffer,
+    _resolution_buffer: wgpu::Buffer,
+    vertex_buffer: wgpu::Buffer,
 
-    vertex_bind_group: wgpu::BindGroup,
     fragment_bind_group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
 }
 
-impl Bars {
-    pub fn new(desc: &BarsDescriptor) -> Self {
+impl FragmentCanvas {
+    pub fn new(desc: &FragmentCanvasDescriptor) -> Self {
         let device = desc.device;
-        let amount_bars = desc.audio_conf.amount_bars;
-        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
         let time = Instant::now();
 
-        let column_width = VERTEX_SURFACE_WIDTH / u16::from(amount_bars) as f32;
-        let padding = column_width / 5.;
+        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
 
         let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Bar freq buffer"),
-            size: (std::mem::size_of::<f32>() * usize::from(u16::from(amount_bars))) as u64,
+            label: Some("Fragment canvas frequency buffer"),
+            size: (std::mem::size_of::<f32>()
+                * usize::from(u16::from(desc.audio_config.amount_bars))) as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
-        let column_width_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar column width buffer"),
-            contents: bytemuck::cast_slice(&[column_width]),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
-
-        let padding_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar padding buffer"),
-            contents: bytemuck::cast_slice(&[padding]),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
-
         let time_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar time buffer"),
+            label: Some("Fragment canvas time buffer"),
             contents: bytemuck::cast_slice(&[time.elapsed().as_secs_f32()]),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
-        let (pipeline, vertex_bind_group, fragment_bind_group) = {
-            let vertex_bind_group_layout =
+        let resolution_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Fragment canvas resolution buffer"),
+            contents: bytemuck::cast_slice(&[desc.resolution[0] as f32, desc.resolution[1] as f32]),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+
+        let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Fragment canvas vertex buffer"),
+            contents: bytemuck::cast_slice(&VERTICES),
+            usage: wgpu::BufferUsages::VERTEX,
+        });
+
+        let (pipeline, fragment_bind_group) = {
+            let fragment_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Bar vertex bind group layout"),
+                    label: Some("Fragment canvas bind group layout"),
                     entries: &[
                         bind_group_layout_entry(
                             0,
-                            wgpu::ShaderStages::VERTEX,
+                            wgpu::ShaderStages::FRAGMENT,
                             wgpu::BufferBindingType::Storage { read_only: true },
                         ),
                         bind_group_layout_entry(
                             1,
-                            wgpu::ShaderStages::VERTEX,
+                            wgpu::ShaderStages::FRAGMENT,
                             wgpu::BufferBindingType::Uniform,
                         ),
                         bind_group_layout_entry(
                             2,
-                            wgpu::ShaderStages::VERTEX,
+                            wgpu::ShaderStages::FRAGMENT,
                             wgpu::BufferBindingType::Uniform,
                         ),
                     ],
                 });
 
-            let vertex_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Bar bind group"),
-                layout: &vertex_bind_group_layout,
+            let fragment_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Fragment canvas bind group"),
+                layout: &fragment_bind_group_layout,
                 entries: &[
                     bind_group_entry(0, &freqs_buffer),
-                    bind_group_entry(1, &column_width_buffer),
-                    bind_group_entry(2, &padding_buffer),
+                    bind_group_entry(1, &time_buffer),
+                    bind_group_entry(2, &resolution_buffer),
                 ],
             });
 
-            let fragment_bind_group_layout =
-                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Fragment bind group layout"),
-                    entries: &[bind_group_layout_entry(
-                        0,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    )],
-                });
-
-            let fragment_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Fragment bind group"),
-                layout: &fragment_bind_group_layout,
-                entries: &[bind_group_entry(0, &time_buffer)],
-            });
-
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Bar pipeline layout"),
-                bind_group_layouts: &[&vertex_bind_group_layout, &fragment_bind_group_layout],
+                label: Some("Fragment canvas pipeline layout"),
+                bind_group_layouts: &[&fragment_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
             let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Bar vertex module"),
+                label: Some("Fragment canvas vertex module"),
                 source: wgpu::ShaderSource::Wgsl(include_str!("./vertex_shader.wgsl").into()),
             });
 
             let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Bar fragment module"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("./fragment_shader.wgsl").into()),
+                label: Some("Fragment canvas fragment module"),
+                source: desc.fragment_source.clone(),
             });
 
             let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Bar render pipeline"),
+                label: Some("Fragment canvas render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &vertex_module,
-                    entry_point: Some(SHADER_ENTRYPOINT),
+                    entry_point: Some(ENTRYPOINT),
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[],
+                    buffers: &[wgpu::VertexBufferLayout {
+                        array_stride: std::mem::size_of::<VertexPosition>() as u64,
+                        step_mode: wgpu::VertexStepMode::Vertex,
+                        attributes: &[wgpu::VertexAttribute {
+                            format: wgpu::VertexFormat::Float32x2,
+                            offset: 0,
+                            shader_location: 0,
+                        }],
+                    }],
                 },
                 primitive: wgpu::PrimitiveState {
                     topology: wgpu::PrimitiveTopology::TriangleStrip,
@@ -154,10 +158,10 @@ impl Bars {
                 multisample: wgpu::MultisampleState::default(),
                 fragment: Some(wgpu::FragmentState {
                     module: &fragment_module,
-                    entry_point: Some(SHADER_ENTRYPOINT),
+                    entry_point: Some(ENTRYPOINT),
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                     targets: &[Some(wgpu::ColorTargetState {
-                        format: desc.texture_format,
+                        format: desc.format,
                         blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                         write_mask: wgpu::ColorWrites::all(),
                     })],
@@ -166,22 +170,20 @@ impl Bars {
                 cache: None,
             });
 
-            (pipeline, vertex_bind_group, fragment_bind_group)
+            (pipeline, fragment_bind_group)
         };
 
         Self {
-            amount_bars,
             bar_processor,
             time,
 
             freqs_buffer,
-            _column_width_buffer: column_width_buffer,
-            _padding_buffer: padding_buffer,
             time_buffer,
+            _resolution_buffer: resolution_buffer,
+            vertex_buffer,
 
-            pipeline,
-            vertex_bind_group,
             fragment_bind_group,
+            pipeline,
         }
     }
 
@@ -199,17 +201,16 @@ impl Bars {
     }
 }
 
-impl Component for Bars {
+impl Component for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, &self.vertex_bind_group, &[]);
-        pass.set_bind_group(1, &self.fragment_bind_group, &[]);
+        pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
+        pass.set_bind_group(0, &self.fragment_bind_group, &[]);
         pass.set_pipeline(&self.pipeline);
-
-        pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
+        pass.draw(0..4, 0..1);
     }
 }
 
-impl Component for &Bars {
+impl Component for &FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         (*self).render_with_renderpass(pass);
     }
