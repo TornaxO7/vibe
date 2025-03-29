@@ -27,8 +27,8 @@ pub struct Bars {
     _padding_buffer: wgpu::Buffer,
     time_buffer: wgpu::Buffer,
 
-    vertex_bind_group: wgpu::BindGroup,
-    fragment_bind_group: wgpu::BindGroup,
+    column_padding_bind_group: wgpu::BindGroup,
+    freqs_time_bind_group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
 }
 
@@ -68,9 +68,35 @@ impl Bars {
         });
 
         let (pipeline, vertex_bind_group, fragment_bind_group) = {
-            let vertex_bind_group_layout =
+            let column_padding_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Bar vertex bind group layout"),
+                    label: Some("Bar column padding bind group layout"),
+                    entries: &[
+                        bind_group_layout_entry(
+                            0,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                        bind_group_layout_entry(
+                            1,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ],
+                });
+
+            let column_padding_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Bar column padding bind group"),
+                layout: &column_padding_bind_group_layout,
+                entries: &[
+                    bind_group_entry(0, &column_width_buffer),
+                    bind_group_entry(1, &padding_buffer),
+                ],
+            });
+
+            let freqs_time_bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Bar freqs time bind group layout"),
                     entries: &[
                         bind_group_layout_entry(
                             0,
@@ -79,46 +105,27 @@ impl Bars {
                         ),
                         bind_group_layout_entry(
                             1,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                        bind_group_layout_entry(
-                            2,
-                            wgpu::ShaderStages::VERTEX,
+                            wgpu::ShaderStages::FRAGMENT,
                             wgpu::BufferBindingType::Uniform,
                         ),
                     ],
                 });
 
-            let vertex_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Bar bind group"),
-                layout: &vertex_bind_group_layout,
+            let freqs_time_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Bar freqs time bind group"),
+                layout: &freqs_time_bind_group_layout,
                 entries: &[
                     bind_group_entry(0, &freqs_buffer),
-                    bind_group_entry(1, &column_width_buffer),
-                    bind_group_entry(2, &padding_buffer),
+                    bind_group_entry(1, &time_buffer),
                 ],
-            });
-
-            let fragment_bind_group_layout =
-                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Fragment bind group layout"),
-                    entries: &[bind_group_layout_entry(
-                        0,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    )],
-                });
-
-            let fragment_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Fragment bind group"),
-                layout: &fragment_bind_group_layout,
-                entries: &[bind_group_entry(0, &time_buffer)],
             });
 
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bar pipeline layout"),
-                bind_group_layouts: &[&vertex_bind_group_layout, &fragment_bind_group_layout],
+                bind_group_layouts: &[
+                    &column_padding_bind_group_layout,
+                    &freqs_time_bind_group_layout,
+                ],
                 push_constant_ranges: &[],
             });
 
@@ -166,7 +173,7 @@ impl Bars {
                 cache: None,
             });
 
-            (pipeline, vertex_bind_group, fragment_bind_group)
+            (pipeline, column_padding_bind_group, freqs_time_bind_group)
         };
 
         Self {
@@ -179,8 +186,8 @@ impl Bars {
             time_buffer,
 
             pipeline,
-            vertex_bind_group,
-            fragment_bind_group,
+            column_padding_bind_group: vertex_bind_group,
+            freqs_time_bind_group: fragment_bind_group,
         }
     }
 
@@ -196,8 +203,8 @@ impl Bars {
 
 impl Component for Bars {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, &self.vertex_bind_group, &[]);
-        pass.set_bind_group(1, &self.fragment_bind_group, &[]);
+        pass.set_bind_group(0, &self.column_padding_bind_group, &[]);
+        pass.set_bind_group(1, &self.freqs_time_bind_group, &[]);
         pass.set_pipeline(&self.pipeline);
 
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);

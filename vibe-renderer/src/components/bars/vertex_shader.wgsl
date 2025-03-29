@@ -1,11 +1,11 @@
 @group(0) @binding(0)
-var<storage, read> freqs: array<f32>;
-
-@group(0) @binding(1)
 var<uniform> column_width: f32;
 
-@group(0) @binding(2)
+@group(0) @binding(1)
 var<uniform> padding: f32;
+
+@group(1) @binding(0)
+var<storage, read> freqs: array<f32>;
 
 struct Input {
     @builtin(vertex_index) vertex_idx: u32,
