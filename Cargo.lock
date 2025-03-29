@@ -1329,6 +1329,7 @@ version = "0.0.1"
 dependencies = [
  "bytemuck",
  "pollster",
+ "serde",
  "shady-audio",
  "thiserror 2.0.12",
  "tracing",

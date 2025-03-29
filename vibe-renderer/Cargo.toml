@@ -21,3 +21,5 @@ wgpu = { version = "24.0", default-features = false, features = [
   "naga-ir",
   "serde",
 ] }
+
+serde = { version = "1", features = ["derive"] }
