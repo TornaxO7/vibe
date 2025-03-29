@@ -37,9 +37,9 @@ pub struct FragmentCanvas {
     bar_processor: BarProcessor,
     time: Instant,
 
-    freqs_buffer: wgpu::Buffer,
     time_buffer: wgpu::Buffer,
     _resolution_buffer: wgpu::Buffer,
+    freqs_buffer: wgpu::Buffer,
     vertex_buffer: wgpu::Buffer,
 
     fragment_bind_group: wgpu::BindGroup,
@@ -53,14 +53,6 @@ impl FragmentCanvas {
 
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
 
-        let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Fragment canvas frequency buffer"),
-            size: (std::mem::size_of::<f32>()
-                * usize::from(u16::from(desc.audio_config.amount_bars))) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-
         let time_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Fragment canvas time buffer"),
             contents: bytemuck::cast_slice(&[time.elapsed().as_secs_f32()]),
@@ -71,6 +63,14 @@ impl FragmentCanvas {
             label: Some("Fragment canvas resolution buffer"),
             contents: bytemuck::cast_slice(&[desc.resolution[0] as f32, desc.resolution[1] as f32]),
             usage: wgpu::BufferUsages::UNIFORM,
+        });
+
+        let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas frequency buffer"),
+            size: (std::mem::size_of::<f32>()
+                * usize::from(u16::from(desc.audio_config.amount_bars))) as u64,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
 
         let vertex_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -87,7 +87,7 @@ impl FragmentCanvas {
                         bind_group_layout_entry(
                             0,
                             wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Storage { read_only: true },
+                            wgpu::BufferBindingType::Uniform,
                         ),
                         bind_group_layout_entry(
                             1,
@@ -97,7 +97,7 @@ impl FragmentCanvas {
                         bind_group_layout_entry(
                             2,
                             wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
+                            wgpu::BufferBindingType::Storage { read_only: true },
                         ),
                     ],
                 });
@@ -106,9 +106,9 @@ impl FragmentCanvas {
                 label: Some("Fragment canvas bind group"),
                 layout: &fragment_bind_group_layout,
                 entries: &[
-                    bind_group_entry(0, &freqs_buffer),
-                    bind_group_entry(1, &time_buffer),
-                    bind_group_entry(2, &resolution_buffer),
+                    bind_group_entry(0, &time_buffer),
+                    bind_group_entry(1, &resolution_buffer),
+                    bind_group_entry(2, &freqs_buffer),
                 ],
             });
 
