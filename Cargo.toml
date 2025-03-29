@@ -1,5 +1,6 @@
 [workspace]
 members = ["vibe-renderer"]
+resolver = "2"
 
 # [dependencies]
 

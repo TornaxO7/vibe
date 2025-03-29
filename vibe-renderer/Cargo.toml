@@ -23,3 +23,6 @@ wgpu = { version = "24.0", default-features = false, features = [
 ] }
 
 serde = { version = "1", features = ["derive"] }
+
+[dev-dependencies]
+winit = "0.30"

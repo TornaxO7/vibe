@@ -1,3 +1,6 @@
+pub mod components;
+
+use components::Component;
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -62,6 +65,36 @@ impl Renderer {
             device,
             queue,
         }
+    }
+
+    pub fn render<'a>(
+        &self,
+        view: &'a wgpu::TextureView,
+        components: impl IntoIterator<Item = impl Component>,
+    ) {
+        let mut encoder = self
+            .device
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
+
+        {
+            let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                ..Default::default()
+            });
+
+            for component in components {
+                component.render_with_renderpass(&mut render_pass);
+            }
+        }
+
+        self.queue.submit(std::iter::once(encoder.finish()));
     }
 }
 
