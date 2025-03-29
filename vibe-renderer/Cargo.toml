@@ -26,3 +26,4 @@ serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 winit = "0.30"
+image = "0.25"
