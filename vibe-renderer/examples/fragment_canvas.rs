@@ -55,12 +55,12 @@ impl<'a> State<'a> {
             let fragment_source = wgpu::ShaderSource::Wgsl(
                 "
                     @group(0) @binding(0)
+                    var<uniform> iResolution: vec2<f32>;
+
+                    @group(0) @binding(0)
                     var<uniform> iTime: f32;
 
                     @group(0) @binding(1)
-                    var<uniform> iResolution: vec2<f32>;
-
-                    @group(0) @binding(2)
                     var<storage, read> freqs: array<f32>;
 
                     @fragment

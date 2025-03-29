@@ -1,8 +1,8 @@
-layout(set = 0, binding = 0) uniform float iTime;
+layout(set = 0, binding = 0) uniform vec2 iResolution;
 
-layout(set = 0, binding = 1) uniform vec2 iResolution;
+layout(set = 1, binding = 0) uniform float iTime;
 
-layout(set = 0, binding = 2) readonly buffer iAudio {
+layout(set = 1, binding = 1) readonly buffer iAudio {
     float[] freqs;
 };
 

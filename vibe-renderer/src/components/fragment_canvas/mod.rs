@@ -35,11 +35,13 @@ pub struct FragmentCanvas {
     bar_processor: BarProcessor,
 
     time_buffer: wgpu::Buffer,
-    _resolution_buffer: wgpu::Buffer,
+    resolution_buffer: wgpu::Buffer,
     freqs_buffer: wgpu::Buffer,
     vertex_buffer: wgpu::Buffer,
 
-    fragment_bind_group: wgpu::BindGroup,
+    resolution_bind_group: wgpu::BindGroup,
+    time_freqs_bind_group: wgpu::BindGroup,
+
     pipeline: wgpu::RenderPipeline,
 }
 
@@ -75,10 +77,26 @@ impl FragmentCanvas {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        let (pipeline, fragment_bind_group) = {
-            let fragment_bind_group_layout =
+        let (pipeline, resolution_bind_group, time_freqs_bind_group) = {
+            let resolution_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Fragment canvas bind group layout"),
+                    label: Some("Fragment canvas resolution bind group layout"),
+                    entries: &[bind_group_layout_entry(
+                        0,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    )],
+                });
+
+            let resolution_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Fragment canvas resolution bind group"),
+                layout: &resolution_bind_group_layout,
+                entries: &[bind_group_entry(0, &resolution_buffer)],
+            });
+
+            let time_freqs_bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Fragment canvas time freqs bind group layout"),
                     entries: &[
                         bind_group_layout_entry(
                             0,
@@ -88,29 +106,23 @@ impl FragmentCanvas {
                         bind_group_layout_entry(
                             1,
                             wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                        bind_group_layout_entry(
-                            2,
-                            wgpu::ShaderStages::FRAGMENT,
                             wgpu::BufferBindingType::Storage { read_only: true },
                         ),
                     ],
                 });
 
-            let fragment_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            let time_freqs_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Fragment canvas bind group"),
-                layout: &fragment_bind_group_layout,
+                layout: &time_freqs_bind_group_layout,
                 entries: &[
                     bind_group_entry(0, &time_buffer),
-                    bind_group_entry(1, &resolution_buffer),
-                    bind_group_entry(2, &freqs_buffer),
+                    bind_group_entry(1, &freqs_buffer),
                 ],
             });
 
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas pipeline layout"),
-                bind_group_layouts: &[&fragment_bind_group_layout],
+                bind_group_layouts: &[&resolution_bind_group_layout, &time_freqs_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -166,7 +178,7 @@ impl FragmentCanvas {
                 cache: None,
             });
 
-            (pipeline, fragment_bind_group)
+            (pipeline, resolution_bind_group, time_freqs_bind_group)
         };
 
         Self {
@@ -174,12 +186,22 @@ impl FragmentCanvas {
 
             freqs_buffer,
             time_buffer,
-            _resolution_buffer: resolution_buffer,
+            resolution_buffer,
             vertex_buffer,
 
-            fragment_bind_group,
+            time_freqs_bind_group,
+            resolution_bind_group,
+
             pipeline,
         }
+    }
+
+    pub fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+        queue.write_buffer(
+            &self.resolution_buffer,
+            0,
+            bytemuck::cast_slice(&new_resolution),
+        );
     }
 
     pub fn update_audio(&mut self, processor: &SampleProcessor, queue: &wgpu::Queue) {
@@ -194,8 +216,10 @@ impl FragmentCanvas {
 
 impl Component for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
+        pass.set_bind_group(0, &self.resolution_bind_group, &[]);
+        pass.set_bind_group(1, &self.time_freqs_bind_group, &[]);
+
         pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
-        pass.set_bind_group(0, &self.fragment_bind_group, &[]);
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
     }

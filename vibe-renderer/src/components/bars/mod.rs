@@ -29,6 +29,7 @@ pub struct Bars {
 
     column_padding_bind_group: wgpu::BindGroup,
     freqs_time_bind_group: wgpu::BindGroup,
+
     pipeline: wgpu::RenderPipeline,
 }
 
@@ -67,7 +68,7 @@ impl Bars {
             mapped_at_creation: false,
         });
 
-        let (pipeline, vertex_bind_group, fragment_bind_group) = {
+        let (pipeline, column_padding_bind_group, freqs_time_bind_group) = {
             let column_padding_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("Bar column padding bind group layout"),
@@ -186,8 +187,8 @@ impl Bars {
             time_buffer,
 
             pipeline,
-            column_padding_bind_group: vertex_bind_group,
-            freqs_time_bind_group: fragment_bind_group,
+            column_padding_bind_group,
+            freqs_time_bind_group,
         }
     }
 
