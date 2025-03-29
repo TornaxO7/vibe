@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
@@ -18,6 +18,7 @@ struct State<'a> {
     surface: wgpu::Surface<'a>,
     surface_config: wgpu::SurfaceConfiguration,
     window: Arc<Window>,
+    time: Instant,
 
     canvas: FragmentCanvas,
 }
@@ -26,6 +27,7 @@ impl<'a> State<'a> {
     pub fn new<'b>(window: Window, processor: &'b SampleProcessor) -> Self {
         let window = Arc::new(window);
         let size = window.inner_size();
+        let time = Instant::now();
 
         let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::default());
         let surface = renderer.instance().create_surface(window.clone()).unwrap();
@@ -81,6 +83,7 @@ impl<'a> State<'a> {
         };
 
         Self {
+            time,
             renderer,
             surface,
             window,
@@ -100,7 +103,8 @@ impl<'a> State<'a> {
 
     pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
         self.canvas.update_audio(processor, self.renderer.queue());
-        self.canvas.update_time(self.renderer.queue());
+        self.canvas
+            .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
         let surface_texture = self.surface.get_current_texture()?;
 
         let view = surface_texture

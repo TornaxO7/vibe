@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
@@ -35,7 +33,6 @@ pub struct FragmentCanvasDescriptor<'a> {
 
 pub struct FragmentCanvas {
     bar_processor: BarProcessor,
-    time: Instant,
 
     time_buffer: wgpu::Buffer,
     _resolution_buffer: wgpu::Buffer,
@@ -49,14 +46,13 @@ pub struct FragmentCanvas {
 impl FragmentCanvas {
     pub fn new(desc: &FragmentCanvasDescriptor) -> Self {
         let device = desc.device;
-        let time = Instant::now();
-
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
 
-        let time_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let time_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas time buffer"),
-            contents: bytemuck::cast_slice(&[time.elapsed().as_secs_f32()]),
+            size: std::mem::size_of::<f32>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
 
         let resolution_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -175,7 +171,6 @@ impl FragmentCanvas {
 
         Self {
             bar_processor,
-            time,
 
             freqs_buffer,
             time_buffer,
@@ -192,12 +187,8 @@ impl FragmentCanvas {
         queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
     }
 
-    pub fn update_time(&mut self, queue: &wgpu::Queue) {
-        queue.write_buffer(
-            &self.time_buffer,
-            0,
-            bytemuck::cast_slice(&[self.time.elapsed().as_secs_f32()]),
-        );
+    pub fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
     }
 }
 

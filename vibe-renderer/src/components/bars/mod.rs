@@ -1,4 +1,4 @@
-use std::{num::NonZero, time::Instant};
+use std::num::NonZero;
 
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
@@ -15,12 +15,12 @@ pub struct BarsDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
     pub audio_conf: shady_audio::Config,
     pub texture_format: wgpu::TextureFormat,
+    pub fragment_source: wgpu::ShaderSource<'a>,
 }
 
 pub struct Bars {
     amount_bars: NonZero<u16>,
     bar_processor: BarProcessor,
-    time: Instant,
 
     freqs_buffer: wgpu::Buffer,
     _column_width_buffer: wgpu::Buffer,
@@ -37,7 +37,6 @@ impl Bars {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
-        let time = Instant::now();
 
         let column_width = VERTEX_SURFACE_WIDTH / u16::from(amount_bars) as f32;
         let padding = column_width / 5.;
@@ -61,10 +60,11 @@ impl Bars {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let time_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+        let time_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Bar time buffer"),
-            contents: bytemuck::cast_slice(&[time.elapsed().as_secs_f32()]),
+            size: std::mem::size_of::<f32>() as u64,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
         });
 
         let (pipeline, vertex_bind_group, fragment_bind_group) = {
@@ -129,7 +129,7 @@ impl Bars {
 
             let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Bar fragment module"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("./fragment_shader.wgsl").into()),
+                source: desc.fragment_source.clone(),
             });
 
             let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
@@ -172,7 +172,6 @@ impl Bars {
         Self {
             amount_bars,
             bar_processor,
-            time,
 
             freqs_buffer,
             _column_width_buffer: column_width_buffer,
@@ -185,17 +184,13 @@ impl Bars {
         }
     }
 
-    pub fn update_audio(&mut self, processor: &SampleProcessor, queue: &wgpu::Queue) {
+    pub fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
         let bar_values = self.bar_processor.process_bars(processor);
         queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
     }
 
-    pub fn update_time(&mut self, queue: &wgpu::Queue) {
-        queue.write_buffer(
-            &self.time_buffer,
-            0,
-            bytemuck::cast_slice(&[self.time.elapsed().as_secs_f32()]),
-        );
+    pub fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
     }
 }
 

@@ -9,7 +9,7 @@ fn wgsl_passes() {
     let mut tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new());
-    let frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
+    let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &sample_processor,
         audio_config: shady_audio::Config::default(),
         device: tester.renderer.device(),
@@ -17,6 +17,8 @@ fn wgsl_passes() {
         resolution: [tester.output_width, tester.output_height],
         fragment_source: wgpu::ShaderSource::Wgsl(include_str!("./frag.wgsl").into()),
     });
+
+    frag_canvas.update_time(tester.renderer.queue(), 100.);
 
     let img = tester.render(frag_canvas);
 
@@ -31,7 +33,7 @@ fn glsl_passes() {
     let mut tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new());
-    let frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
+    let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &sample_processor,
         audio_config: shady_audio::Config::default(),
         device: tester.renderer.device(),
@@ -43,6 +45,8 @@ fn glsl_passes() {
             defines: wgpu::naga::FastHashMap::default(),
         },
     });
+
+    frag_canvas.update_time(tester.renderer.queue(), 100.);
 
     let img = tester.render(frag_canvas);
 

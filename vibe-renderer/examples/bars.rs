@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
@@ -18,6 +18,7 @@ struct State<'a> {
     surface: wgpu::Surface<'a>,
     surface_config: wgpu::SurfaceConfiguration,
     window: Arc<Window>,
+    time: Instant,
 
     bars: Bars,
 }
@@ -26,6 +27,7 @@ impl<'a> State<'a> {
     pub fn new<'b>(window: Window, processor: &'b SampleProcessor) -> Self {
         let window = Arc::new(window);
         let size = window.inner_size();
+        let time = Instant::now();
 
         let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::default());
         let surface = renderer.instance().create_surface(window.clone()).unwrap();
@@ -54,9 +56,23 @@ impl<'a> State<'a> {
             sample_processor: &processor,
             audio_conf: shady_audio::Config::default(),
             texture_format: surface_config.format,
+            fragment_source: wgpu::ShaderSource::Wgsl(
+                "
+                @group(1) @binding(0)
+                var<uniform> iTime: f32;
+
+                @fragment
+                fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+                    let bottom_color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
+                    return vec4<f32>(bottom_color, pos.y);
+                }
+                "
+                .into(),
+            ),
         });
 
         Self {
+            time,
             renderer,
             surface,
             window,
@@ -75,8 +91,9 @@ impl<'a> State<'a> {
     }
 
     pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
-        self.bars.update_audio(processor, self.renderer.queue());
-        self.bars.update_time(self.renderer.queue());
+        self.bars.update_audio(self.renderer.queue(), processor);
+        self.bars
+            .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
         let surface_texture = self.surface.get_current_texture()?;
 
         let view = surface_texture
