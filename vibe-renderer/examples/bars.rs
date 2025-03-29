@@ -76,6 +76,7 @@ impl<'a> State<'a> {
 
     pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
         self.bars.update_audio(processor, self.renderer.queue());
+        self.bars.update_time(self.renderer.queue());
         let surface_texture = self.surface.get_current_texture()?;
 
         let view = surface_texture

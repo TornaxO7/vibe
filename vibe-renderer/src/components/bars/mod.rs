@@ -1,4 +1,4 @@
-use std::num::NonZero;
+use std::{num::NonZero, time::Instant};
 
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
@@ -20,12 +20,15 @@ pub struct BarsDescriptor<'a> {
 pub struct Bars {
     amount_bars: NonZero<u16>,
     bar_processor: BarProcessor,
+    time: Instant,
 
     freqs_buffer: wgpu::Buffer,
     _column_width_buffer: wgpu::Buffer,
     _padding_buffer: wgpu::Buffer,
+    time_buffer: wgpu::Buffer,
 
-    bind_group: wgpu::BindGroup,
+    vertex_bind_group: wgpu::BindGroup,
+    fragment_bind_group: wgpu::BindGroup,
     pipeline: wgpu::RenderPipeline,
 }
 
@@ -34,6 +37,7 @@ impl Bars {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let time = Instant::now();
 
         let column_width = VERTEX_SURFACE_WIDTH / u16::from(amount_bars) as f32;
         let padding = column_width / 5.;
@@ -57,23 +61,38 @@ impl Bars {
             usage: wgpu::BufferUsages::UNIFORM,
         });
 
-        let (pipeline, bind_group) = {
-            let bind_group_layout =
+        let time_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Bar time buffer"),
+            contents: bytemuck::cast_slice(&[time.elapsed().as_secs_f32()]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
+        let (pipeline, vertex_bind_group, fragment_bind_group) = {
+            let vertex_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Bar bind group layout"),
+                    label: Some("Bar vertex bind group layout"),
                     entries: &[
                         bind_group_layout_entry(
                             0,
+                            wgpu::ShaderStages::VERTEX,
                             wgpu::BufferBindingType::Storage { read_only: true },
                         ),
-                        bind_group_layout_entry(1, wgpu::BufferBindingType::Uniform),
-                        bind_group_layout_entry(2, wgpu::BufferBindingType::Uniform),
+                        bind_group_layout_entry(
+                            1,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                        bind_group_layout_entry(
+                            2,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
                     ],
                 });
 
-            let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            let vertex_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
                 label: Some("Bar bind group"),
-                layout: &bind_group_layout,
+                layout: &vertex_bind_group_layout,
                 entries: &[
                     bind_group_entry(0, &freqs_buffer),
                     bind_group_entry(1, &column_width_buffer),
@@ -81,9 +100,25 @@ impl Bars {
                 ],
             });
 
+            let fragment_bind_group_layout =
+                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Fragment bind group layout"),
+                    entries: &[bind_group_layout_entry(
+                        0,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    )],
+                });
+
+            let fragment_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Fragment bind group"),
+                layout: &fragment_bind_group_layout,
+                entries: &[bind_group_entry(0, &time_buffer)],
+            });
+
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bar pipeline layout"),
-                bind_group_layouts: &[&bind_group_layout],
+                bind_group_layouts: &[&vertex_bind_group_layout, &fragment_bind_group_layout],
                 push_constant_ranges: &[],
             });
 
@@ -131,19 +166,22 @@ impl Bars {
                 cache: None,
             });
 
-            (pipeline, bind_group)
+            (pipeline, vertex_bind_group, fragment_bind_group)
         };
 
         Self {
             amount_bars,
             bar_processor,
+            time,
 
             freqs_buffer,
             _column_width_buffer: column_width_buffer,
             _padding_buffer: padding_buffer,
+            time_buffer,
 
             pipeline,
-            bind_group,
+            vertex_bind_group,
+            fragment_bind_group,
         }
     }
 
@@ -151,11 +189,20 @@ impl Bars {
         let bar_values = self.bar_processor.process_bars(processor);
         queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
     }
+
+    pub fn update_time(&mut self, queue: &wgpu::Queue) {
+        queue.write_buffer(
+            &self.time_buffer,
+            0,
+            bytemuck::cast_slice(&[self.time.elapsed().as_secs_f32()]),
+        );
+    }
 }
 
 impl Component for Bars {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, &self.bind_group, &[]);
+        pass.set_bind_group(0, &self.vertex_bind_group, &[]);
+        pass.set_bind_group(1, &self.fragment_bind_group, &[]);
         pass.set_pipeline(&self.pipeline);
 
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
@@ -170,11 +217,12 @@ impl Component for &Bars {
 
 fn bind_group_layout_entry(
     binding: u32,
+    visibility: wgpu::ShaderStages,
     ty: wgpu::BufferBindingType,
 ) -> wgpu::BindGroupLayoutEntry {
     wgpu::BindGroupLayoutEntry {
         binding,
-        visibility: wgpu::ShaderStages::VERTEX,
+        visibility,
         ty: wgpu::BindingType::Buffer {
             ty,
             has_dynamic_offset: false,
