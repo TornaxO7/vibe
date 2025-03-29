@@ -19,7 +19,10 @@ pub struct Tester<'a> {
 
 impl<'a> Tester<'a> {
     pub fn new(width: u32, height: u32) -> Self {
-        let renderer = Renderer::new(&RendererDescriptor::default());
+        let renderer = Renderer::new(&RendererDescriptor {
+            fallback_to_software_rendering: true,
+            ..Default::default()
+        });
         let output_width = width;
         let output_height = height;
 

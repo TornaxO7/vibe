@@ -15,6 +15,9 @@ pub struct RendererDescriptor {
 
     /// Set the backend which should be used.
     pub backend: wgpu::Backends,
+
+    /// Enforce software rendering if wgpu can't find a gpu.
+    pub fallback_to_software_rendering: bool,
 }
 
 impl Default for RendererDescriptor {
@@ -22,6 +25,7 @@ impl Default for RendererDescriptor {
         Self {
             power_preference: wgpu::PowerPreference::LowPower,
             backend: wgpu::Backends::VULKAN,
+            fallback_to_software_rendering: false,
         }
     }
 }
@@ -39,6 +43,7 @@ impl Renderer {
         let instance = wgpu::Instance::new(
             &wgpu::InstanceDescriptor {
                 backends: desc.backend,
+
                 ..Default::default()
             }
             .with_env(),
@@ -47,6 +52,7 @@ impl Renderer {
         let adapter = instance
             .request_adapter(&wgpu::RequestAdapterOptions {
                 power_preference: desc.power_preference,
+                force_fallback_adapter: desc.fallback_to_software_rendering,
                 ..Default::default()
             })
             .block_on()
