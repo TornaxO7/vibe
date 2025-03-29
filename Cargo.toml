@@ -1,41 +1,23 @@
-[package]
-name = "vibe-daemon"
-version = "0.0.1"
-edition = "2021"
-authors = ["TornaxO7 <tornax@pm.me>"]
-description = "A desktop music visualizer"
-license = "GPL-2.0"
-repository = "https://github.com/TornaxO7/vibe"
+[workspace]
+members = ["vibe-renderer"]
 
-[dependencies]
-anyhow = "1"
-thiserror = "2"
+# [dependencies]
 
-bytemuck = "1.22"
-pollster = "0.4"
-raw-window-handle = "0.6"
-tracing = "0.1"
-tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+# tracing = "0.1"
+# tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 
-reqwest = { version = "0.12", default-features = false, features = [
-  "rustls-tls",
-  "blocking",
-] }
+# reqwest = { version = "0.12", default-features = false, features = [
+#   "rustls-tls",
+#   "blocking",
+# ] }
 
-wayland-client = "0.31"
-wayland-backend = { version = "0.3", features = ["client_system"] }
-smithay-client-toolkit = "0.19"
+# wayland-client = "0.31"
+# wayland-backend = { version = "0.3", features = ["client_system"] }
+# smithay-client-toolkit = "0.19"
 
-wgpu = { version = "24.0", default-features = false, features = [
-  "wgsl",
-  "glsl",
-  "naga-ir",
-  "serde",
-] }
-xdg = "2.5"
-shady-audio = "6"
-toml = { version = "0.8", features = ["parse", "display"] }
-serde = { version = "1", features = ["derive"] }
+# xdg = "2.5"
+# toml = { version = "0.8", features = ["parse", "display"] }
+# serde = { version = "1", features = ["derive"] }
 
 [profile.release-lto]
 inherits = "release"
