@@ -8,5 +8,26 @@ license = "GPL-2.0"
 repository = "https://github.com/TornaxO7/vibe-daemon"
 
 [dependencies]
+serde.workspace = true
+shady-audio.workspace = true
+tracing.workspace = true
+wgpu.workspace = true
+
 anyhow = "1"
+thiserror = "2"
 raw-window-handle = "0.6"
+
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+
+wayland-client = "0.31"
+wayland-backend = { version = "0.3", features = ["client_system"] }
+smithay-client-toolkit = "0.19"
+
+reqwest = { version = "0.12", default-features = false, features = [
+  "rustls-tls",
+  "blocking",
+] }
+
+vibe-renderer = { path = "../vibe-renderer" }
+xdg = "2.5"
+toml = "0.8"

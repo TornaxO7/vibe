@@ -19,11 +19,7 @@ use smithay_client_toolkit::{
     },
 };
 use tracing::error;
-use vibe_daemon::{
-    renderer::{RenderShader, Renderer},
-    resources::ResourceCollection,
-    types::size::Size,
-};
+
 use wayland_client::QueueHandle;
 use wgpu::{
     naga::{
@@ -33,7 +29,7 @@ use wgpu::{
     PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
 
-use crate::state::{GlobalResources, State};
+use crate::state::State;
 use config::OutputConfig;
 
 /// Contains every relevant information for an output.

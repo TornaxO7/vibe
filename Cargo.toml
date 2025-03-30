@@ -1,24 +1,18 @@
 [workspace]
-members = ["vibe-renderer"]
+members = ["vibe-renderer", "vibe-daemon"]
 resolver = "2"
 
-# [dependencies]
+[workspace.dependencies]
+wgpu = { version = "24.0", default-features = false, features = [
+  "wgsl",
+  "glsl",
+  "naga-ir",
+  "serde",
+] }
 
-# tracing = "0.1"
-# tracing-subscriber = { version = "0.3", features = ["env-filter"] }
-
-# reqwest = { version = "0.12", default-features = false, features = [
-#   "rustls-tls",
-#   "blocking",
-# ] }
-
-# wayland-client = "0.31"
-# wayland-backend = { version = "0.3", features = ["client_system"] }
-# smithay-client-toolkit = "0.19"
-
-# xdg = "2.5"
-# toml = { version = "0.8", features = ["parse", "display"] }
-# serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive"] }
+tracing = "0.1"
+shady-audio = "6"
 
 [profile.release-lto]
 inherits = "release"

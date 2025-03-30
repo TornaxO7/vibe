@@ -1,7 +1,7 @@
 use std::io;
 
 use serde::{Deserialize, Serialize};
-use vibe_daemon::renderer::GraphicsConfig;
+use vibe_renderer::RendererDescriptor;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigError {
@@ -14,19 +14,16 @@ pub enum ConfigError {
 
 #[derive(Default, Debug, Serialize, Deserialize)]
 pub struct Config {
-    pub graphics_config: GraphicsConfig,
+    pub graphics_config: RendererDescriptor,
 }
 
 impl Config {
     pub fn save(&self) -> io::Result<()> {
-        std::fs::write(
-            vibe_daemon::get_config_path(),
-            toml::to_string(self).unwrap(),
-        )
+        std::fs::write(crate::get_config_path(), toml::to_string(self).unwrap())
     }
 }
 
 pub fn load() -> Result<Config, ConfigError> {
-    let content = std::fs::read_to_string(vibe_daemon::get_config_path())?;
+    let content = std::fs::read_to_string(crate::get_config_path())?;
     toml::from_str(&content).map_err(|err| err.into())
 }

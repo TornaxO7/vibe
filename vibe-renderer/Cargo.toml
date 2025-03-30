@@ -8,21 +8,13 @@ license = "GPL-2.0"
 repository = "https://github.com/TornaxO7/vibe/vibe-renderer"
 
 [dependencies]
-tracing = "0.1"
+serde.workspace = true
+shady-audio.workspace = true
+tracing.workspace = true
+wgpu.workspace = true
 
-thiserror = "2"
 pollster = "0.4"
 bytemuck = "1.22"
-
-shady-audio = "6"
-wgpu = { version = "24.0", default-features = false, features = [
-  "wgsl",
-  "glsl",
-  "naga-ir",
-  "serde",
-] }
-
-serde = { version = "1", features = ["derive"] }
 
 [dev-dependencies]
 winit = "0.30"

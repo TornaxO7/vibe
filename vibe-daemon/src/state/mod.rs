@@ -1,9 +1,6 @@
-mod resources;
-
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
 };
-pub use resources::GlobalResources;
 
 use anyhow::Context;
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
@@ -20,7 +17,7 @@ use smithay_client_toolkit::{
 };
 use std::{collections::HashMap, ptr::NonNull};
 use tracing::{debug, error, info, warn};
-use vibe_daemon::{renderer::Renderer, resources::ResourceCollection, types::size::Size};
+use vibe_renderer::Renderer;
 use wayland_client::{
     globals::GlobalList,
     protocol::{wl_output::WlOutput, wl_surface::WlSurface},
@@ -30,6 +27,7 @@ use wayland_client::{
 use crate::{
     config::ConfigError,
     output::{config::OutputConfig, OutputCtx},
+    types::size::Size,
 };
 
 pub struct State {
@@ -42,7 +40,6 @@ pub struct State {
 
     renderer: Renderer,
     sample_processor: SampleProcessor,
-    global_resources: GlobalResources,
 
     outputs: HashMap<WlOutput, OutputCtx>,
 }
@@ -62,7 +59,7 @@ impl State {
             SampleProcessor::new(SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap());
 
         let vibe_config = crate::config::load().unwrap_or_else(|err| {
-            let config_path = vibe_daemon::get_config_path();
+            let config_path = crate::get_config_path();
             let default_config = crate::config::Config::default();
 
             match err {
@@ -105,7 +102,6 @@ impl State {
         });
 
         let renderer = Renderer::new(&vibe_config.graphics_config);
-        let resources = GlobalResources::new(renderer.device());
 
         Ok(Self {
             run: true,
@@ -114,7 +110,6 @@ impl State {
             registry_state: RegistryState::new(globals),
             layer_shell,
             renderer,
-            global_resources: resources,
 
             sample_processor,
 
@@ -221,7 +216,7 @@ impl OutputHandler for State {
                 qh,
                 wl_surface,
                 Layer::Background,
-                Some(format!("{} background", vibe_daemon::APP_NAME)),
+                Some(format!("{} background", crate::APP_NAME)),
                 Some(&output),
             );
             layer_surface.set_input_region(Some(region.wl_region()));

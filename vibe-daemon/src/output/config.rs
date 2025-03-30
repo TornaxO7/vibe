@@ -28,7 +28,7 @@ impl OutputConfig {
     pub fn save(&self, name: impl AsRef<str>) -> io::Result<()> {
         let string = toml::to_string(self).unwrap();
         let save_path = {
-            let mut path = vibe_daemon::get_output_config_dir();
+            let mut path = crate::get_output_config_dir();
             path.push(format!("{}.toml", name.as_ref()));
             path
         };
@@ -41,7 +41,7 @@ impl OutputConfig {
 
 pub fn load(output_info: &OutputInfo) -> Option<anyhow::Result<OutputConfig>> {
     let name = output_info.name.as_ref().unwrap();
-    let iterator = std::fs::read_dir(vibe_daemon::get_output_config_dir()).unwrap();
+    let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
 
     for entry in iterator {
         let entry = entry.unwrap();
