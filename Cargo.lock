@@ -3473,6 +3473,7 @@ dependencies = [
  "pollster",
  "serde",
  "shady-audio",
+ "thiserror 2.0.12",
  "tracing",
  "wgpu",
  "winit",

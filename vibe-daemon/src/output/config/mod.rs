@@ -1,10 +1,11 @@
+pub mod component;
+
 use std::{ffi::OsStr, io};
 
 use anyhow::Context;
+use component::ComponentConfig;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
-
-use super::component::ComponentConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {

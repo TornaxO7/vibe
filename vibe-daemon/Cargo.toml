@@ -10,11 +10,11 @@ repository = "https://github.com/TornaxO7/vibe-daemon"
 [dependencies]
 serde.workspace = true
 shady-audio.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
 
 anyhow = "1"
-thiserror = "2"
 raw-window-handle = "0.6"
 
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }

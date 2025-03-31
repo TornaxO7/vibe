@@ -1,5 +1,5 @@
 use shady_audio::{fetcher::DummyFetcher, SampleProcessor};
-use vibe_renderer::components::{Bars, BarsDescriptor};
+use vibe_renderer::components::{Bars, BarsDescriptor, ShaderCode};
 
 use crate::Tester;
 
@@ -13,8 +13,9 @@ fn wgsl_passes() {
         sample_processor: &sample_processor,
         audio_conf: shady_audio::Config::default(),
         texture_format: tester.output_texture_format(),
-        fragment_source: wgpu::ShaderSource::Wgsl(include_str!("./frag.wgsl").into()),
-    });
+        fragment_source: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
+    })
+    .unwrap_or_else(|msg| panic!("{}", msg));
 
     bars.update_time(tester.renderer.queue(), 100.);
 
@@ -34,12 +35,9 @@ fn glsl_passes() {
         sample_processor: &sample_processor,
         audio_conf: shady_audio::Config::default(),
         texture_format: tester.output_texture_format(),
-        fragment_source: wgpu::ShaderSource::Glsl {
-            shader: include_str!("./frag.glsl").into(),
-            stage: wgpu::naga::ShaderStage::Fragment,
-            defines: wgpu::naga::FastHashMap::default(),
-        },
-    });
+        fragment_source: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
+    })
+    .unwrap_or_else(|msg| panic!("{}", msg));
 
     bars.update_time(tester.renderer.queue(), 100.);
 

@@ -1,9 +1,9 @@
-use std::num::NonZero;
+use std::{borrow::Cow, num::NonZero};
 
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use super::{bind_group_entry, bind_group_layout_entry, Component};
+use super::{bind_group_entry, bind_group_layout_entry, Component, ParseErrorMsg, ShaderCode};
 
 const SHADER_ENTRYPOINT: &str = "main";
 
@@ -15,7 +15,7 @@ pub struct BarsDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
     pub audio_conf: shady_audio::Config,
     pub texture_format: wgpu::TextureFormat,
-    pub fragment_source: wgpu::ShaderSource<'a>,
+    pub fragment_source: ShaderCode,
 }
 
 pub struct Bars {
@@ -34,7 +34,7 @@ pub struct Bars {
 }
 
 impl Bars {
-    pub fn new(desc: &BarsDescriptor) -> Self {
+    pub fn new(desc: &BarsDescriptor) -> Result<Self, ParseErrorMsg> {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
@@ -135,10 +135,22 @@ impl Bars {
                 source: wgpu::ShaderSource::Wgsl(include_str!("./vertex_shader.wgsl").into()),
             });
 
-            let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Bar fragment module"),
-                source: desc.fragment_source.clone(),
-            });
+            let fragment_module = {
+                let module = match &desc.fragment_source {
+                    ShaderCode::Wgsl(code) => {
+                        const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
+                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
+                    }
+                    ShaderCode::Glsl(code) => {
+                        const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
+                        super::parse_glsl_fragment_code(PREAMBLE, code)?
+                    }
+                };
+                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Bar fragment module"),
+                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
+                })
+            };
 
             let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("Bar render pipeline"),
@@ -177,7 +189,7 @@ impl Bars {
             (pipeline, column_padding_bind_group, freqs_time_bind_group)
         };
 
-        Self {
+        Ok(Self {
             amount_bars,
             bar_processor,
 
@@ -189,7 +201,7 @@ impl Bars {
             pipeline,
             column_padding_bind_group,
             freqs_time_bind_group,
-        }
+        })
     }
 
     pub fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {

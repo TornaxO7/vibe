@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{FragmentCanvas, FragmentCanvasDescriptor},
+    components::{FragmentCanvas, FragmentCanvasDescriptor, ShaderCode},
     Renderer,
 };
 use winit::{
@@ -52,17 +52,8 @@ impl<'a> State<'a> {
         surface.configure(renderer.device(), &surface_config);
 
         let canvas = {
-            let fragment_source = wgpu::ShaderSource::Wgsl(
+            let fragment_source = ShaderCode::Wgsl(
                 "
-                    @group(0) @binding(0)
-                    var<uniform> iResolution: vec2<f32>;
-
-                    @group(0) @binding(0)
-                    var<uniform> iTime: f32;
-
-                    @group(0) @binding(1)
-                    var<storage, read> freqs: array<f32>;
-
                     @fragment
                     fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                         let uv = pos.xy / iResolution.xy;
@@ -80,6 +71,7 @@ impl<'a> State<'a> {
                 resolution: [size.width, size.height],
                 fragment_source,
             })
+            .unwrap_or_else(|msg| panic!("{}", msg))
         };
 
         Self {

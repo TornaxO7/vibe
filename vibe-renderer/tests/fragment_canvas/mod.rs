@@ -1,5 +1,5 @@
 use shady_audio::{fetcher::DummyFetcher, SampleProcessor};
-use vibe_renderer::components::{FragmentCanvas, FragmentCanvasDescriptor};
+use vibe_renderer::components::{FragmentCanvas, FragmentCanvasDescriptor, ShaderCode};
 
 use crate::Tester;
 
@@ -15,8 +15,9 @@ fn wgsl_passes() {
         device: tester.renderer.device(),
         format: tester.output_texture_format(),
         resolution: [tester.output_width, tester.output_height],
-        fragment_source: wgpu::ShaderSource::Wgsl(include_str!("./frag.wgsl").into()),
-    });
+        fragment_source: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
+    })
+    .unwrap_or_else(|msg| panic!("{}", msg));
 
     frag_canvas.update_time(tester.renderer.queue(), 100.);
 
@@ -39,12 +40,9 @@ fn glsl_passes() {
         device: tester.renderer.device(),
         format: tester.output_texture_format(),
         resolution: [tester.output_width, tester.output_height],
-        fragment_source: wgpu::ShaderSource::Glsl {
-            shader: include_str!("./frag.glsl").into(),
-            stage: wgpu::naga::ShaderStage::Fragment,
-            defines: wgpu::naga::FastHashMap::default(),
-        },
-    });
+        fragment_source: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
+    })
+    .unwrap_or_else(|msg| panic!("{}", msg));
 
     frag_canvas.update_time(tester.renderer.queue(), 100.);
 

@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{Bars, BarsDescriptor},
+    components::{Bars, BarsDescriptor, ShaderCode},
     Renderer,
 };
 use winit::{
@@ -56,11 +56,8 @@ impl<'a> State<'a> {
             sample_processor: &processor,
             audio_conf: shady_audio::Config::default(),
             texture_format: surface_config.format,
-            fragment_source: wgpu::ShaderSource::Wgsl(
+            fragment_source: ShaderCode::Wgsl(
                 "
-                @group(1) @binding(1)
-                var<uniform> iTime: f32;
-
                 @fragment
                 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                     let bottom_color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
@@ -69,7 +66,8 @@ impl<'a> State<'a> {
                 "
                 .into(),
             ),
-        });
+        })
+        .unwrap_or_else(|err| panic!("{}", err));
 
         Self {
             time,

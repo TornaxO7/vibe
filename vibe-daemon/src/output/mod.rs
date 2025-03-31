@@ -1,11 +1,9 @@
-pub mod component;
 pub mod config;
 mod shader;
 
 use std::borrow::Cow;
 
 use anyhow::{anyhow, Context};
-use component::ComponentConfig;
 use shader::config::{ShaderCode, ShaderConf};
 use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{

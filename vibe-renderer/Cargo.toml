@@ -10,6 +10,7 @@ repository = "https://github.com/TornaxO7/vibe/vibe-renderer"
 [dependencies]
 serde.workspace = true
 shady-audio.workspace = true
+thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
 

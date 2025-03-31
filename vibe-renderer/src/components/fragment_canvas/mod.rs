@@ -1,9 +1,11 @@
+use std::borrow::Cow;
+
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
 use crate::components::bind_group_entry;
 
-use super::{bind_group_layout_entry, Component};
+use super::{bind_group_layout_entry, Component, ParseErrorMsg, ShaderCode};
 
 const ENTRYPOINT: &str = "main";
 
@@ -20,15 +22,12 @@ const VERTICES: [VertexPosition; 4] = [
 pub struct FragmentCanvasDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
     pub audio_config: shady_audio::Config,
-
     pub device: &'a wgpu::Device,
-
     pub format: wgpu::TextureFormat,
 
     /// Canvas/Resolution size: (width, height).
     pub resolution: [u32; 2],
-
-    pub fragment_source: wgpu::ShaderSource<'a>,
+    pub fragment_source: ShaderCode,
 }
 
 pub struct FragmentCanvas {
@@ -46,7 +45,7 @@ pub struct FragmentCanvas {
 }
 
 impl FragmentCanvas {
-    pub fn new(desc: &FragmentCanvasDescriptor) -> Self {
+    pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ParseErrorMsg> {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
 
@@ -131,10 +130,23 @@ impl FragmentCanvas {
                 source: wgpu::ShaderSource::Wgsl(include_str!("./vertex_shader.wgsl").into()),
             });
 
-            let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Fragment canvas fragment module"),
-                source: desc.fragment_source.clone(),
-            });
+            let fragment_module = {
+                let module = match &desc.fragment_source {
+                    ShaderCode::Wgsl(code) => {
+                        const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
+                        super::parse_wgsl_fragment_code(PREAMBLE, &code)?
+                    }
+                    ShaderCode::Glsl(code) => {
+                        const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
+                        super::parse_glsl_fragment_code(PREAMBLE, &code)?
+                    }
+                };
+
+                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Fragment canvas fragment module"),
+                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
+                })
+            };
 
             let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("Fragment canvas render pipeline"),
@@ -181,7 +193,7 @@ impl FragmentCanvas {
             (pipeline, resolution_bind_group, time_freqs_bind_group)
         };
 
-        Self {
+        Ok(Self {
             bar_processor,
 
             freqs_buffer,
@@ -193,7 +205,7 @@ impl FragmentCanvas {
             resolution_bind_group,
 
             pipeline,
-        }
+        })
     }
 
     pub fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
@@ -218,7 +230,6 @@ impl Component for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.resolution_bind_group, &[]);
         pass.set_bind_group(1, &self.time_freqs_bind_group, &[]);
-
         pass.set_vertex_buffer(0, self.vertex_buffer.slice(..));
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
