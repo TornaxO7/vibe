@@ -113,7 +113,7 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, [&self.bars as &dyn Component]);
+        self.renderer.render(&view, [&self.bars]);
 
         surface_texture.present();
         Ok(())
