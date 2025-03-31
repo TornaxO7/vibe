@@ -43,9 +43,3 @@ impl From<AudioConfig> for shady_audio::Config {
         }
     }
 }
-
-#[derive(Debug, Serialize, Deserialize)]
-pub enum ShaderCode {
-    Wgsl(String),
-    Glsl(String),
-}

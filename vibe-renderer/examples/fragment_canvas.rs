@@ -57,7 +57,8 @@ impl<'a> State<'a> {
                     @fragment
                     fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                         let uv = pos.xy / iResolution.xy;
-                        return vec4<f32>(sin(uv + iTime + freqs[3]) * .5 + .5, 0., 1.0);
+                        // return vec4(sin(uv + iTime + freqs[3]) * .5 + .5, 0., 1.0);
+                        return vec4(uv, .0, 1.);
                     }
             "
                 .into(),
@@ -90,6 +91,9 @@ impl<'a> State<'a> {
             self.surface_config.height = new_size.height;
             self.surface
                 .configure(self.renderer.device(), &self.surface_config);
+
+            self.canvas
+                .update_resolution(self.renderer.queue(), [new_size.width, new_size.height]);
         }
     }
 

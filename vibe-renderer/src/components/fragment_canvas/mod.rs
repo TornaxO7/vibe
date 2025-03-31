@@ -59,7 +59,7 @@ impl FragmentCanvas {
         let resolution_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Fragment canvas resolution buffer"),
             contents: bytemuck::cast_slice(&[desc.resolution[0] as f32, desc.resolution[1] as f32]),
-            usage: wgpu::BufferUsages::UNIFORM,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
         let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
@@ -212,7 +212,7 @@ impl FragmentCanvas {
         queue.write_buffer(
             &self.resolution_buffer,
             0,
-            bytemuck::cast_slice(&new_resolution),
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
     }
 

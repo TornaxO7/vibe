@@ -16,6 +16,8 @@ pub struct BarsDescriptor<'a> {
     pub audio_conf: shady_audio::Config,
     pub texture_format: wgpu::TextureFormat,
     pub fragment_source: ShaderCode,
+    /// width, height
+    pub resolution: [u32; 2],
 }
 
 pub struct Bars {
@@ -26,8 +28,9 @@ pub struct Bars {
     _column_width_buffer: wgpu::Buffer,
     _padding_buffer: wgpu::Buffer,
     time_buffer: wgpu::Buffer,
+    resolution_buffer: wgpu::Buffer,
 
-    column_padding_bind_group: wgpu::BindGroup,
+    column_padding_resolution_bind_group: wgpu::BindGroup,
     freqs_time_bind_group: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
@@ -68,6 +71,12 @@ impl Bars {
             mapped_at_creation: false,
         });
 
+        let resolution_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Bar resolution buffer"),
+            contents: bytemuck::cast_slice(&[desc.resolution[0] as f32, desc.resolution[1] as f32]),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
+
         let (pipeline, column_padding_bind_group, freqs_time_bind_group) = {
             let column_padding_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -83,17 +92,24 @@ impl Bars {
                             wgpu::ShaderStages::VERTEX,
                             wgpu::BufferBindingType::Uniform,
                         ),
+                        bind_group_layout_entry(
+                            2,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
                     ],
                 });
 
-            let column_padding_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Bar column padding bind group"),
-                layout: &column_padding_bind_group_layout,
-                entries: &[
-                    bind_group_entry(0, &column_width_buffer),
-                    bind_group_entry(1, &padding_buffer),
-                ],
-            });
+            let column_padding_resolution_bind_group =
+                device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Bar column padding bind group"),
+                    layout: &column_padding_bind_group_layout,
+                    entries: &[
+                        bind_group_entry(0, &column_width_buffer),
+                        bind_group_entry(1, &padding_buffer),
+                        bind_group_entry(2, &resolution_buffer),
+                    ],
+                });
 
             let freqs_time_bind_group_layout =
                 device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -186,7 +202,11 @@ impl Bars {
                 cache: None,
             });
 
-            (pipeline, column_padding_bind_group, freqs_time_bind_group)
+            (
+                pipeline,
+                column_padding_resolution_bind_group,
+                freqs_time_bind_group,
+            )
         };
 
         Ok(Self {
@@ -197,9 +217,10 @@ impl Bars {
             _column_width_buffer: column_width_buffer,
             _padding_buffer: padding_buffer,
             time_buffer,
+            resolution_buffer,
 
             pipeline,
-            column_padding_bind_group,
+            column_padding_resolution_bind_group: column_padding_bind_group,
             freqs_time_bind_group,
         })
     }
@@ -212,11 +233,19 @@ impl Bars {
     pub fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
     }
+
+    pub fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+        queue.write_buffer(
+            &self.resolution_buffer,
+            0,
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+        );
+    }
 }
 
 impl Component for Bars {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, &self.column_padding_bind_group, &[]);
+        pass.set_bind_group(0, &self.column_padding_resolution_bind_group, &[]);
         pass.set_bind_group(1, &self.freqs_time_bind_group, &[]);
         pass.set_pipeline(&self.pipeline);
 

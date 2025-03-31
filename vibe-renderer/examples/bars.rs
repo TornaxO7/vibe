@@ -56,12 +56,23 @@ impl<'a> State<'a> {
             sample_processor: &processor,
             audio_conf: shady_audio::Config::default(),
             texture_format: surface_config.format,
+            resolution: [size.width, size.height],
             fragment_source: ShaderCode::Wgsl(
                 "
                 @fragment
                 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                    let bottom_color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
-                    return vec4<f32>(bottom_color, pos.y);
+                    var uv = pos.xy / iResolution.xy;
+                    uv.y = 1. - uv.y;
+                    uv.x *= iResolution.x / iResolution.y;
+
+                    var col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
+
+                    const GAMMA: f32 = 2.2;
+                    col.r = pow(col.r, GAMMA);
+                    col.g = pow(col.g, GAMMA);
+                    col.b = pow(col.b, GAMMA);
+
+                    return vec4<f32>(col, uv.y);
                 }
                 "
                 .into(),
@@ -85,6 +96,9 @@ impl<'a> State<'a> {
             self.surface_config.height = new_size.height;
             self.surface
                 .configure(self.renderer.device(), &self.surface_config);
+
+            self.bars
+                .update_resolution(self.renderer.queue(), [new_size.width, new_size.height]);
         }
     }
 

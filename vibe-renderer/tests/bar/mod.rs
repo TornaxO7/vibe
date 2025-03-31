@@ -13,6 +13,7 @@ fn wgsl_passes() {
         sample_processor: &sample_processor,
         audio_conf: shady_audio::Config::default(),
         texture_format: tester.output_texture_format(),
+        resolution: [0, 0],
         fragment_source: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
@@ -35,6 +36,7 @@ fn glsl_passes() {
         sample_processor: &sample_processor,
         audio_conf: shady_audio::Config::default(),
         texture_format: tester.output_texture_format(),
+        resolution: [0, 0],
         fragment_source: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
     })
     .unwrap_or_else(|msg| panic!("{}", msg));

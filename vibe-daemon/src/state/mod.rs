@@ -142,7 +142,6 @@ impl State {
                         .texture
                         .create_view(&wgpu::TextureViewDescriptor::default()),
                     global_bind_groups,
-                    output.render_shaders(),
                 );
                 surface_texture.present();
                 output.request_redraw(qh);
