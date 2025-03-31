@@ -249,7 +249,6 @@ impl OutputHandler for State {
             &self.renderer,
             &self.sample_processor,
             config,
-            &self.global_resources,
         );
 
         self.outputs.insert(output, ctx);
@@ -302,11 +301,8 @@ impl CompositorHandler for State {
         // update the shader resources first before rendering
         {
             let output = self.outputs.get_mut(&key).unwrap();
-            for shader in output.shaders.iter_mut() {
-                shader
-                    .resources
-                    .audio
-                    .fetch_bar_values(&self.sample_processor);
+            for component in output.components.iter_mut() {
+                component.update_audio(&self.sample_processor);
             }
         }
 

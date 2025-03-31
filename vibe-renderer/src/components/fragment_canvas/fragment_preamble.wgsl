@@ -6,4 +6,3 @@ var<uniform> iTime: f32;
 
 @group(1) @binding(1)
 var<storage, read> freqs: array<f32>;
-

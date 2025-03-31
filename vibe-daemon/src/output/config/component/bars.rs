@@ -20,6 +20,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct BarsConfig {
     pub audio_conf: AudioConfig,
+    pub max_height: f32,
     pub fragment_code: ShaderCode,
 }
 
@@ -27,6 +28,7 @@ impl Default for BarsConfig {
     fn default() -> Self {
         Self {
             audio_conf: AudioConfig::default(),
+            max_height: 0.75,
             fragment_code: ShaderCode::Wgsl(DEFAULT_WGSL_FRAGMENT_CODE.into()),
         }
     }

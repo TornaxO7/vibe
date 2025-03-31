@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{Bars, BarsDescriptor, ShaderCode},
+    components::{Bars, BarsDescriptor, Component, ShaderCode},
     Renderer,
 };
 use winit::{
@@ -58,7 +58,7 @@ impl<'a> State<'a> {
             texture_format: surface_config.format,
             max_height: 0.5,
             resolution: [size.width, size.height],
-            fragment_source: ShaderCode::Wgsl(
+            fragment_code: ShaderCode::Wgsl(
                 "
                 @fragment
                 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
@@ -113,7 +113,7 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, [&self.bars]);
+        self.renderer.render(&view, [&self.bars as &dyn Component]);
 
         surface_texture.present();
         Ok(())

@@ -21,13 +21,14 @@ const VERTICES: [VertexPosition; 4] = [
 
 pub struct FragmentCanvasDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
-    pub audio_config: shady_audio::Config,
+    pub audio_conf: shady_audio::Config,
     pub device: &'a wgpu::Device,
     pub format: wgpu::TextureFormat,
 
+    // fragment shader relevant stuff
     /// Canvas/Resolution size: (width, height).
     pub resolution: [u32; 2],
-    pub fragment_source: ShaderCode,
+    pub fragment_code: ShaderCode,
 }
 
 pub struct FragmentCanvas {
@@ -47,7 +48,7 @@ pub struct FragmentCanvas {
 impl FragmentCanvas {
     pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ParseErrorMsg> {
         let device = desc.device;
-        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
+        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
         let time_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas time buffer"),
@@ -64,8 +65,8 @@ impl FragmentCanvas {
 
         let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas frequency buffer"),
-            size: (std::mem::size_of::<f32>()
-                * usize::from(u16::from(desc.audio_config.amount_bars))) as u64,
+            size: (std::mem::size_of::<f32>() * usize::from(u16::from(desc.audio_conf.amount_bars)))
+                as u64,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -131,7 +132,7 @@ impl FragmentCanvas {
             });
 
             let fragment_module = {
-                let module = match &desc.fragment_source {
+                let module = match &desc.fragment_code {
                     ShaderCode::Wgsl(code) => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
                         super::parse_wgsl_fragment_code(PREAMBLE, &code)?
@@ -207,23 +208,6 @@ impl FragmentCanvas {
             pipeline,
         })
     }
-
-    pub fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
-        queue.write_buffer(
-            &self.resolution_buffer,
-            0,
-            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-        );
-    }
-
-    pub fn update_audio(&mut self, processor: &SampleProcessor, queue: &wgpu::Queue) {
-        let bar_values = self.bar_processor.process_bars(processor);
-        queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
-    }
-
-    pub fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
-    }
 }
 
 impl Component for FragmentCanvas {
@@ -234,10 +218,39 @@ impl Component for FragmentCanvas {
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
     }
-}
 
-impl Component for &FragmentCanvas {
-    fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        (*self).render_with_renderpass(pass);
+    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+        queue.write_buffer(
+            &self.resolution_buffer,
+            0,
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+        );
+    }
+
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+        let bar_values = self.bar_processor.process_bars(processor);
+        queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
+    }
+
+    fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
     }
 }
+
+// impl Component for &FragmentCanvas {
+//     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
+//         (*self).render_with_renderpass(pass);
+//     }
+
+//     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+//         (*self).update_audio(queue, processor);
+//     }
+
+//     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+//         (*self).update_time(queue, new_time);
+//     }
+
+//     fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+//         (*self).update_resolution(queue, new_resolution);
+//     }
+// }

@@ -15,7 +15,9 @@ pub struct BarsDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
     pub audio_conf: shady_audio::Config,
     pub texture_format: wgpu::TextureFormat,
-    pub fragment_source: ShaderCode,
+
+    // fragment shader relevant stuff
+    pub fragment_code: ShaderCode,
     /// width, height
     pub resolution: [u32; 2],
     pub max_height: f32,
@@ -166,7 +168,7 @@ impl Bars {
             });
 
             let fragment_module = {
-                let module = match &desc.fragment_source {
+                let module = match &desc.fragment_code {
                     ShaderCode::Wgsl(code) => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
                         super::parse_wgsl_fragment_code(PREAMBLE, code)?
@@ -239,23 +241,6 @@ impl Bars {
             freqs_time_bind_group,
         })
     }
-
-    pub fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
-        let bar_values = self.bar_processor.process_bars(processor);
-        queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
-    }
-
-    pub fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
-    }
-
-    pub fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
-        queue.write_buffer(
-            &self.resolution_buffer,
-            0,
-            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-        );
-    }
 }
 
 impl Component for Bars {
@@ -266,10 +251,21 @@ impl Component for Bars {
 
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
     }
-}
 
-impl Component for &Bars {
-    fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        (*self).render_with_renderpass(pass);
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+        let bar_values = self.bar_processor.process_bars(processor);
+        queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
+    }
+
+    fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
+    }
+
+    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+        queue.write_buffer(
+            &self.resolution_buffer,
+            0,
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+        );
     }
 }

@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{FragmentCanvas, FragmentCanvasDescriptor, ShaderCode},
+    components::{Component, FragmentCanvas, FragmentCanvasDescriptor, ShaderCode},
     Renderer,
 };
 use winit::{
@@ -66,11 +66,11 @@ impl<'a> State<'a> {
 
             FragmentCanvas::new(&FragmentCanvasDescriptor {
                 sample_processor: &processor,
-                audio_config: shady_audio::Config::default(),
+                audio_conf: shady_audio::Config::default(),
                 device: renderer.device(),
                 format: surface_config.format,
                 resolution: [size.width, size.height],
-                fragment_source,
+                fragment_code: fragment_source,
             })
             .unwrap_or_else(|msg| panic!("{}", msg))
         };
@@ -98,7 +98,7 @@ impl<'a> State<'a> {
     }
 
     pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
-        self.canvas.update_audio(processor, self.renderer.queue());
+        self.canvas.update_audio(self.renderer.queue(), processor);
         self.canvas
             .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
         let surface_texture = self.surface.get_current_texture()?;
@@ -107,7 +107,8 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, [&self.canvas]);
+        self.renderer
+            .render(&view, [&self.canvas as &dyn Component]);
         surface_texture.present();
         Ok(())
     }

@@ -1,21 +1,42 @@
 use std::{num::NonZero, ops::Range};
 
-use bars::BarsConfig;
-use fragment_canvas::FragmentCanvasConfig;
 use serde::{Deserialize, Serialize};
+use vibe_renderer::components::ShaderCode;
 
-pub mod bars;
-pub mod fragment_canvas;
+const DEFAULT_BARS_WGSL_FRAGMENT_CODE: &str = "
+@fragment
+fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+    var color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
 
-#[derive(Debug)]
+    // apply gamma correction
+    const GAMMA: f32 = 2.2;
+    color.r = pow(color.r, GAMMA);
+    color.g = pow(color.g, GAMMA);
+    color.b = pow(color.b, GAMMA);
+    return vec4<f32>(color, pos.y);
+}
+";
+
+#[derive(Debug, Serialize, Deserialize)]
 pub enum ComponentConfig {
-    Bars(BarsConfig),
-    FragmentCanvas(FragmentCanvasConfig),
+    Bars {
+        audio_conf: AudioConfig,
+        max_height: f32,
+        fragment_code: ShaderCode,
+    },
+    FragmentCanvas {
+        audio_conf: AudioConfig,
+        fragment_code: ShaderCode,
+    },
 }
 
 impl Default for ComponentConfig {
     fn default() -> Self {
-        Self::Bars(BarsConfig::default())
+        Self::Bars {
+            audio_conf: AudioConfig::default(),
+            max_height: 0.75,
+            fragment_code: ShaderCode::Wgsl(DEFAULT_BARS_WGSL_FRAGMENT_CODE.into()),
+        }
     }
 }
 

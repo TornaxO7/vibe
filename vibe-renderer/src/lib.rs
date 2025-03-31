@@ -76,7 +76,7 @@ impl Renderer {
     pub fn render<'a>(
         &self,
         view: &'a wgpu::TextureView,
-        components: impl IntoIterator<Item = impl Component>,
+        components: impl IntoIterator<Item = &'a dyn Component>,
     ) {
         let mut encoder = self
             .device

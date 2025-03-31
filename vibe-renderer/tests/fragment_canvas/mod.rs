@@ -1,5 +1,5 @@
 use shady_audio::{fetcher::DummyFetcher, SampleProcessor};
-use vibe_renderer::components::{FragmentCanvas, FragmentCanvasDescriptor, ShaderCode};
+use vibe_renderer::components::{Component, FragmentCanvas, FragmentCanvasDescriptor, ShaderCode};
 
 use crate::Tester;
 
@@ -11,11 +11,11 @@ fn wgsl_passes() {
     let sample_processor = SampleProcessor::new(DummyFetcher::new());
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &sample_processor,
-        audio_config: shady_audio::Config::default(),
+        audio_conf: shady_audio::Config::default(),
         device: tester.renderer.device(),
         format: tester.output_texture_format(),
         resolution: [tester.output_width, tester.output_height],
-        fragment_source: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
+        fragment_code: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
@@ -36,11 +36,11 @@ fn glsl_passes() {
     let sample_processor = SampleProcessor::new(DummyFetcher::new());
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &sample_processor,
-        audio_config: shady_audio::Config::default(),
+        audio_conf: shady_audio::Config::default(),
         device: tester.renderer.device(),
         format: tester.output_texture_format(),
         resolution: [tester.output_width, tester.output_height],
-        fragment_source: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
+        fragment_code: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

@@ -14,6 +14,7 @@ use smithay_client_toolkit::{
     },
 };
 
+use tracing::error;
 use vibe_renderer::{
     components::{Bars, Component, FragmentCanvas, FragmentCanvasDescriptor},
     Renderer,
@@ -28,7 +29,7 @@ use wgpu::{
 };
 
 use crate::{state::State, types::size::Size};
-use config::OutputConfig;
+use config::{component::ComponentConfig, OutputConfig};
 
 /// Contains every relevant information for an output.
 pub struct OutputCtx {
@@ -99,73 +100,43 @@ impl OutputCtx {
 
             for comp_conf in config.components {
                 let component: Box<dyn Component> = match comp_conf {
-                    ComponentConfig::Bars(bars_conf) => {
-                        let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {
-                            device: renderer.device(),
-                            sample_processor,
-                            audio_conf: bars_conf.audio_conf,
-                            texture_format: surface_config.format,
-                            fragment_source: bars_conf.fragment_source,
-                        });
-
-                        Box::new(bars)
-                    }
-                    ComponentConfig::FragmentCanvas(canvas_conf) => {
-                        let fragment_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
-                            sample_processor,
-                            audio_config: canvas_conf.audio_conf,
-                            device: renderer.device(),
-                            format: surface_config.format,
-                            fragment_source: canvas_conf.fragment_source,
-                            resolution: [0, 0],
-                        });
-
-                        Box::new(fragment_canvas)
-                    }
-                };
+                    ComponentConfig::Bars {
+                        audio_conf,
+                        max_height,
+                        fragment_code,
+                    } => Bars::new(&vibe_renderer::components::BarsDescriptor {
+                        device: renderer.device(),
+                        sample_processor,
+                        audio_conf,
+                        texture_format: surface_config.format,
+                        fragment_code,
+                        max_height,
+                        resolution: [size.width, size.height],
+                    })
+                    .map(|bars| Box::new(bars)),
+                    ComponentConfig::FragmentCanvas {
+                        audio_conf,
+                        fragment_code,
+                    } => FragmentCanvas::new(&FragmentCanvasDescriptor {
+                        sample_processor,
+                        audio_conf,
+                        device: renderer.device(),
+                        format: surface_config.format,
+                        fragment_code,
+                        resolution: [size.width, size.height],
+                    })
+                    .map(|canvas| Box::new(canvas)),
+                }
+                .unwrap_or_else(|msg| {
+                    error!("{}", msg);
+                    panic!("Invalid fragment shader code");
+                });
 
                 components.push(component);
             }
 
             components
         };
-
-        // let shaders = {
-        //     let mut shaders = Vec::with_capacity(config.shaders.len());
-
-        //     for shader_conf in config.shaders.iter() {
-        //         let shader_resource =
-        //             ShaderResources::new(renderer.device(), sample_processor, shader_conf);
-
-        //         let pipeline = {
-        //             let shader_source = match get_shader_source(shader_conf) {
-        //                 Ok(source) => source,
-        //                 Err(err) => {
-        //                     error!("Couldn't parse shader:\n\n{}", err);
-        //                     continue;
-        //                 }
-        //             };
-
-        //             let bind_group_layouts = [
-        //                 output_resources.bind_group_layout(),
-        //                 global_resources.bind_group_layout(),
-        //                 shader_resource.bind_group_layout(),
-        //             ];
-
-        //             renderer.create_render_pipeline(
-        //                 shader_source,
-        //                 &bind_group_layouts,
-        //                 surface_config.format,
-        //             )
-        //         };
-
-        //         let shader = Shader::new(shader_resource, pipeline);
-
-        //         shaders.push(shader);
-        //     }
-
-        //     shaders
-        // };
 
         Self {
             surface_config,
@@ -213,22 +184,6 @@ impl OutputCtx {
         &self.surface
     }
 }
-
-// impl ResourceCollection for OutputCtx {
-//     fn bind_group_layout(&self) -> &wgpu::BindGroupLayout {
-//         self.resources.bind_group_layout()
-//     }
-
-//     fn bind_group(&self) -> &wgpu::BindGroup {
-//         self.resources.bind_group()
-//     }
-
-//     fn update_ressource_buffers(&self, queue: &wgpu::Queue) {
-//         for shader in self.shaders.iter() {
-//             shader.update_render_buffers(queue);
-//         }
-//     }
-// }
 
 fn get_shader_source(shader_conf: &ShaderConf) -> anyhow::Result<ShaderSource> {
     let fragment_module = match &shader_conf.code {

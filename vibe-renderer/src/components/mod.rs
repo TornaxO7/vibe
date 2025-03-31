@@ -4,11 +4,18 @@ mod fragment_canvas;
 pub use bars::{Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 use serde::{Deserialize, Serialize};
+use shady_audio::SampleProcessor;
 
 pub type ParseErrorMsg = String;
 
 pub trait Component {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
+
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor);
+
+    fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32);
+
+    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]);
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
