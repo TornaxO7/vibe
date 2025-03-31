@@ -18,6 +18,7 @@ pub struct BarsDescriptor<'a> {
     pub fragment_source: ShaderCode,
     /// width, height
     pub resolution: [u32; 2],
+    pub max_height: f32,
 }
 
 pub struct Bars {
@@ -29,6 +30,7 @@ pub struct Bars {
     _padding_buffer: wgpu::Buffer,
     time_buffer: wgpu::Buffer,
     resolution_buffer: wgpu::Buffer,
+    _max_height_buffer: wgpu::Buffer,
 
     column_padding_resolution_bind_group: wgpu::BindGroup,
     freqs_time_bind_group: wgpu::BindGroup,
@@ -77,9 +79,15 @@ impl Bars {
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
+        let max_height_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Bar max_height buffer"),
+            contents: bytemuck::cast_slice(&[desc.max_height]),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+
         let (pipeline, column_padding_bind_group, freqs_time_bind_group) = {
-            let column_padding_bind_group_layout =
-                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            let column_padding_resolution_height_bind_group_layout = device
+                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                     label: Some("Bar column padding bind group layout"),
                     entries: &[
                         bind_group_layout_entry(
@@ -97,17 +105,23 @@ impl Bars {
                             wgpu::ShaderStages::FRAGMENT,
                             wgpu::BufferBindingType::Uniform,
                         ),
+                        bind_group_layout_entry(
+                            3,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
                     ],
                 });
 
             let column_padding_resolution_bind_group =
                 device.create_bind_group(&wgpu::BindGroupDescriptor {
                     label: Some("Bar column padding bind group"),
-                    layout: &column_padding_bind_group_layout,
+                    layout: &column_padding_resolution_height_bind_group_layout,
                     entries: &[
                         bind_group_entry(0, &column_width_buffer),
                         bind_group_entry(1, &padding_buffer),
                         bind_group_entry(2, &resolution_buffer),
+                        bind_group_entry(3, &max_height_buffer),
                     ],
                 });
 
@@ -140,7 +154,7 @@ impl Bars {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bar pipeline layout"),
                 bind_group_layouts: &[
-                    &column_padding_bind_group_layout,
+                    &column_padding_resolution_height_bind_group_layout,
                     &freqs_time_bind_group_layout,
                 ],
                 push_constant_ranges: &[],
@@ -218,6 +232,7 @@ impl Bars {
             _padding_buffer: padding_buffer,
             time_buffer,
             resolution_buffer,
+            _max_height_buffer: max_height_buffer,
 
             pipeline,
             column_padding_resolution_bind_group: column_padding_bind_group,

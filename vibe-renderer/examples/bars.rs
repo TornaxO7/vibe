@@ -56,6 +56,7 @@ impl<'a> State<'a> {
             sample_processor: &processor,
             audio_conf: shady_audio::Config::default(),
             texture_format: surface_config.format,
+            max_height: 0.5,
             resolution: [size.width, size.height],
             fragment_source: ShaderCode::Wgsl(
                 "

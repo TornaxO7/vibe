@@ -4,6 +4,9 @@ var<uniform> column_width: f32;
 @group(0) @binding(1)
 var<uniform> padding: f32;
 
+@group(0) @binding(3)
+var<uniform> max_height: f32;
+
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
 
@@ -33,7 +36,8 @@ fn main(in: Input) -> @builtin(position) vec4<f32> {
 
     // y
     if (in.vertex_idx <= 1) {
-        pos.y += 2. * freqs[in.instance_idx];
+        const MAX_HEIGHT: f32 = 2.;
+        pos.y += MAX_HEIGHT * freqs[in.instance_idx] * max_height;
     }
 
     return vec4<f32>(pos, 0., 1.);
