@@ -1,10 +1,5 @@
 pub mod config;
-mod shader;
 
-use std::borrow::Cow;
-
-use anyhow::{anyhow, Context};
-use shader::config::{ShaderCode, ShaderConf};
 use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
     output::OutputInfo,
@@ -20,13 +15,7 @@ use vibe_renderer::{
     Renderer,
 };
 use wayland_client::QueueHandle;
-use wgpu::{
-    naga::{
-        front::{glsl, wgsl},
-        Module, ShaderStage,
-    },
-    PresentMode, ShaderSource, Surface, SurfaceConfiguration,
-};
+use wgpu::{PresentMode, Surface, SurfaceConfiguration};
 
 use crate::{state::State, types::size::Size};
 use config::{component::ComponentConfig, OutputConfig};
@@ -107,25 +96,25 @@ impl OutputCtx {
                     } => Bars::new(&vibe_renderer::components::BarsDescriptor {
                         device: renderer.device(),
                         sample_processor,
-                        audio_conf,
+                        audio_conf: shady_audio::Config::from(audio_conf),
                         texture_format: surface_config.format,
                         fragment_code,
                         max_height,
                         resolution: [size.width, size.height],
                     })
-                    .map(|bars| Box::new(bars)),
+                    .map(|bars| Box::new(bars) as Box<dyn Component>),
                     ComponentConfig::FragmentCanvas {
                         audio_conf,
                         fragment_code,
                     } => FragmentCanvas::new(&FragmentCanvasDescriptor {
                         sample_processor,
-                        audio_conf,
+                        audio_conf: shady_audio::Config::from(audio_conf),
                         device: renderer.device(),
                         format: surface_config.format,
                         fragment_code,
                         resolution: [size.width, size.height],
                     })
-                    .map(|canvas| Box::new(canvas)),
+                    .map(|canvas| Box::new(canvas) as Box<dyn Component>),
                 }
                 .unwrap_or_else(|msg| {
                     error!("{}", msg);
@@ -168,8 +157,9 @@ impl OutputCtx {
             self.surface
                 .configure(renderer.device(), &self.surface_config);
 
-            self.resources.set_resolution(new_size);
-            self.resources.update_ressource_buffers(renderer.queue());
+            for component in self.components.iter_mut() {
+                component.update_resolution(renderer.queue(), [new_size.width, new_size.height]);
+            }
         }
     }
 }
@@ -183,40 +173,4 @@ impl OutputCtx {
     pub fn surface(&self) -> &wgpu::Surface<'static> {
         &self.surface
     }
-}
-
-fn get_shader_source(shader_conf: &ShaderConf) -> anyhow::Result<ShaderSource> {
-    let fragment_module = match &shader_conf.code {
-        ShaderCode::Glsl(code) => get_glsl_module(code)?,
-        ShaderCode::Wgsl(code) => get_wgsl_module(code)?,
-        ShaderCode::VibeShader(dir_name) => {
-            let url = format!("https://raw.githubusercontent.com/TornaxO7/vibe-shaders/refs/heads/main/{}/code.toml", dir_name);
-            let body = reqwest::blocking::get(url)
-                .context("Send http request to fetch shader code")?
-                .text()
-                .unwrap();
-            let shader_code: ShaderCode = toml::from_str(&body)?;
-
-            match shader_code {
-                ShaderCode::Glsl(code) => get_glsl_module(code)?,
-                ShaderCode::Wgsl(code) => get_wgsl_module(code)?,
-                ShaderCode::VibeShader(_) => {
-                    anyhow::bail!("The shader in '{}' refers to another shader. Please create an issue this shouldn't happen! Going to skip this shader...", dir_name);
-                }
-            }
-        }
-    };
-
-    Ok(ShaderSource::Naga(Cow::Owned(fragment_module)))
-}
-
-fn get_glsl_module(code: impl AsRef<str>) -> anyhow::Result<Module> {
-    let mut frontend = glsl::Frontend::default();
-    frontend
-        .parse(&glsl::Options::from(ShaderStage::Fragment), code.as_ref())
-        .map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
-}
-
-fn get_wgsl_module(code: impl AsRef<str>) -> anyhow::Result<Module> {
-    wgsl::parse_str(code.as_ref()).map_err(|err| anyhow!("{}", err.emit_to_string(code.as_ref())))
 }

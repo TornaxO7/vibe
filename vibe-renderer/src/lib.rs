@@ -73,10 +73,13 @@ impl Renderer {
         }
     }
 
-    pub fn render<'a>(
+    pub fn render<
+        'a,
+        I: IntoIterator<Item: std::ops::Deref<Target: std::ops::Deref<Target: Component>>>,
+    >(
         &self,
         view: &'a wgpu::TextureView,
-        components: impl IntoIterator<Item = &'a dyn Component>,
+        components: I,
     ) {
         let mut encoder = self
             .device

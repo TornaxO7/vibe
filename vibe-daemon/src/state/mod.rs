@@ -15,7 +15,7 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use std::{collections::HashMap, ptr::NonNull};
+use std::{collections::HashMap, ptr::NonNull, time::Instant};
 use tracing::{debug, error, info, warn};
 use vibe_renderer::Renderer;
 use wayland_client::{
@@ -40,6 +40,8 @@ pub struct State {
 
     renderer: Renderer,
     sample_processor: SampleProcessor,
+
+    time: Instant,
 
     outputs: HashMap<WlOutput, OutputCtx>,
 }
@@ -111,29 +113,27 @@ impl State {
             layer_shell,
             renderer,
 
+            time: Instant::now(),
+
             sample_processor,
 
             outputs: HashMap::new(),
         })
     }
 
-    pub fn render(&self, output: &OutputCtx, qh: &QueueHandle<Self>) {
+    pub fn render(&mut self, output_key: WlOutput, qh: &QueueHandle<Self>) {
+        let output = self.outputs.get_mut(&output_key).unwrap();
+
         // update the buffers for the next frame
         {
-            self.global_resources
-                .update_ressource_buffers(self.renderer.queue());
+            let queue = self.renderer.queue();
+            let curr_time = self.time.elapsed().as_secs_f32();
 
-            for shader in output.shaders.iter() {
-                shader
-                    .resources
-                    .update_ressource_buffers(self.renderer.queue());
+            for component in output.components.iter_mut() {
+                component.update_audio(queue, &self.sample_processor);
+                component.update_time(queue, curr_time);
             }
         }
-
-        let global_bind_groups = [
-            self.global_resources.bind_group(),
-            output.resources.bind_group(),
-        ];
 
         match output.surface().get_current_texture() {
             Ok(surface_texture) => {
@@ -141,7 +141,7 @@ impl State {
                     &surface_texture
                         .texture
                         .create_view(&wgpu::TextureViewDescriptor::default()),
-                    global_bind_groups,
+                    &output.components,
                 );
                 surface_texture.present();
                 output.request_redraw(qh);
@@ -302,13 +302,11 @@ impl CompositorHandler for State {
         {
             let output = self.outputs.get_mut(&key).unwrap();
             for component in output.components.iter_mut() {
-                component.update_audio(&self.sample_processor);
+                component.update_audio(self.renderer.queue(), &self.sample_processor);
             }
         }
 
-        let output = self.outputs.get(&key).unwrap();
-
-        self.render(output, qh);
+        self.render(key, qh);
     }
 
     fn surface_enter(
