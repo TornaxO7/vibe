@@ -1,15 +1,12 @@
+pub mod component;
 pub mod config;
-mod resources;
 mod shader;
 
 use std::borrow::Cow;
 
 use anyhow::{anyhow, Context};
-use resources::OutputResources;
-use shader::{
-    config::{ShaderCode, ShaderConf},
-    Shader, ShaderResources,
-};
+use component::ComponentConfig;
+use shader::config::{ShaderCode, ShaderConf};
 use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
     output::OutputInfo,
@@ -18,8 +15,11 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use tracing::error;
 
+use vibe_renderer::{
+    components::{Bars, Component, FragmentCanvas, FragmentCanvasDescriptor},
+    Renderer,
+};
 use wayland_client::QueueHandle;
 use wgpu::{
     naga::{
@@ -29,13 +29,12 @@ use wgpu::{
     PresentMode, ShaderSource, Surface, SurfaceConfiguration,
 };
 
-use crate::state::State;
+use crate::{state::State, types::size::Size};
 use config::OutputConfig;
 
 /// Contains every relevant information for an output.
 pub struct OutputCtx {
-    pub resources: OutputResources,
-    pub shaders: Vec<Shader>,
+    pub components: Vec<Box<dyn Component>>,
 
     // don't know if this is required, but better drop `surface` first before
     // `layer_surface`
@@ -52,7 +51,6 @@ impl OutputCtx {
         renderer: &Renderer,
         sample_processor: &SampleProcessor,
         config: OutputConfig,
-        global_resources: &GlobalResources,
     ) -> Self {
         let size = Size::from(&info);
 
@@ -98,51 +96,84 @@ impl OutputCtx {
             config
         };
 
-        let output_resources = OutputResources::new(renderer.device());
+        let components = {
+            let mut components = Vec::with_capacity(config.components.len());
 
-        let shaders = {
-            let mut shaders = Vec::with_capacity(config.shaders.len());
+            for comp_conf in config.components {
+                let component: Box<dyn Component> = match comp_conf {
+                    ComponentConfig::Bars(bars_conf) => {
+                        let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {
+                            device: renderer.device(),
+                            sample_processor,
+                            audio_conf: bars_conf.audio_conf,
+                            texture_format: surface_config.format,
+                            fragment_source: bars_conf.fragment_source,
+                        });
 
-            for shader_conf in config.shaders.iter() {
-                let shader_resource =
-                    ShaderResources::new(renderer.device(), sample_processor, shader_conf);
+                        Box::new(bars)
+                    }
+                    ComponentConfig::FragmentCanvas(canvas_conf) => {
+                        let fragment_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
+                            sample_processor,
+                            audio_config: canvas_conf.audio_conf,
+                            device: renderer.device(),
+                            format: surface_config.format,
+                            fragment_source: canvas_conf.fragment_source,
+                            resolution: [0, 0],
+                        });
 
-                let pipeline = {
-                    let shader_source = match get_shader_source(shader_conf) {
-                        Ok(source) => source,
-                        Err(err) => {
-                            error!("Couldn't parse shader:\n\n{}", err);
-                            continue;
-                        }
-                    };
-
-                    let bind_group_layouts = [
-                        output_resources.bind_group_layout(),
-                        global_resources.bind_group_layout(),
-                        shader_resource.bind_group_layout(),
-                    ];
-
-                    renderer.create_render_pipeline(
-                        shader_source,
-                        &bind_group_layouts,
-                        surface_config.format,
-                    )
+                        Box::new(fragment_canvas)
+                    }
                 };
 
-                let shader = Shader::new(shader_resource, pipeline);
-
-                shaders.push(shader);
+                components.push(component);
             }
 
-            shaders
+            components
         };
+
+        // let shaders = {
+        //     let mut shaders = Vec::with_capacity(config.shaders.len());
+
+        //     for shader_conf in config.shaders.iter() {
+        //         let shader_resource =
+        //             ShaderResources::new(renderer.device(), sample_processor, shader_conf);
+
+        //         let pipeline = {
+        //             let shader_source = match get_shader_source(shader_conf) {
+        //                 Ok(source) => source,
+        //                 Err(err) => {
+        //                     error!("Couldn't parse shader:\n\n{}", err);
+        //                     continue;
+        //                 }
+        //             };
+
+        //             let bind_group_layouts = [
+        //                 output_resources.bind_group_layout(),
+        //                 global_resources.bind_group_layout(),
+        //                 shader_resource.bind_group_layout(),
+        //             ];
+
+        //             renderer.create_render_pipeline(
+        //                 shader_source,
+        //                 &bind_group_layouts,
+        //                 surface_config.format,
+        //             )
+        //         };
+
+        //         let shader = Shader::new(shader_resource, pipeline);
+
+        //         shaders.push(shader);
+        //     }
+
+        //     shaders
+        // };
 
         Self {
             surface_config,
             surface,
             layer_surface,
-            shaders,
-            resources: output_resources,
+            components,
         }
     }
 
@@ -176,10 +207,6 @@ impl OutputCtx {
 
 // getters
 impl OutputCtx {
-    pub fn render_shaders(&self) -> impl IntoIterator<Item = impl RenderShader + use<'_>> {
-        &self.shaders
-    }
-
     pub fn layer_surface(&self) -> &LayerSurface {
         &self.layer_surface
     }

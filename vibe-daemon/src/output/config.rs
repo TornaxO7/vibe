@@ -4,12 +4,12 @@ use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
 
-use super::shader::config::ShaderConf;
+use super::component::ComponentConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
     pub enable: bool,
-    pub shaders: Vec<ShaderConf>,
+    pub components: Vec<ComponentConfig>,
 }
 
 impl OutputConfig {
@@ -18,7 +18,7 @@ impl OutputConfig {
 
         let new = Self {
             enable: true,
-            shaders: vec![ShaderConf::default()],
+            components: vec![ComponentConfig::default()],
         };
 
         new.save(name)?;
