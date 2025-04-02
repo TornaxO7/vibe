@@ -44,6 +44,7 @@ impl Default for ComponentConfig {
 pub struct AudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: Range<NonZero<u16>>,
+    pub sensitivity: f32,
 }
 
 impl Default for AudioConfig {
@@ -51,6 +52,7 @@ impl Default for AudioConfig {
         Self {
             amount_bars: NonZero::new(60).unwrap(),
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+            sensitivity: 0.1,
         }
     }
 }
@@ -60,6 +62,7 @@ impl From<AudioConfig> for shady_audio::Config {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range,
+            sensitivity: conf.sensitivity,
             ..Default::default()
         }
     }

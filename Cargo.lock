@@ -2829,9 +2829,9 @@ dependencies = [
 
 [[package]]
 name = "shady-audio"
-version = "6.1.0"
+version = "7.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "046161438679b0cd36d68a56ceee7213d19e1d9b0c6ecbd2b9cdfc44e4dc7605"
+checksum = "55ab7f6e37a8b99e7e309816b31393a0aa21f6ff161c29a733581d478aaa7021"
 dependencies = [
  "apodize",
  "cpal",
