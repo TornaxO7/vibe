@@ -73,14 +73,13 @@ impl Renderer {
         }
     }
 
-    pub fn render<
-        'a,
-        I: IntoIterator<Item: std::ops::Deref<Target: std::ops::Deref<Target: Component>>>,
-    >(
+    pub fn render<'a, T>(
         &self,
         view: &'a wgpu::TextureView,
-        components: I,
-    ) {
+        components: impl IntoIterator<Item = &'a T>,
+    ) where
+        T: std::ops::Deref<Target: Component> + 'a,
+    {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());

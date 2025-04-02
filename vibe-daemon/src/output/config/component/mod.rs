@@ -41,10 +41,16 @@ impl Default for ComponentConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Sensitivity {
+    pub min: f32,
+    pub max: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: Range<NonZero<u16>>,
-    pub sensitivity: f32,
+    pub sensitivity: Sensitivity,
 }
 
 impl Default for AudioConfig {
@@ -52,7 +58,10 @@ impl Default for AudioConfig {
         Self {
             amount_bars: NonZero::new(60).unwrap(),
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-            sensitivity: 0.1,
+            sensitivity: Sensitivity {
+                min: 0.05,
+                max: 0.2,
+            },
         }
     }
 }
@@ -62,7 +71,10 @@ impl From<AudioConfig> for shady_audio::Config {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range,
-            sensitivity: conf.sensitivity,
+            sensitivity: shady_audio::Sensitivity {
+                min: conf.sensitivity.min,
+                max: conf.sensitivity.max,
+            },
             ..Default::default()
         }
     }
