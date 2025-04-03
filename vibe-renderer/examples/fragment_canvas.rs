@@ -107,7 +107,7 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, [&self.canvas]);
+        self.renderer.render(&view, &[&self.canvas]);
         surface_texture.present();
         Ok(())
     }

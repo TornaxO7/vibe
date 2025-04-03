@@ -75,10 +75,10 @@ impl Renderer {
         }
     }
 
-    pub fn render<C: Deref<Target: Component>>(
+    pub fn render<'a, 'c, C: Deref<Target: Component> + 'c>(
         &self,
-        view: &wgpu::TextureView,
-        components: impl IntoIterator<Item = C>,
+        view: &'a wgpu::TextureView,
+        components: impl IntoIterator<Item = &'c C>,
     ) {
         let mut encoder = self
             .device
