@@ -23,11 +23,6 @@ wayland-client = "0.31"
 wayland-backend = { version = "0.3", features = ["client_system"] }
 smithay-client-toolkit = "0.19"
 
-reqwest = { version = "0.12", default-features = false, features = [
-  "rustls-tls",
-  "blocking",
-] }
-
 vibe-renderer = { path = "../vibe-renderer" }
 xdg = "2.5"
 toml = "0.8"

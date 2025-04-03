@@ -103,7 +103,9 @@ impl State {
             default_config
         });
 
-        let renderer = Renderer::new(&vibe_config.graphics_config);
+        let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::from(
+            vibe_config.graphics_config,
+        ));
 
         Ok(Self {
             run: true,
