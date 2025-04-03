@@ -108,6 +108,11 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 ### Fragment canvas
 
 Create a component to write [shadertoy]-_like_ shaders.
+If you want to use the shadertoy-shaders, you generally need to do the following things:
+
+1. Replace the `void mainImage(...)` function _signature_ with `void main()`.
+2. Replace `fragCoord` with `gl_FragCoord` and it should work.
+3. Optional: Apply the gamma correction for "correct" color display (see below in the example glsl code on how to do that).
 
 ```toml
 # set the amount of bars you'd like to display
@@ -155,6 +160,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 # void main() {
 #     vec3 col = vec3(0.);
 #
+#     // gamma correction
 #     const float GAMMA = 2.2;
 #     col.r = pow(col.r, GAMMA);
 #     col.g = pow(col.g, GAMMA);
