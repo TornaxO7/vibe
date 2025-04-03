@@ -135,11 +135,11 @@ impl FragmentCanvas {
                 let module = match &desc.fragment_code {
                     ShaderCode::Wgsl(code) => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, &code)?
+                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
                     }
                     ShaderCode::Glsl(code) => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, &code)?
+                        super::parse_glsl_fragment_code(PREAMBLE, code)?
                     }
                 };
 
