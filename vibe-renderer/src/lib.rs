@@ -1,5 +1,7 @@
 pub mod components;
 
+use std::ops::Deref;
+
 use components::Component;
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
@@ -73,13 +75,11 @@ impl Renderer {
         }
     }
 
-    pub fn render<'a, T>(
+    pub fn render<'a, C: Deref<Target: Component>>(
         &self,
         view: &'a wgpu::TextureView,
-        components: impl IntoIterator<Item = &'a T>,
-    ) where
-        T: std::ops::Deref<Target: Component> + 'a,
-    {
+        components: impl IntoIterator<Item = C>,
+    ) {
         let mut encoder = self
             .device
             .create_command_encoder(&wgpu::CommandEncoderDescriptor::default());

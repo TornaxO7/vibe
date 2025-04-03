@@ -72,3 +72,21 @@ fn parse_glsl_fragment_code(
         .parse(&options, &full_code)
         .map_err(|err| err.emit_to_string(&full_code))
 }
+
+impl<T: Component + ?Sized> Component for Box<T> {
+    fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
+        self.as_ref().render_with_renderpass(pass);
+    }
+
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+        self.as_mut().update_audio(queue, processor);
+    }
+
+    fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        self.as_mut().update_time(queue, new_time);
+    }
+
+    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+        self.as_mut().update_resolution(queue, new_resolution);
+    }
+}
