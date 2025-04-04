@@ -3,12 +3,42 @@ use std::{borrow::Cow, num::NonZero};
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use super::{bind_group_entry, bind_group_layout_entry, Component, ParseErrorMsg, ShaderCode};
+use super::{bind_group_manager::BindGroupManager, Component, ParseErrorMsg, ShaderCode};
+
+// assuming each value is positive
+pub type Rgba = [f32; 4];
 
 const SHADER_ENTRYPOINT: &str = "main";
 
 /// The x coords goes from -1 to 1.
 const VERTEX_SURFACE_WIDTH: f32 = 2.;
+
+#[derive(Debug, Clone)]
+pub enum BarVariant {
+    Color(Rgba),
+    FragmentCode {
+        /// width, height
+        resolution: [u32; 2],
+        code: ShaderCode,
+    },
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum Bindings0 {
+    ColumnWidth = 0,
+    Padding = 1,
+    MaxHeight = 2,
+    Color = 3,
+    Resolution = 4,
+}
+
+#[repr(u32)]
+#[derive(Debug, Clone, Copy)]
+pub enum Bindings1 {
+    Freqs = 0,
+    Time = 1,
+}
 
 pub struct BarsDescriptor<'a> {
     pub device: &'a wgpu::Device,
@@ -17,9 +47,7 @@ pub struct BarsDescriptor<'a> {
     pub texture_format: wgpu::TextureFormat,
 
     // fragment shader relevant stuff
-    pub fragment_code: ShaderCode,
-    /// width, height
-    pub resolution: [u32; 2],
+    pub variant: BarVariant,
     pub max_height: f32,
 }
 
@@ -27,15 +55,8 @@ pub struct Bars {
     amount_bars: NonZero<u16>,
     bar_processor: BarProcessor,
 
-    freqs_buffer: wgpu::Buffer,
-    _column_width_buffer: wgpu::Buffer,
-    _padding_buffer: wgpu::Buffer,
-    time_buffer: wgpu::Buffer,
-    resolution_buffer: wgpu::Buffer,
-    _max_height_buffer: wgpu::Buffer,
-
-    column_padding_resolution_bind_group: wgpu::BindGroup,
-    freqs_time_bind_group: wgpu::BindGroup,
+    bind_group0: BindGroupManager,
+    bind_group1: BindGroupManager,
 
     pipeline: wgpu::RenderPipeline,
 }
@@ -46,145 +67,131 @@ impl Bars {
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
+        let mut bind_group0_builder = BindGroupManager::builder(Some("Bars: Bind group 0"));
+        let mut bind_group1_builder = BindGroupManager::builder(Some("Bars: Bind group 1"));
+
         let column_width = VERTEX_SURFACE_WIDTH / u16::from(amount_bars) as f32;
         let padding = column_width / 5.;
 
-        let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Bar freq buffer"),
-            size: (std::mem::size_of::<f32>() * usize::from(u16::from(amount_bars))) as u64,
-            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        bind_group0_builder.insert_buffer(
+            Bindings0::ColumnWidth as u32,
+            wgpu::ShaderStages::VERTEX,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Bar: `column_width` buffer"),
+                contents: bytemuck::bytes_of(&column_width),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
 
-        let column_width_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar column width buffer"),
-            contents: bytemuck::cast_slice(&[column_width]),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+        bind_group0_builder.insert_buffer(
+            Bindings0::Padding as u32,
+            wgpu::ShaderStages::VERTEX,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Bar: `padding` buffer"),
+                contents: bytemuck::bytes_of(&padding),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
 
-        let padding_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar padding buffer"),
-            contents: bytemuck::cast_slice(&[padding]),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+        bind_group0_builder.insert_buffer(
+            Bindings0::MaxHeight as u32,
+            wgpu::ShaderStages::VERTEX,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Bar: `max_height` buffer"),
+                contents: bytemuck::bytes_of(&desc.max_height),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
 
-        let time_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Bar time buffer"),
-            size: std::mem::size_of::<f32>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+        bind_group1_builder.insert_buffer(
+            Bindings1::Freqs as u32,
+            wgpu::ShaderStages::VERTEX,
+            device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Bar: `freqs` buffer"),
+                size: (std::mem::size_of::<f32>() * usize::from(u16::from(amount_bars))) as u64,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            }),
+        );
 
-        let resolution_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar resolution buffer"),
-            contents: bytemuck::cast_slice(&[desc.resolution[0] as f32, desc.resolution[1] as f32]),
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-        });
+        let fragment_module = match &desc.variant {
+            BarVariant::Color(rgba) => {
+                bind_group0_builder.insert_buffer(
+                    Bindings0::Color as u32,
+                    wgpu::ShaderStages::FRAGMENT,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Bar: `color` buffer"),
+                        contents: bytemuck::cast_slice(rgba),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                );
 
-        let max_height_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Bar max_height buffer"),
-            contents: bytemuck::cast_slice(&[desc.max_height]),
-            usage: wgpu::BufferUsages::UNIFORM,
-        });
+                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Bar: Color fragment module"),
+                    source: wgpu::ShaderSource::Wgsl(
+                        include_str!("./shaders/fragment_color.wgsl").into(),
+                    ),
+                })
+            }
+            BarVariant::FragmentCode { resolution, code } => {
+                bind_group0_builder.insert_buffer(
+                    Bindings0::Resolution as u32,
+                    wgpu::ShaderStages::FRAGMENT,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Bar: iResolution buffer"),
+                        contents: bytemuck::cast_slice(resolution),
+                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    }),
+                );
 
-        let (pipeline, column_padding_bind_group, freqs_time_bind_group) = {
-            let column_padding_resolution_height_bind_group_layout = device
-                .create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Bar column padding bind group layout"),
-                    entries: &[
-                        bind_group_layout_entry(
-                            0,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                        bind_group_layout_entry(
-                            1,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                        bind_group_layout_entry(
-                            2,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                        bind_group_layout_entry(
-                            3,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ],
-                });
+                bind_group1_builder.insert_buffer(
+                    Bindings1::Time as u32,
+                    wgpu::ShaderStages::FRAGMENT,
+                    device.create_buffer(&wgpu::BufferDescriptor {
+                        label: Some("Bar: iTime buffer"),
+                        size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
+                    }),
+                );
 
-            let column_padding_resolution_bind_group =
-                device.create_bind_group(&wgpu::BindGroupDescriptor {
-                    label: Some("Bar column padding bind group"),
-                    layout: &column_padding_resolution_height_bind_group_layout,
-                    entries: &[
-                        bind_group_entry(0, &column_width_buffer),
-                        bind_group_entry(1, &padding_buffer),
-                        bind_group_entry(2, &resolution_buffer),
-                        bind_group_entry(3, &max_height_buffer),
-                    ],
-                });
+                let module = match &code {
+                    ShaderCode::Wgsl(code) => {
+                        const PREAMBLE: &str =
+                            include_str!("./shaders/fragment_code_preamble.wgsl");
+                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
+                    }
+                    ShaderCode::Glsl(code) => {
+                        const PREAMBLE: &str =
+                            include_str!("./shaders/fragment_code_preamble.glsl");
+                        super::parse_glsl_fragment_code(PREAMBLE, code)?
+                    }
+                };
+                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Bar: Fragment code module"),
+                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
+                })
+            }
+        };
 
-            let freqs_time_bind_group_layout =
-                device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                    label: Some("Bar freqs time bind group layout"),
-                    entries: &[
-                        bind_group_layout_entry(
-                            0,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Storage { read_only: true },
-                        ),
-                        bind_group_layout_entry(
-                            1,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ],
-                });
-
-            let freqs_time_bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                label: Some("Bar freqs time bind group"),
-                layout: &freqs_time_bind_group_layout,
-                entries: &[
-                    bind_group_entry(0, &freqs_buffer),
-                    bind_group_entry(1, &time_buffer),
-                ],
-            });
-
+        let pipeline = {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bar pipeline layout"),
                 bind_group_layouts: &[
-                    &column_padding_resolution_height_bind_group_layout,
-                    &freqs_time_bind_group_layout,
+                    &bind_group0_builder.get_bind_group_layout(device),
+                    &bind_group1_builder.get_bind_group_layout(device),
                 ],
                 push_constant_ranges: &[],
             });
 
             let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Bar vertex module"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("./vertex_shader.wgsl").into()),
+                source: wgpu::ShaderSource::Wgsl(
+                    include_str!("./shaders/vertex_shader.wgsl").into(),
+                ),
             });
 
-            let fragment_module = {
-                let module = match &desc.fragment_code {
-                    ShaderCode::Wgsl(code) => {
-                        const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
-                    }
-                    ShaderCode::Glsl(code) => {
-                        const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, code)?
-                    }
-                };
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar fragment module"),
-                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
-                })
-            };
-
-            let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("Bar render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
@@ -216,56 +223,56 @@ impl Bars {
                 }),
                 multiview: None,
                 cache: None,
-            });
-
-            (
-                pipeline,
-                column_padding_resolution_bind_group,
-                freqs_time_bind_group,
-            )
+            })
         };
 
         Ok(Self {
             amount_bars,
             bar_processor,
 
-            freqs_buffer,
-            _column_width_buffer: column_width_buffer,
-            _padding_buffer: padding_buffer,
-            time_buffer,
-            resolution_buffer,
-            _max_height_buffer: max_height_buffer,
+            bind_group0: bind_group0_builder.build(device),
+            bind_group1: bind_group1_builder.build(device),
 
             pipeline,
-            column_padding_resolution_bind_group: column_padding_bind_group,
-            freqs_time_bind_group,
         })
     }
 }
 
 impl Component for Bars {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, &self.column_padding_resolution_bind_group, &[]);
-        pass.set_bind_group(1, &self.freqs_time_bind_group, &[]);
+        if !self.bind_group0.is_empty() {
+            pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
+        }
+
+        if !self.bind_group1.is_empty() {
+            pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
+        }
+
         pass.set_pipeline(&self.pipeline);
 
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
     }
 
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
-        let bar_values = self.bar_processor.process_bars(processor);
-        queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(bar_values));
+        if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
+            let bar_values = self.bar_processor.process_bars(processor);
+            queue.write_buffer(&buffer, 0, bytemuck::cast_slice(bar_values));
+        }
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        queue.write_buffer(&self.time_buffer, 0, bytemuck::cast_slice(&[new_time]));
+        if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Time as u32) {
+            queue.write_buffer(&buffer, 0, bytemuck::bytes_of(&new_time));
+        }
     }
 
     fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
-        queue.write_buffer(
-            &self.resolution_buffer,
-            0,
-            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-        );
+        if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::Resolution as u32) {
+            queue.write_buffer(
+                &buffer,
+                0,
+                bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+            );
+        }
     }
 }

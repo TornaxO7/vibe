@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{Bars, BarsDescriptor, Component, ShaderCode},
+    components::{BarVariant, Bars, BarsDescriptor, Component, ShaderCode},
     Renderer,
 };
 use winit::{
@@ -57,27 +57,29 @@ impl<'a> State<'a> {
             audio_conf: shady_audio::Config::default(),
             texture_format: surface_config.format,
             max_height: 0.5,
-            resolution: [size.width, size.height],
-            fragment_code: ShaderCode::Wgsl(
+            variant: BarVariant::FragmentCode {
+                resolution: [size.width, size.height],
+                code: ShaderCode::Wgsl(
+                    "
+                    @fragment
+                    fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+                        var uv = pos.xy / iResolution.xy;
+                        uv.y = 1. - uv.y;
+                        uv.x *= iResolution.x / iResolution.y;
+
+                        var col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
+
+                        const GAMMA: f32 = 2.2;
+                        col.r = pow(col.r, GAMMA);
+                        col.g = pow(col.g, GAMMA);
+                        col.b = pow(col.b, GAMMA);
+
+                        return vec4<f32>(col, uv.y);
+                    }
                 "
-                @fragment
-                fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                    var uv = pos.xy / iResolution.xy;
-                    uv.y = 1. - uv.y;
-                    uv.x *= iResolution.x / iResolution.y;
-
-                    var col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
-
-                    const GAMMA: f32 = 2.2;
-                    col.r = pow(col.r, GAMMA);
-                    col.g = pow(col.g, GAMMA);
-                    col.b = pow(col.b, GAMMA);
-
-                    return vec4<f32>(col, uv.y);
-                }
-                "
-                .into(),
-            ),
+                    .into(),
+                ),
+            },
         })
         .unwrap_or_else(|err| panic!("{}", err));
 

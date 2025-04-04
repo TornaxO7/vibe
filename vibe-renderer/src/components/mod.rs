@@ -1,7 +1,8 @@
 mod bars;
+mod bind_group_manager;
 mod fragment_canvas;
 
-pub use bars::{Bars, BarsDescriptor};
+pub use bars::{BarVariant, Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 use serde::{Deserialize, Serialize};
 use shady_audio::SampleProcessor;

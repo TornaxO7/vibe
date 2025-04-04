@@ -1,4 +1,4 @@
-@group(0) @binding(2)
+@group(0) @binding(4)
 var<uniform> iResolution: vec2<f32>;
 
 @group(1) @binding(1)

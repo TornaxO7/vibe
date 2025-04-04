@@ -4,7 +4,7 @@ var<uniform> column_width: f32;
 @group(0) @binding(1)
 var<uniform> padding: f32;
 
-@group(0) @binding(3)
+@group(0) @binding(2)
 var<uniform> max_height: f32;
 
 @group(1) @binding(0)
