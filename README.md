@@ -1,6 +1,6 @@
 # Vibe
 
-A desktop music visualizer inspired by [glava] and [shadertoy] for wayland!
+`vibe` (to have a nice vibe with your music) is a desktop music visualizer inspired by [glava] and [shadertoy] for wayland!
 
 **Note:** Your compositor _must_ support the [`wlr-layer-shell`] protocol. See [here](https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support)
 for a list of compositors on which `vibe` should be able to run.
