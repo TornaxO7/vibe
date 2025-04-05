@@ -116,6 +116,11 @@ impl Bars {
 
         let fragment_module = match &desc.variant {
             BarVariant::Color(rgba) => {
+                let mut rgba_with_gamma_correction = rgba.clone();
+                for value in rgba_with_gamma_correction.iter_mut() {
+                    *value = value.powf(super::GAMMA);
+                }
+
                 bind_group0_builder.insert_buffer(
                     Bindings0::Color as u32,
                     wgpu::ShaderStages::FRAGMENT,
