@@ -3,6 +3,7 @@ use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
 
 mod bar_with_color_variant;
 mod bar_with_fragment_code_variant;
+mod bar_with_presence_gradient_variant;
 
 mod fragment_canvas;
 

@@ -7,8 +7,6 @@ pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 use serde::{Deserialize, Serialize};
 use shady_audio::SampleProcessor;
 
-const GAMMA: f32 = 2.2;
-
 pub type ParseErrorMsg = String;
 
 pub trait Component {

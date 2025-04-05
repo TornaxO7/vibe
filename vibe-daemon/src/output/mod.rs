@@ -96,38 +96,34 @@ impl OutputCtx {
                         audio_conf,
                         max_height,
                         variant,
-                    } => match variant {
-                        BarVariantConfig::Color(rgba) => {
-                            let mut rgba_adjusted = [0f32; 4];
-                            for (idx, value) in rgba.0.iter().enumerate() {
-                                rgba_adjusted[idx] = *value as f32 / 255.;
+                    } => {
+                        let variant = match variant {
+                            BarVariantConfig::Color(rgba) => {
+                                BarVariant::Color(rgba.gamma_corrected())
                             }
+                            BarVariantConfig::PresenceGradient {
+                                high_presence,
+                                low_presence,
+                            } => BarVariant::PresenceGradient {
+                                high: high_presence.gamma_corrected(),
+                                low: low_presence.gamma_corrected(),
+                            },
+                            BarVariantConfig::FragmentCode(code) => BarVariant::FragmentCode {
+                                resolution: [size.width, size.height],
+                                code,
+                            },
+                        };
 
-                            Bars::new(&vibe_renderer::components::BarsDescriptor {
-                                device: renderer.device(),
-                                sample_processor,
-                                audio_conf: shady_audio::Config::from(audio_conf),
-                                texture_format: surface_config.format,
-                                max_height,
-                                variant: BarVariant::Color(rgba_adjusted),
-                            })
-                            .map(|bars| Box::new(bars) as Box<dyn Component>)
-                        }
-                        BarVariantConfig::FragmentCode(code) => {
-                            Bars::new(&vibe_renderer::components::BarsDescriptor {
-                                device: renderer.device(),
-                                sample_processor,
-                                audio_conf: shady_audio::Config::from(audio_conf),
-                                texture_format: surface_config.format,
-                                max_height,
-                                variant: BarVariant::FragmentCode {
-                                    resolution: [size.width, size.height],
-                                    code,
-                                },
-                            })
-                            .map(|bars| Box::new(bars) as Box<dyn Component>)
-                        }
-                    },
+                        Bars::new(&vibe_renderer::components::BarsDescriptor {
+                            device: renderer.device(),
+                            sample_processor,
+                            audio_conf: shady_audio::Config::from(audio_conf),
+                            texture_format: surface_config.format,
+                            max_height,
+                            variant,
+                        })
+                        .map(|bars| Box::new(bars) as Box<dyn Component>)
+                    }
                     ComponentConfig::FragmentCanvas {
                         audio_conf,
                         fragment_code,

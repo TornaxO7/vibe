@@ -75,7 +75,13 @@ max = 0.20000000298023224
 #    So in this case the bars will be turquoise.
 [components.Bars.variant]
 Color = [0, 255, 255, 255]
-# 2. Write the fragment code on your own.
+# 2. Let the bars apply a color, depending how high its bar is.
+# ==
+# [components.Bars.variant.PresenceGradient]
+# high_presence = [255, 0, 0, 255]
+# low_presence = [0, 0, 255, 255]
+# ==
+# 3. Write the fragment code on your own.
 #
 #    There are some global "variales" which you can use in the fragment shader:
 #    - For `wgsl`: https://github.com/TornaxO7/vibe/blob/main/vibe-renderer/src/components/bars/fragment_preamble.wgsl

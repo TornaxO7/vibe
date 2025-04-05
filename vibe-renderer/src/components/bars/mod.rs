@@ -16,6 +16,10 @@ const VERTEX_SURFACE_WIDTH: f32 = 2.;
 #[derive(Debug, Clone)]
 pub enum BarVariant {
     Color(Rgba),
+    PresenceGradient {
+        high: Rgba,
+        low: Rgba,
+    },
     FragmentCode {
         /// width, height
         resolution: [u32; 2],
@@ -31,6 +35,8 @@ pub enum Bindings0 {
     MaxHeight = 2,
     Color = 3,
     Resolution = 4,
+    GradientHighPresenceColor = 5,
+    GradientLowPresenceColor = 6,
 }
 
 #[repr(u32)]
@@ -116,11 +122,6 @@ impl Bars {
 
         let fragment_module = match &desc.variant {
             BarVariant::Color(rgba) => {
-                let mut rgba_with_gamma_correction = rgba.clone();
-                for value in rgba_with_gamma_correction.iter_mut() {
-                    *value = value.powf(super::GAMMA);
-                }
-
                 bind_group0_builder.insert_buffer(
                     Bindings0::Color as u32,
                     wgpu::ShaderStages::FRAGMENT,
@@ -135,6 +136,34 @@ impl Bars {
                     label: Some("Bar: Color fragment module"),
                     source: wgpu::ShaderSource::Wgsl(
                         include_str!("./shaders/fragment_color.wgsl").into(),
+                    ),
+                })
+            }
+            BarVariant::PresenceGradient { high, low } => {
+                bind_group0_builder.insert_buffer(
+                    Bindings0::GradientHighPresenceColor as u32,
+                    wgpu::ShaderStages::FRAGMENT,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Bar: `high_prescene_color` buffer"),
+                        contents: bytemuck::cast_slice(high),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                );
+
+                bind_group0_builder.insert_buffer(
+                    Bindings0::GradientLowPresenceColor as u32,
+                    wgpu::ShaderStages::FRAGMENT,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Bar: `low_presence_color` buffer"),
+                        contents: bytemuck::cast_slice(low),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                );
+
+                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Bar: Gradient fragment module"),
+                    source: wgpu::ShaderSource::Wgsl(
+                        include_str!("./shaders/fragment_presence_gradient.wgsl").into(),
                     ),
                 })
             }
@@ -260,20 +289,20 @@ impl Component for Bars {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
         if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
             let bar_values = self.bar_processor.process_bars(processor);
-            queue.write_buffer(&buffer, 0, bytemuck::cast_slice(bar_values));
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(bar_values));
         }
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Time as u32) {
-            queue.write_buffer(&buffer, 0, bytemuck::bytes_of(&new_time));
+            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
         }
     }
 
     fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
         if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::Resolution as u32) {
             queue.write_buffer(
-                &buffer,
+                buffer,
                 0,
                 bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
             );

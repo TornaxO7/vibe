@@ -15,6 +15,11 @@ struct Input {
     @builtin(instance_index) instance_idx: u32,
 };
 
+struct Output {
+    @builtin(position) pos: vec4<f32>,
+    @location(0) bar_height: f32,
+};
+
 // Assuming:
 //
 // 0    1
@@ -24,7 +29,7 @@ struct Input {
 //  ----
 // 2    3
 @vertex
-fn main(in: Input) -> @builtin(position) vec4<f32> {
+fn main(in: Input) -> Output {
     var pos = vec2<f32>(-1., -1.);
 
     // x
@@ -36,9 +41,13 @@ fn main(in: Input) -> @builtin(position) vec4<f32> {
 
     // y
     if (in.vertex_idx <= 1) {
-        const MAX_HEIGHT: f32 = 2.;
-        pos.y += MAX_HEIGHT * freqs[in.instance_idx] * max_height;
+        const CANVAS_HEIGHT: f32 = 2.;
+        pos.y += CANVAS_HEIGHT * freqs[in.instance_idx] * max_height;
     }
 
-    return vec4<f32>(pos, 0., 1.);
+    var output: Output;
+    output.pos = vec4(pos, 0., 1.);
+    output.bar_height = freqs[in.instance_idx];
+
+    return output;
 }
