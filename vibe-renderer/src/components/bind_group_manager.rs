@@ -73,7 +73,7 @@ impl BindGroupManagerBuilder {
                 })
         }
 
-        if let Some(_) = self.buffers.insert(binding, buffer) {
+        if self.buffers.insert(binding, buffer).is_some() {
             panic!("Binding is already used");
         }
     }
@@ -82,7 +82,7 @@ impl BindGroupManagerBuilder {
         let label = self.label.map(|label| format!("{} - layout", label));
 
         device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: label.as_ref().map(|s| s.as_str()),
+            label: label.as_deref(),
             entries: &self.bind_group_layout_entries,
         })
     }

@@ -217,7 +217,7 @@ impl Component for FragmentCanvas {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
         if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
             let bar_values = self.bar_processor.process_bars(processor);
-            queue.write_buffer(&buffer, 0, bytemuck::cast_slice(bar_values));
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(bar_values));
         }
     }
 
