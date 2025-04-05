@@ -249,7 +249,6 @@ impl Component for Bars {
         }
 
         pass.set_pipeline(&self.pipeline);
-
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
     }
 
