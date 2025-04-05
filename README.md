@@ -34,7 +34,7 @@ See [USAGE.md](./USAGE.md).
 
 # Configs
 
-See [CONFIG.md](./CONFIG.md).
+See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki/Config).
 
 [shady-toy]: https://github.com/TornaxO7/shady/tree/main/shady-toy
 [glava]: https://github.com/jarcode-foss/glava
