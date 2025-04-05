@@ -1,7 +1,9 @@
 use image::RgbaImage;
 use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
 
+mod bar_with_color_variant;
 mod bar_with_fragment_code_variant;
+
 mod fragment_canvas;
 
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
