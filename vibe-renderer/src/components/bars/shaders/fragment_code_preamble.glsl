@@ -1,4 +1,4 @@
-layout(set = 0, binding = 2) uniform vec2 iResolution;
+layout(set = 0, binding = 4) uniform vec2 iResolution;
 
 layout(set = 1, binding = 1) uniform float iTime;
 

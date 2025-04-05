@@ -11,14 +11,17 @@ use smithay_client_toolkit::{
 
 use tracing::error;
 use vibe_renderer::{
-    components::{Bars, Component, FragmentCanvas, FragmentCanvasDescriptor},
+    components::{BarVariant, Bars, Component, FragmentCanvas, FragmentCanvasDescriptor},
     Renderer,
 };
 use wayland_client::QueueHandle;
 use wgpu::{PresentMode, Surface, SurfaceConfiguration};
 
 use crate::{state::State, types::size::Size};
-use config::{component::ComponentConfig, OutputConfig};
+use config::{
+    component::{BarVariantConfig, ComponentConfig},
+    OutputConfig,
+};
 
 /// Contains every relevant information for an output.
 pub struct OutputCtx {
@@ -92,17 +95,35 @@ impl OutputCtx {
                     ComponentConfig::Bars {
                         audio_conf,
                         max_height,
-                        fragment_code,
-                    } => Bars::new(&vibe_renderer::components::BarsDescriptor {
-                        device: renderer.device(),
-                        sample_processor,
-                        audio_conf: shady_audio::Config::from(audio_conf),
-                        texture_format: surface_config.format,
-                        fragment_code,
-                        max_height,
-                        resolution: [size.width, size.height],
-                    })
-                    .map(|bars| Box::new(bars) as Box<dyn Component>),
+                        variant,
+                    } => {
+                        let variant = match variant {
+                            BarVariantConfig::Color(rgba) => {
+                                BarVariant::Color(rgba.gamma_corrected())
+                            }
+                            BarVariantConfig::PresenceGradient {
+                                high_presence,
+                                low_presence,
+                            } => BarVariant::PresenceGradient {
+                                high: high_presence.gamma_corrected(),
+                                low: low_presence.gamma_corrected(),
+                            },
+                            BarVariantConfig::FragmentCode(code) => BarVariant::FragmentCode {
+                                resolution: [size.width, size.height],
+                                code,
+                            },
+                        };
+
+                        Bars::new(&vibe_renderer::components::BarsDescriptor {
+                            device: renderer.device(),
+                            sample_processor,
+                            audio_conf: shady_audio::Config::from(audio_conf),
+                            texture_format: surface_config.format,
+                            max_height,
+                            variant,
+                        })
+                        .map(|bars| Box::new(bars) as Box<dyn Component>)
+                    }
                     ComponentConfig::FragmentCanvas {
                         audio_conf,
                         fragment_code,

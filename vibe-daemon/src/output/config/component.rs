@@ -3,6 +3,8 @@ use std::{num::NonZero, ops::Range};
 use serde::{Deserialize, Serialize};
 use vibe_renderer::components::ShaderCode;
 
+const GAMMA: f32 = 2.2;
+
 const DEFAULT_BARS_WGSL_FRAGMENT_CODE: &str = "
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
@@ -18,11 +20,40 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 ";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Rgba(pub [u8; 4]);
+
+impl Rgba {
+    pub fn gamma_corrected(&self) -> [f32; 4] {
+        let mut rgba_f32 = [0f32; 4];
+        for (idx, value) in self.0.iter().enumerate() {
+            rgba_f32[idx] = (*value as f32) / 255f32;
+        }
+
+        // apply gamma correction
+        for value in rgba_f32[0..3].iter_mut() {
+            *value = value.powf(GAMMA);
+        }
+
+        rgba_f32
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BarVariantConfig {
+    Color(Rgba),
+    PresenceGradient {
+        high_presence: Rgba,
+        low_presence: Rgba,
+    },
+    FragmentCode(ShaderCode),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ComponentConfig {
     Bars {
         audio_conf: AudioConfig,
         max_height: f32,
-        fragment_code: ShaderCode,
+        variant: BarVariantConfig,
     },
     FragmentCanvas {
         audio_conf: AudioConfig,
@@ -35,7 +66,9 @@ impl Default for ComponentConfig {
         Self::Bars {
             audio_conf: AudioConfig::default(),
             max_height: 0.75,
-            fragment_code: ShaderCode::Wgsl(DEFAULT_BARS_WGSL_FRAGMENT_CODE.into()),
+            variant: BarVariantConfig::FragmentCode(ShaderCode::Wgsl(
+                DEFAULT_BARS_WGSL_FRAGMENT_CODE.into(),
+            )),
         }
     }
 }

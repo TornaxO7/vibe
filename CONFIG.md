@@ -70,39 +70,54 @@ end = 10000
 min = 0.05000000074505806
 max = 0.20000000298023224
 
-# The fragment code which should be used to color the bars.
+# Now you can configure its color. For that you have multiple choices:
+# 1. Setting the bars by the given RGBA value. Each value in the array has to be within the range [0, 255].
+#    So in this case the bars will be turquoise.
+[components.Bars.variant]
+Color = [0, 255, 255, 255]
+# 2. Let the bars apply a color, depending how high its bar is.
+# ==
+# [components.Bars.variant.PresenceGradient]
+# high_presence = [255, 0, 0, 255]
+# low_presence = [0, 0, 255, 255]
+# ==
+# 3. Write the fragment code on your own.
 #
-# There are some global "variales" which you can use in the fragment shader:
-# - For `wgsl`: https://github.com/TornaxO7/vibe/blob/main/vibe-renderer/src/components/bars/fragment_preamble.wgsl
-# - For `glsl`: https://github.com/TornaxO7/vibe/blob/main/vibe-renderer/src/components/bars/fragment_preamble.glsl
-[components.Bars.fragment_code]
-# EITHER write WGSL code
-Wgsl = """
-@fragment
-fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-    var color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
-
-    // apply gamma correction
-    const GAMMA: f32 = 2.2;
-    color.r = pow(color.r, GAMMA);
-    color.g = pow(color.g, GAMMA);
-    color.b = pow(color.b, GAMMA);
-    return vec4<f32>(color, 1. - pos.y / iResolution.y);
-}
-"""
+#    There are some global "variales" which you can use in the fragment shader:
+#    - For `wgsl`: https://github.com/TornaxO7/vibe/blob/main/vibe-renderer/src/components/bars/fragment_preamble.wgsl
+#    - For `glsl`: https://github.com/TornaxO7/vibe/blob/main/vibe-renderer/src/components/bars/fragment_preamble.glsl
+#
+# Uncomment the lines between the `# ==` if you want to use it.
+# ==
+# [components.Bars.variant.FragmentCode]
+# # EITHER write WGSL code
+# Wgsl = """
+# @fragment
+# fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+#     var color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
+#
+#     // apply gamma correction
+#     const GAMMA: f32 = 2.2;
+#     color.r = pow(color.r, GAMMA);
+#     color.g = pow(color.g, GAMMA);
+#     color.b = pow(color.b, GAMMA);
+#     return vec4<f32>(color, 1. - pos.y / iResolution.y);
+# }
+# """
+# ==
 # OR GLSL code (uncomment after the "==") if you want to use it and remove the `Wsgl = ` part).
 # ==
 # Glsl = """
 # void main() {
 #     vec3 col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
-#
-#     const float GAMMA = 2.2;
+# #     const float GAMMA = 2.2;
 #     col.r = pow(col.r, GAMMA);
 #     col.g = pow(col.g, GAMMA);
 #     col.b = pow(col.b, GAMMA);
 #     fragColor = vec4(col, 1. - gl_FragCoord.y / iResolution.y);
 # }
 # """
+# ==
 ```
 
 ### Fragment canvas
