@@ -1,6 +1,6 @@
 use std::{num::NonZero, sync::Arc, time::Instant};
 
-use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::{
     components::{Aurodio, AurodioDescriptor, Component},
     Renderer,
@@ -54,9 +54,13 @@ impl<'a> State<'a> {
         let aurodio = Aurodio::new(&AurodioDescriptor {
             device: renderer.device(),
             sample_processor: &processor,
-            audio_conf: shady_audio::Config::default(),
+            audio_conf: BarProcessorConfig {
+                max_sensitivity: 0.2,
+                ..Default::default()
+            },
             texture_format: surface_config.format,
             amount_layers: NonZero::new(5).unwrap(),
+            base_color: [0., 0.5, 0.5],
         });
 
         Self {

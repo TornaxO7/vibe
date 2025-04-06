@@ -2,10 +2,13 @@ pub mod components;
 
 use std::ops::Deref;
 
-use components::Component;
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::info;
+
+pub trait Renderable {
+    fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RendererDescriptor {
@@ -75,10 +78,10 @@ impl Renderer {
         }
     }
 
-    pub fn render<'a, 'c, C: Deref<Target: Component> + 'c>(
+    pub fn render<'a, 'r, R: Deref<Target: Renderable> + 'r>(
         &self,
         view: &'a wgpu::TextureView,
-        components: impl IntoIterator<Item = &'c C>,
+        renderables: impl IntoIterator<Item = &'r R>,
     ) {
         let mut encoder = self
             .device
@@ -97,8 +100,8 @@ impl Renderer {
                 ..Default::default()
             });
 
-            for component in components {
-                component.render_with_renderpass(&mut render_pass);
+            for renderable in renderables {
+                renderable.render_with_renderpass(&mut render_pass);
             }
         }
 

@@ -13,6 +13,9 @@ var<storage, read> zoom_factors: array<f32>;
 @group(0) @binding(4)
 var<storage, read> random_seeds: array<f32>;
 
+@group(0) @binding(5)
+var<uniform> base_color: vec3<f32>;
+
 @group(1) @binding(0)
 var<uniform> iTime: f32;
 
@@ -64,6 +67,12 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     var uv: vec2<f32> = pos.xy / iResolution.xy;
     uv.x *= iResolution.x / iResolution.y;
 
+    var base_color2: vec3<f32>;
+    base_color2.r = cos(iTime + uv.x + base_color.r);
+    base_color2.g = sin(iTime + uv.y + base_color.g);
+    base_color2.b = sin(iTime * .5 + uv.x + uv.y + base_color.b);
+    base_color2 = base_color2 * .1 + .5;
+
     let time = iTime;
 
     let amount_layers = arrayLength(&zoom_factors);
@@ -75,7 +84,8 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         // don't let y become bigger than 1
         y /= f32(amount_layers);
 
-        col += vec4(y, y, y, noise_value);
+        let freq = freqs[amount_layers - layer_idx];
+        col += vec4(base_color2 * y * max(freq * f32(amount_layers), .5), noise_value);
     }
     
     const GAMMA: f32 = 2.2;

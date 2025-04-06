@@ -1,12 +1,14 @@
 use std::num::NonZero;
 
 use rand::Rng;
-use shady_audio::{BarProcessor, SampleProcessor};
+use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use crate::components::bind_group_manager::BindGroupManager;
+use crate::{components::bind_group_manager::BindGroupManager, Renderable};
 
 use super::Component;
+
+type Rgb = [f32; 3];
 
 const ENTRY_POINT: &str = "main";
 
@@ -18,6 +20,7 @@ enum Bindings0 {
     PointsWidth,
     ZoomFactors,
     RandomSeeds,
+    BaseColor,
 }
 
 #[repr(u32)]
@@ -40,10 +43,11 @@ const VERTICES: [VertexPosition; 4] = [
 pub struct AurodioDescriptor<'a> {
     pub device: &'a wgpu::Device,
     pub sample_processor: &'a SampleProcessor,
-    pub audio_conf: shady_audio::Config,
+    pub audio_conf: BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
 
     pub amount_layers: NonZero<u8>,
+    pub base_color: Rgb,
 }
 
 pub struct Aurodio {
@@ -59,7 +63,13 @@ pub struct Aurodio {
 impl Aurodio {
     pub fn new(desc: &AurodioDescriptor) -> Self {
         let device = desc.device;
-        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let bar_processor = BarProcessor::new(
+            desc.sample_processor,
+            BarProcessorConfig {
+                amount_bars: NonZero::new(u16::from(u8::from(desc.amount_layers))).unwrap(),
+                ..desc.audio_conf.clone()
+            },
+        );
 
         let mut bind_group0_builder = BindGroupManager::builder(Some("Aurodio: Bind group 0"));
         let mut bind_group1_builder = BindGroupManager::builder(Some("Aurodio: Bind group 1"));
@@ -77,8 +87,6 @@ impl Aurodio {
 
         {
             let (points, width) = get_points(desc.amount_layers);
-
-            println!("amount points: {}", points.len());
 
             bind_group0_builder.insert_buffer(
                 Bindings0::Points as u32,
@@ -128,6 +136,16 @@ impl Aurodio {
                 }),
             );
         }
+
+        bind_group0_builder.insert_buffer(
+            Bindings0::BaseColor as u32,
+            wgpu::ShaderStages::FRAGMENT,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Aurodio: `base_color` buffer"),
+                contents: bytemuck::cast_slice(&desc.base_color),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
 
         bind_group1_builder.insert_buffer(
             Bindings1::ITime as u32,
@@ -238,7 +256,7 @@ impl Aurodio {
     }
 }
 
-impl Component for Aurodio {
+impl Renderable for Aurodio {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
         pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
@@ -246,7 +264,9 @@ impl Component for Aurodio {
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
     }
+}
 
+impl Component for Aurodio {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
         if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
             let bar_values = self.bar_processor.process_bars(processor);
@@ -296,7 +316,7 @@ fn get_points(amount_layers: NonZero<u8>) -> (Vec<[f32; 2]>, u32) {
 fn get_zoom_factors(amount_layers: NonZero<u8>) -> Vec<f32> {
     (0..u8::from(amount_layers))
         .into_iter()
-        .map(|layer_idx| (layer_idx * 2) as f32)
+        .map(|layer_idx| (layer_idx * 2 + 1) as f32)
         .collect()
 }
 
