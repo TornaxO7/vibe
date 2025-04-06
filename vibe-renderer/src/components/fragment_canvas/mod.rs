@@ -199,6 +199,7 @@ impl Component for FragmentCanvas {
         if !self.bind_group1.is_empty() {
             pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
         }
+
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);

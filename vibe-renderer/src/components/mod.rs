@@ -1,7 +1,9 @@
+mod aurodio;
 mod bars;
 mod bind_group_manager;
 mod fragment_canvas;
 
+pub use aurodio::{Aurodio, AurodioDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 use serde::{Deserialize, Serialize};

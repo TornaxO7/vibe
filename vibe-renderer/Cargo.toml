@@ -16,6 +16,7 @@ wgpu.workspace = true
 
 pollster = "0.4"
 bytemuck = "1.22"
+rand = "0.9"
 
 [dev-dependencies]
 winit = "0.30"
