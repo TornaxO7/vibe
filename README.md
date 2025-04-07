@@ -7,7 +7,7 @@ for a list of compositors on which `vibe` should be able to run.
 
 # Demo
 
-[![Demo video](https://img.youtube.com/vi/557iYiWnXn0/maxresdefault.jpg)](https://www.youtube.com/watch?v=557iYiWnXn0)
+[![Demo video](https://img.youtube.com/vi/OQXdHLKH3ok/maxresdefault.jpg)](https://www.youtube.com/watch?v=OQXdHLKH3ok)
 
 # Features
 
