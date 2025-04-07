@@ -1,11 +1,13 @@
 mod aurodio;
 mod bars;
-mod bind_group_manager;
 mod fragment_canvas;
+mod value_noise;
 
 pub use aurodio::{Aurodio, AurodioDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
+pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
+
 use serde::{Deserialize, Serialize};
 use shady_audio::SampleProcessor;
 

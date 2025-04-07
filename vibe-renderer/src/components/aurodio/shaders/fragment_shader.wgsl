@@ -16,6 +16,15 @@ var<storage, read> random_seeds: array<f32>;
 @group(0) @binding(5)
 var<uniform> base_color: vec3<f32>;
 
+@group(0) @binding(6)
+var value_noise_texture: texture_2d<f32>;
+
+@group(0) @binding(7)
+var value_noise_sampler: sampler;
+
+@group(0) @binding(8)
+var<uniform> movement_speed: f32;
+
 @group(1) @binding(0)
 var<uniform> iTime: f32;
 
@@ -61,11 +70,18 @@ fn cellular_noise(uv: vec2<f32>, layer_idx: u32, time: f32) -> f32 {
     return sqrt(min_d);
 }
 
+fn dust_layer(uv: vec2<f32>, color: vec3<f32>) -> vec4<f32> {
+    return vec4<f32>(color * textureSample(value_noise_texture, value_noise_sampler, uv).rgb, 1.);
+}
+
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     var col: vec4<f32>;
     var uv: vec2<f32> = pos.xy / iResolution.xy;
     uv.x *= iResolution.x / iResolution.y;
+
+    uv.x += 10. * cos(iTime * movement_speed) + 20.;
+    uv.y += 10. * sin(iTime * movement_speed) + 20.;
 
     var base_color2: vec3<f32>;
     base_color2.r = cos(iTime + uv.x + base_color.r);
@@ -87,6 +103,8 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         let freq = freqs[amount_layers - layer_idx];
         col += vec4(base_color2 * y * max(freq * f32(amount_layers), .5), noise_value);
     }
+
+    col += dust_layer(uv, base_color2);
     
     const GAMMA: f32 = 2.2;
     col.r = pow(col.r, GAMMA);

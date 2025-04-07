@@ -1,8 +1,7 @@
-use std::{num::NonZero, sync::Arc, time::Instant};
+use std::sync::Arc;
 
-use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::{
-    components::{Aurodio, AurodioDescriptor, Component},
+    components::{Component, ValueNoise, ValueNoiseDescriptor},
     Renderer,
 };
 use winit::{
@@ -18,16 +17,14 @@ struct State<'a> {
     surface: wgpu::Surface<'a>,
     surface_config: wgpu::SurfaceConfiguration,
     window: Arc<Window>,
-    time: Instant,
 
-    aurodio: Aurodio,
+    value_noise: ValueNoise,
 }
 
 impl<'a> State<'a> {
-    pub fn new<'b>(window: Window, processor: &'b SampleProcessor) -> Self {
+    pub fn new<'b>(window: Window) -> Self {
         let window = Arc::new(window);
         let size = window.inner_size();
-        let time = Instant::now();
 
         let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::default());
         let surface = renderer.instance().create_surface(window.clone()).unwrap();
@@ -51,26 +48,20 @@ impl<'a> State<'a> {
 
         surface.configure(renderer.device(), &surface_config);
 
-        let aurodio = Aurodio::new(&AurodioDescriptor {
-            renderer: &renderer,
-            sample_processor: &processor,
-            audio_conf: BarProcessorConfig {
-                max_sensitivity: 0.2,
-                ..Default::default()
-            },
-            texture_format: surface_config.format,
-            amount_layers: NonZero::new(5).unwrap(),
-            base_color: [0., 0.5, 0.5],
-            movement_speed: 0.001,
+        let value_noise = ValueNoise::new(&ValueNoiseDescriptor {
+            device: renderer.device(),
+            width: size.width,
+            height: size.height,
+            format: surface_config.format,
+            octaves: 6,
         });
 
         Self {
-            time,
             renderer,
             surface,
             window,
             surface_config,
-            aurodio,
+            value_noise,
         }
     }
 
@@ -81,22 +72,19 @@ impl<'a> State<'a> {
             self.surface
                 .configure(self.renderer.device(), &self.surface_config);
 
-            self.aurodio
+            self.value_noise
                 .update_resolution(self.renderer.queue(), [new_size.width, new_size.height]);
         }
     }
 
-    pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
-        self.aurodio.update_audio(self.renderer.queue(), processor);
-        self.aurodio
-            .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
+    pub fn render(&mut self) -> Result<(), wgpu::SurfaceError> {
         let surface_texture = self.surface.get_current_texture()?;
 
         let view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, &[&self.aurodio]);
+        self.renderer.render(&view, &[&self.value_noise]);
 
         surface_texture.present();
         Ok(())
@@ -104,18 +92,12 @@ impl<'a> State<'a> {
 }
 
 struct App<'a> {
-    sample_processor: SampleProcessor,
     state: Option<State<'a>>,
 }
 
 impl<'a> App<'a> {
     pub fn new() -> Self {
-        Self {
-            sample_processor: SampleProcessor::new(
-                SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap(),
-            ),
-            state: None,
-        }
+        Self { state: None }
     }
 }
 
@@ -125,7 +107,7 @@ impl<'a> ApplicationHandler for App<'a> {
             .create_window(WindowAttributes::default())
             .unwrap();
 
-        self.state = Some(State::new(window, &self.sample_processor));
+        self.state = Some(State::new(window));
     }
 
     fn window_event(
@@ -135,13 +117,12 @@ impl<'a> ApplicationHandler for App<'a> {
         event: winit::event::WindowEvent,
     ) {
         let state = self.state.as_mut().unwrap();
-        self.sample_processor.process_next_samples();
 
         match event {
             winit::event::WindowEvent::Resized(new_size) => state.resize(new_size),
             winit::event::WindowEvent::CloseRequested => event_loop.exit(),
             winit::event::WindowEvent::RedrawRequested => {
-                state.render(&self.sample_processor).unwrap();
+                state.render().unwrap();
                 state.window.request_redraw();
             }
             winit::event::WindowEvent::KeyboardInput { event, .. } => match event {

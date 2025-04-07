@@ -4,7 +4,7 @@ use rand::Rng;
 use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use crate::{components::bind_group_manager::BindGroupManager, Renderable};
+use crate::{bind_group_manager::BindGroupManager, Renderable, Renderer};
 
 use super::Component;
 
@@ -21,6 +21,9 @@ enum Bindings0 {
     ZoomFactors,
     RandomSeeds,
     BaseColor,
+    ValueNoiseTexture,
+    ValueNoiseSampler,
+    MovementSpeed,
 }
 
 #[repr(u32)]
@@ -41,13 +44,15 @@ const VERTICES: [VertexPosition; 4] = [
 ];
 
 pub struct AurodioDescriptor<'a> {
-    pub device: &'a wgpu::Device,
+    pub renderer: &'a Renderer,
     pub sample_processor: &'a SampleProcessor,
     pub audio_conf: BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
 
     pub amount_layers: NonZero<u8>,
     pub base_color: Rgb,
+    // should be very low (recommended: 0.001)
+    pub movement_speed: f32,
 }
 
 pub struct Aurodio {
@@ -62,7 +67,7 @@ pub struct Aurodio {
 
 impl Aurodio {
     pub fn new(desc: &AurodioDescriptor) -> Self {
-        let device = desc.device;
+        let device = desc.renderer.device();
         let bar_processor = BarProcessor::new(
             desc.sample_processor,
             BarProcessorConfig {
@@ -143,6 +148,42 @@ impl Aurodio {
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Aurodio: `base_color` buffer"),
                 contents: bytemuck::cast_slice(&desc.base_color),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
+
+        {
+            let value_noise_texture = desc.renderer.create_value_noise_texture(256, 256, 1.);
+            let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("Aurodio: Value noise sampler"),
+                address_mode_u: wgpu::AddressMode::MirrorRepeat,
+                address_mode_v: wgpu::AddressMode::MirrorRepeat,
+                address_mode_w: wgpu::AddressMode::MirrorRepeat,
+                mipmap_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                mag_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
+            });
+
+            bind_group0_builder.insert_texture(
+                Bindings0::ValueNoiseTexture as u32,
+                wgpu::ShaderStages::FRAGMENT,
+                value_noise_texture,
+            );
+
+            bind_group0_builder.insert_sampler(
+                Bindings0::ValueNoiseSampler as u32,
+                wgpu::ShaderStages::FRAGMENT,
+                sampler,
+            );
+        }
+
+        bind_group0_builder.insert_buffer(
+            Bindings0::MovementSpeed as u32,
+            wgpu::ShaderStages::FRAGMENT,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Aurodio: `movement_speed` buffer"),
+                contents: bytemuck::bytes_of(&desc.movement_speed),
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
@@ -324,7 +365,7 @@ fn get_random_seeds(amount_layers: NonZero<u8>) -> Vec<f32> {
     let amount_layers_usize = usize::from(u8::from(amount_layers));
     let mut seeds = vec![0f32; amount_layers_usize];
 
-    rand::rng().fill(&mut seeds[..]);
+    rand::fill(&mut seeds[..]);
 
     seeds
 }

@@ -3,9 +3,9 @@ use std::borrow::Cow;
 use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use crate::Renderable;
+use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{bind_group_manager::BindGroupManager, Component, ParseErrorMsg, ShaderCode};
+use super::{Component, ParseErrorMsg, ShaderCode};
 
 const ENTRYPOINT: &str = "main";
 

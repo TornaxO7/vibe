@@ -3,9 +3,9 @@ use std::{borrow::Cow, num::NonZero};
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use crate::Renderable;
+use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{bind_group_manager::BindGroupManager, Component, ParseErrorMsg, ShaderCode};
+use super::{Component, ParseErrorMsg, ShaderCode};
 
 // assuming each value is positive
 pub type Rgba = [f32; 4];
