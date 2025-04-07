@@ -1,6 +1,6 @@
 use std::{num::NonZero, sync::Arc, time::Instant};
 
-use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
+use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{Aurodio, AurodioDescriptor, Component},
     Renderer,

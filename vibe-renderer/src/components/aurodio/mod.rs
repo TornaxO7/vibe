@@ -377,7 +377,6 @@ fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
 
 fn get_zoom_factors(amount_layers: usize) -> Vec<f32> {
     (0..(amount_layers as u8))
-        .into_iter()
         .map(|layer_idx| ((layer_idx + 1).pow(2)) as f32)
         .collect()
 }
