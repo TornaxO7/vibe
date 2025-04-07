@@ -13,8 +13,8 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
-const RED: [f32; 4] = [1., 0., 0., 1.];
-const BLUE: [f32; 4] = [0., 0., 1., 1.];
+const TURQUOISE: [f32; 4] = [0., 1., 1., 1.];
+const DARK_BLUE: [f32; 4] = [0.05, 0., 0.321, 255.];
 
 struct State<'a> {
     renderer: Renderer,
@@ -61,8 +61,8 @@ impl<'a> State<'a> {
             texture_format: surface_config.format,
             max_height: 0.5,
             variant: BarVariant::PresenceGradient {
-                high: RED,
-                low: BLUE,
+                high: TURQUOISE,
+                low: DARK_BLUE,
             },
         })
         .unwrap_or_else(|err| panic!("{}", err));

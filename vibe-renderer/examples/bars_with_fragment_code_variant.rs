@@ -56,7 +56,7 @@ impl<'a> State<'a> {
             sample_processor: &processor,
             audio_conf: BarProcessorConfig::default(),
             texture_format: surface_config.format,
-            max_height: 0.5,
+            max_height: 0.75,
             variant: BarVariant::FragmentCode {
                 resolution: [size.width, size.height],
                 code: ShaderCode::Wgsl(
