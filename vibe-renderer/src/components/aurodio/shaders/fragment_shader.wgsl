@@ -100,11 +100,12 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
         // don't let y become bigger than 1
         y /= f32(amount_layers);
 
-        let freq = freqs[amount_layers - layer_idx];
+        let freq = freqs[amount_layers - layer_idx - 1];
         col += vec4(base_color2 * y * max(freq * f32(amount_layers), .5), noise_value);
     }
 
     col += dust_layer(uv, base_color2);
+    col = clamp(col, vec4<f32>(0.), vec4<f32>(1.));
     
     const GAMMA: f32 = 2.2;
     col.r = pow(col.r, GAMMA);

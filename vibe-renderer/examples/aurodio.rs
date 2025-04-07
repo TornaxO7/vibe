@@ -59,9 +59,13 @@ impl<'a> State<'a> {
                 ..Default::default()
             },
             texture_format: surface_config.format,
-            amount_layers: NonZero::new(5).unwrap(),
+            freq_ranges: &[
+                NonZero::new(50).unwrap()..NonZero::new(250).unwrap(),
+                NonZero::new(500).unwrap()..NonZero::new(2_000).unwrap(),
+                NonZero::new(4_000).unwrap()..NonZero::new(6_000).unwrap(),
+            ],
             base_color: [0., 0.5, 0.5],
-            movement_speed: 0.001,
+            movement_speed: 0.005,
         });
 
         Self {

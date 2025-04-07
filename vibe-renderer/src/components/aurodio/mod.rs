@@ -1,4 +1,4 @@
-use std::num::NonZero;
+use std::{num::NonZero, ops::Range};
 
 use rand::Rng;
 use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
@@ -49,14 +49,14 @@ pub struct AurodioDescriptor<'a> {
     pub audio_conf: BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
 
-    pub amount_layers: NonZero<u8>,
+    pub freq_range_layer: &'a [Range<NonZero<u16>>],
     pub base_color: Rgb,
     // should be very low (recommended: 0.001)
     pub movement_speed: f32,
 }
 
 pub struct Aurodio {
-    bar_processor: BarProcessor,
+    bar_processors: Box<[BarProcessor]>,
 
     bind_group0: BindGroupManager,
     bind_group1: BindGroupManager,
@@ -67,14 +67,24 @@ pub struct Aurodio {
 
 impl Aurodio {
     pub fn new(desc: &AurodioDescriptor) -> Self {
+        let amount_layers = desc.freq_range_layer.len();
         let device = desc.renderer.device();
-        let bar_processor = BarProcessor::new(
-            desc.sample_processor,
-            BarProcessorConfig {
-                amount_bars: NonZero::new(u16::from(u8::from(desc.amount_layers))).unwrap(),
-                ..desc.audio_conf.clone()
-            },
-        );
+        let bar_processors = {
+            let mut bar_processors = Vec::new();
+
+            for freq_range in desc.freq_range_layer.iter() {
+                bar_processors.push(BarProcessor::new(
+                    desc.sample_processor,
+                    BarProcessorConfig {
+                        amount_bars: NonZero::new(1).unwrap(),
+                        freq_range: freq_range.clone(),
+                        ..desc.audio_conf
+                    },
+                ));
+            }
+
+            bar_processors.into_boxed_slice()
+        };
 
         let mut bind_group0_builder = BindGroupManager::builder(Some("Aurodio: Bind group 0"));
         let mut bind_group1_builder = BindGroupManager::builder(Some("Aurodio: Bind group 1"));
@@ -91,7 +101,7 @@ impl Aurodio {
         );
 
         {
-            let (points, width) = get_points(desc.amount_layers);
+            let (points, width) = get_points(amount_layers);
 
             bind_group0_builder.insert_buffer(
                 Bindings0::Points as u32,
@@ -115,7 +125,7 @@ impl Aurodio {
         }
 
         {
-            let zoom_factors: Vec<f32> = get_zoom_factors(desc.amount_layers);
+            let zoom_factors: Vec<f32> = get_zoom_factors(amount_layers);
 
             bind_group0_builder.insert_buffer(
                 Bindings0::ZoomFactors as u32,
@@ -129,7 +139,7 @@ impl Aurodio {
         }
 
         {
-            let random_seeds: Vec<f32> = get_random_seeds(desc.amount_layers);
+            let random_seeds: Vec<f32> = get_random_seeds(amount_layers);
 
             bind_group0_builder.insert_buffer(
                 Bindings0::RandomSeeds as u32,
@@ -204,9 +214,7 @@ impl Aurodio {
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Aurodio: `freqs` buffer"),
-                size: (std::mem::size_of::<f32>()
-                    * usize::from(u16::from(desc.audio_conf.amount_bars)))
-                    as wgpu::BufferAddress,
+                size: (std::mem::size_of::<f32>() * amount_layers) as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             }),
@@ -286,7 +294,7 @@ impl Aurodio {
         };
 
         Self {
-            bar_processor,
+            bar_processors,
 
             bind_group0: bind_group0_builder.build(device),
             bind_group1: bind_group1_builder.build(device),
@@ -294,6 +302,10 @@ impl Aurodio {
             vbuffer,
             pipeline,
         }
+    }
+
+    pub fn amount_layers(&self) -> usize {
+        self.bar_processors.len()
     }
 }
 
@@ -310,8 +322,13 @@ impl Renderable for Aurodio {
 impl Component for Aurodio {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
         if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
-            let bar_values = self.bar_processor.process_bars(processor);
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(bar_values));
+            let mut bar_values = Vec::with_capacity(self.amount_layers());
+
+            for bar_processor in self.bar_processors.iter_mut() {
+                bar_values.push(bar_processor.process_bars(processor)[0]);
+            }
+
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values));
         }
     }
 
@@ -332,11 +349,10 @@ impl Component for Aurodio {
     }
 }
 
-fn get_points(amount_layers: NonZero<u8>) -> (Vec<[f32; 2]>, u32) {
-    let amount_layers_usize = usize::from(u8::from(amount_layers));
-    let mut points = Vec::with_capacity(amount_layers_usize);
+fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
+    let mut points = Vec::with_capacity(amount_layers);
 
-    let width = amount_layers_usize + 2; // `+2` one square for the left/top and right/bottom
+    let width = amount_layers + 2; // `+2` one square for the left/top and right/bottom
     let height = width;
     let mut rng = rand::rng();
     for _y in 0..height {
@@ -354,16 +370,15 @@ fn get_points(amount_layers: NonZero<u8>) -> (Vec<[f32; 2]>, u32) {
     (points, width as u32)
 }
 
-fn get_zoom_factors(amount_layers: NonZero<u8>) -> Vec<f32> {
-    (0..u8::from(amount_layers))
+fn get_zoom_factors(amount_layers: usize) -> Vec<f32> {
+    (0..(amount_layers as u8))
         .into_iter()
-        .map(|layer_idx| (layer_idx * 2 + 1) as f32)
+        .map(|layer_idx| ((layer_idx + 1).pow(2)) as f32)
         .collect()
 }
 
-fn get_random_seeds(amount_layers: NonZero<u8>) -> Vec<f32> {
-    let amount_layers_usize = usize::from(u8::from(amount_layers));
-    let mut seeds = vec![0f32; amount_layers_usize];
+fn get_random_seeds(amount_layers: usize) -> Vec<f32> {
+    let mut seeds = vec![0f32; amount_layers];
 
     rand::fill(&mut seeds[..]);
 
