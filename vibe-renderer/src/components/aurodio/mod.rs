@@ -1,7 +1,7 @@
 use std::{num::NonZero, ops::Range};
 
 use rand::Rng;
-use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
+use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor, StandardEasing};
 use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable, Renderer};
@@ -46,13 +46,16 @@ const VERTICES: [VertexPosition; 4] = [
 pub struct AurodioDescriptor<'a> {
     pub renderer: &'a Renderer,
     pub sample_processor: &'a SampleProcessor,
-    pub audio_conf: BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
 
-    pub freq_range_layer: &'a [Range<NonZero<u16>>],
     pub base_color: Rgb,
     // should be very low (recommended: 0.001)
     pub movement_speed: f32,
+
+    // audio config
+    pub freq_ranges: &'a [Range<NonZero<u16>>],
+    pub easing: StandardEasing,
+    pub sensitivity: f32,
 }
 
 pub struct Aurodio {
@@ -67,18 +70,20 @@ pub struct Aurodio {
 
 impl Aurodio {
     pub fn new(desc: &AurodioDescriptor) -> Self {
-        let amount_layers = desc.freq_range_layer.len();
+        let amount_layers = desc.freq_ranges.len();
         let device = desc.renderer.device();
         let bar_processors = {
             let mut bar_processors = Vec::new();
 
-            for freq_range in desc.freq_range_layer.iter() {
+            for freq_range in desc.freq_ranges.iter() {
                 bar_processors.push(BarProcessor::new(
                     desc.sample_processor,
                     BarProcessorConfig {
                         amount_bars: NonZero::new(1).unwrap(),
                         freq_range: freq_range.clone(),
-                        ..desc.audio_conf
+                        sensitivity: desc.sensitivity,
+                        easer: desc.easing,
+                        ..Default::default()
                     },
                 ));
             }

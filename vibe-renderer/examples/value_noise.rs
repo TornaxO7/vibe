@@ -54,6 +54,7 @@ impl<'a> State<'a> {
             height: size.height,
             format: surface_config.format,
             octaves: 6,
+            brightness: 0.5,
         });
 
         Self {

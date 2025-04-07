@@ -628,6 +628,9 @@ name = "easing-function"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1ff18235504129e34c411871066cfa4ad108ed6a28d5fb2417057aff7f99bee4"
+dependencies = [
+ "serde",
+]
 
 [[package]]
 name = "either"
@@ -2238,9 +2241,9 @@ dependencies = [
 
 [[package]]
 name = "shady-audio"
-version = "12.0.0"
+version = "13.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "3e7289a9d3071f918d4f941963eeb5ee2ddd18be250e523e08df238d5ee3ec5f"
+checksum = "f4f13b0568eae68c5e5221b4720aa7f7858f6ea3ad2658f97767b06d90443c2b"
 dependencies = [
  "apodize",
  "cpal",

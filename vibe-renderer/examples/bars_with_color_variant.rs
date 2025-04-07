@@ -54,10 +54,7 @@ impl<'a> State<'a> {
         let bars = Bars::new(&BarsDescriptor {
             device: renderer.device(),
             sample_processor: &processor,
-            audio_conf: BarProcessorConfig {
-                amount_bars: std::num::NonZero::new(5).unwrap(),
-                ..Default::default()
-            },
+            audio_conf: BarProcessorConfig::default(),
             texture_format: surface_config.format,
             max_height: 1.,
             variant: BarVariant::Color([0., 0., 1., 1.]),

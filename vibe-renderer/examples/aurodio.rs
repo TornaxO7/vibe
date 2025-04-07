@@ -54,10 +54,6 @@ impl<'a> State<'a> {
         let aurodio = Aurodio::new(&AurodioDescriptor {
             renderer: &renderer,
             sample_processor: &processor,
-            audio_conf: BarProcessorConfig {
-                max_sensitivity: 0.2,
-                ..Default::default()
-            },
             texture_format: surface_config.format,
             freq_ranges: &[
                 NonZero::new(50).unwrap()..NonZero::new(250).unwrap(),
@@ -66,6 +62,8 @@ impl<'a> State<'a> {
             ],
             base_color: [0., 0.5, 0.5],
             movement_speed: 0.005,
+            easing: shady_audio::StandardEasing::OutCubic,
+            sensitivity: 0.2,
         });
 
         Self {
