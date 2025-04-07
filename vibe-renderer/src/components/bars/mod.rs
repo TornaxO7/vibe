@@ -3,7 +3,9 @@ use std::{borrow::Cow, num::NonZero};
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use super::{bind_group_manager::BindGroupManager, Component, ParseErrorMsg, ShaderCode};
+use crate::{bind_group_manager::BindGroupManager, Renderable};
+
+use super::{Component, ParseErrorMsg, ShaderCode};
 
 // assuming each value is positive
 pub type Rgba = [f32; 4];
@@ -49,7 +51,7 @@ pub enum Bindings1 {
 pub struct BarsDescriptor<'a> {
     pub device: &'a wgpu::Device,
     pub sample_processor: &'a SampleProcessor,
-    pub audio_conf: shady_audio::Config,
+    pub audio_conf: shady_audio::BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
 
     // fragment shader relevant stuff
@@ -272,7 +274,7 @@ impl Bars {
     }
 }
 
-impl Component for Bars {
+impl Renderable for Bars {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         if !self.bind_group0.is_empty() {
             pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
@@ -285,7 +287,9 @@ impl Component for Bars {
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
     }
+}
 
+impl Component for Bars {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
         if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
             let bar_values = self.bar_processor.process_bars(processor);

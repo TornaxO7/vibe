@@ -32,6 +32,8 @@ pub struct BindGroupManagerBuilder {
 
     bind_group_layout_entries: Vec<wgpu::BindGroupLayoutEntry>,
     buffers: FastHashMap<BindingIdx, wgpu::Buffer>,
+    textures: FastHashMap<BindingIdx, (wgpu::Texture, wgpu::TextureView)>,
+    samplers: FastHashMap<BindingIdx, wgpu::Sampler>,
 }
 
 impl BindGroupManagerBuilder {
@@ -40,6 +42,8 @@ impl BindGroupManagerBuilder {
             label,
             bind_group_layout_entries: vec![],
             buffers: FastHashMap::default(),
+            textures: FastHashMap::default(),
+            samplers: FastHashMap::default(),
         }
     }
 
@@ -74,7 +78,51 @@ impl BindGroupManagerBuilder {
         }
 
         if self.buffers.insert(binding, buffer).is_some() {
-            panic!("Binding is already used");
+            panic!("Binding ({}) is already used.", binding);
+        }
+    }
+
+    pub fn insert_texture(
+        &mut self,
+        binding: BindingIdx,
+        visibility: wgpu::ShaderStages,
+        texture: wgpu::Texture,
+    ) {
+        self.bind_group_layout_entries
+            .push(wgpu::BindGroupLayoutEntry {
+                binding,
+                visibility,
+                ty: wgpu::BindingType::Texture {
+                    sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                    multisampled: false,
+                    view_dimension: wgpu::TextureViewDimension::D2,
+                },
+                count: None,
+            });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        if self.textures.insert(binding, (texture, view)).is_some() {
+            panic!("Binding {} is already used.", binding);
+        }
+    }
+
+    pub fn insert_sampler(
+        &mut self,
+        binding: BindingIdx,
+        visibility: wgpu::ShaderStages,
+        sampler: wgpu::Sampler,
+    ) {
+        self.bind_group_layout_entries
+            .push(wgpu::BindGroupLayoutEntry {
+                binding,
+                visibility,
+                ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                count: None,
+            });
+
+        if self.samplers.insert(binding, sampler).is_some() {
+            panic!("Binding {} is already used.", binding);
         }
     }
 
@@ -90,14 +138,28 @@ impl BindGroupManagerBuilder {
     pub fn build(self, device: &wgpu::Device) -> BindGroupManager {
         let layout = self.get_bind_group_layout(device);
 
-        let bind_group_entries: Vec<wgpu::BindGroupEntry> = self
-            .buffers
-            .iter()
-            .map(|(&binding, buffer)| wgpu::BindGroupEntry {
-                binding,
+        let mut bind_group_entries = Vec::new();
+
+        for (binding, buffer) in self.buffers.iter() {
+            bind_group_entries.push(wgpu::BindGroupEntry {
+                binding: *binding,
                 resource: buffer.as_entire_binding(),
             })
-            .collect();
+        }
+
+        for (binding, (_texture, view)) in self.textures.iter() {
+            bind_group_entries.push(wgpu::BindGroupEntry {
+                binding: *binding,
+                resource: wgpu::BindingResource::TextureView(view),
+            })
+        }
+
+        for (binding, sampler) in self.samplers.iter() {
+            bind_group_entries.push(wgpu::BindGroupEntry {
+                binding: *binding,
+                resource: wgpu::BindingResource::Sampler(sampler),
+            });
+        }
 
         let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: self.label,

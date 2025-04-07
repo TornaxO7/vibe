@@ -1,9 +1,11 @@
 use std::borrow::Cow;
 
-use shady_audio::{BarProcessor, SampleProcessor};
+use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use super::{bind_group_manager::BindGroupManager, Component, ParseErrorMsg, ShaderCode};
+use crate::{bind_group_manager::BindGroupManager, Renderable};
+
+use super::{Component, ParseErrorMsg, ShaderCode};
 
 const ENTRYPOINT: &str = "main";
 
@@ -30,7 +32,7 @@ const VERTICES: [VertexPosition; 4] = [
 
 pub struct FragmentCanvasDescriptor<'a> {
     pub sample_processor: &'a SampleProcessor,
-    pub audio_conf: shady_audio::Config,
+    pub audio_conf: BarProcessorConfig,
     pub device: &'a wgpu::Device,
     pub format: wgpu::TextureFormat,
 
@@ -190,7 +192,7 @@ impl FragmentCanvas {
     }
 }
 
-impl Component for FragmentCanvas {
+impl Renderable for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         if !self.bind_group0.is_empty() {
             pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
@@ -199,11 +201,14 @@ impl Component for FragmentCanvas {
         if !self.bind_group1.is_empty() {
             pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
         }
+
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
     }
+}
 
+impl Component for FragmentCanvas {
     fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
         if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::IResolution as u32) {
             queue.write_buffer(

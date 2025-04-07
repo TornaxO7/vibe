@@ -11,7 +11,10 @@ use smithay_client_toolkit::{
 
 use tracing::error;
 use vibe_renderer::{
-    components::{BarVariant, Bars, Component, FragmentCanvas, FragmentCanvasDescriptor},
+    components::{
+        Aurodio, AurodioDescriptor, BarVariant, Bars, Component, FragmentCanvas,
+        FragmentCanvasDescriptor,
+    },
     Renderer,
 };
 use wayland_client::QueueHandle;
@@ -117,7 +120,7 @@ impl OutputCtx {
                         Bars::new(&vibe_renderer::components::BarsDescriptor {
                             device: renderer.device(),
                             sample_processor,
-                            audio_conf: shady_audio::Config::from(audio_conf),
+                            audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
                             texture_format: surface_config.format,
                             max_height,
                             variant,
@@ -129,13 +132,27 @@ impl OutputCtx {
                         fragment_code,
                     } => FragmentCanvas::new(&FragmentCanvasDescriptor {
                         sample_processor,
-                        audio_conf: shady_audio::Config::from(audio_conf),
+                        audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
                         device: renderer.device(),
                         format: surface_config.format,
                         fragment_code,
                         resolution: [size.width, size.height],
                     })
                     .map(|canvas| Box::new(canvas) as Box<dyn Component>),
+                    ComponentConfig::Aurodio {
+                        base_color,
+                        movement_speed,
+                        audio_conf,
+                    } => Ok(Box::new(Aurodio::new(&AurodioDescriptor {
+                        renderer,
+                        sample_processor,
+                        texture_format: surface_config.format,
+                        base_color: base_color.gamma_corrected(),
+                        movement_speed,
+                        freq_ranges: &audio_conf.freq_ranges,
+                        easing: audio_conf.easing,
+                        sensitivity: audio_conf.sensitivity,
+                    })) as Box<dyn Component>),
                 }
                 .unwrap_or_else(|msg| {
                     error!("{}", msg);

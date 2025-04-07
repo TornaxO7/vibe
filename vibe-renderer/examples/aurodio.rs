@@ -1,8 +1,8 @@
-use std::{sync::Arc, time::Instant};
+use std::{num::NonZero, sync::Arc, time::Instant};
 
-use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
+use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{BarVariant, Bars, BarsDescriptor, Component},
+    components::{Aurodio, AurodioDescriptor, Component},
     Renderer,
 };
 use winit::{
@@ -13,9 +13,6 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
-const RED: [f32; 4] = [1., 0., 0., 1.];
-const BLUE: [f32; 4] = [0., 0., 1., 1.];
-
 struct State<'a> {
     renderer: Renderer,
     surface: wgpu::Surface<'a>,
@@ -23,7 +20,7 @@ struct State<'a> {
     window: Arc<Window>,
     time: Instant,
 
-    bars: Bars,
+    aurodio: Aurodio,
 }
 
 impl<'a> State<'a> {
@@ -54,18 +51,20 @@ impl<'a> State<'a> {
 
         surface.configure(renderer.device(), &surface_config);
 
-        let bars = Bars::new(&BarsDescriptor {
-            device: renderer.device(),
+        let aurodio = Aurodio::new(&AurodioDescriptor {
+            renderer: &renderer,
             sample_processor: &processor,
-            audio_conf: BarProcessorConfig::default(),
             texture_format: surface_config.format,
-            max_height: 0.5,
-            variant: BarVariant::PresenceGradient {
-                high: RED,
-                low: BLUE,
-            },
-        })
-        .unwrap_or_else(|err| panic!("{}", err));
+            freq_ranges: &[
+                NonZero::new(50).unwrap()..NonZero::new(250).unwrap(),
+                NonZero::new(500).unwrap()..NonZero::new(2_000).unwrap(),
+                NonZero::new(4_000).unwrap()..NonZero::new(6_000).unwrap(),
+            ],
+            base_color: [0., 0.5, 0.5],
+            movement_speed: 0.005,
+            easing: shady_audio::StandardEasing::OutCubic,
+            sensitivity: 0.2,
+        });
 
         Self {
             time,
@@ -73,7 +72,7 @@ impl<'a> State<'a> {
             surface,
             window,
             surface_config,
-            bars,
+            aurodio,
         }
     }
 
@@ -84,14 +83,14 @@ impl<'a> State<'a> {
             self.surface
                 .configure(self.renderer.device(), &self.surface_config);
 
-            self.bars
+            self.aurodio
                 .update_resolution(self.renderer.queue(), [new_size.width, new_size.height]);
         }
     }
 
     pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
-        self.bars.update_audio(self.renderer.queue(), processor);
-        self.bars
+        self.aurodio.update_audio(self.renderer.queue(), processor);
+        self.aurodio
             .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
         let surface_texture = self.surface.get_current_texture()?;
 
@@ -99,7 +98,7 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, &[&self.bars]);
+        self.renderer.render(&view, &[&self.aurodio]);
 
         surface_texture.present();
         Ok(())

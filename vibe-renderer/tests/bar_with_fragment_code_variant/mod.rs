@@ -1,4 +1,4 @@
-use shady_audio::{fetcher::DummyFetcher, SampleProcessor};
+use shady_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, Component, ShaderCode};
 
 use crate::Tester;
@@ -11,7 +11,7 @@ fn wgsl_passes() {
     let mut bars = Bars::new(&BarsDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,
-        audio_conf: shady_audio::Config::default(),
+        audio_conf: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: BarVariant::FragmentCode {
@@ -37,7 +37,7 @@ fn glsl_passes() {
     let mut bars = Bars::new(&BarsDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,
-        audio_conf: shady_audio::Config::default(),
+        audio_conf: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: BarVariant::FragmentCode {

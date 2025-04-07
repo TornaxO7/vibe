@@ -1,11 +1,16 @@
+mod bind_group_manager;
 pub mod components;
 
 use std::ops::Deref;
 
-use components::Component;
+use components::{ValueNoise, ValueNoiseDescriptor};
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::info;
+
+pub trait Renderable {
+    fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RendererDescriptor {
@@ -75,10 +80,10 @@ impl Renderer {
         }
     }
 
-    pub fn render<'a, 'c, C: Deref<Target: Component> + 'c>(
+    pub fn render<'a, 'r, R: Deref<Target: Renderable> + 'r>(
         &self,
         view: &'a wgpu::TextureView,
-        components: impl IntoIterator<Item = &'c C>,
+        renderables: impl IntoIterator<Item = &'r R>,
     ) {
         let mut encoder = self
             .device
@@ -97,8 +102,8 @@ impl Renderer {
                 ..Default::default()
             });
 
-            for component in components {
-                component.render_with_renderpass(&mut render_pass);
+            for renderable in renderables {
+                renderable.render_with_renderpass(&mut render_pass);
             }
         }
 
@@ -122,5 +127,46 @@ impl Renderer {
 
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
+    }
+}
+
+impl Renderer {
+    // `brightness`: should be within the range `0` and `1`
+    pub fn create_value_noise_texture(
+        &self,
+        width: u32,
+        height: u32,
+        brightness: f32,
+    ) -> wgpu::Texture {
+        let device = self.device();
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Value noise texture"),
+            size: wgpu::Extent3d {
+                width,
+                height,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8UnormSrgb,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let renderable = ValueNoise::new(&ValueNoiseDescriptor {
+            device,
+            width,
+            height,
+            format: texture.format(),
+            octaves: 7,
+            brightness,
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.render(&view, &[&renderable]);
+
+        texture
     }
 }

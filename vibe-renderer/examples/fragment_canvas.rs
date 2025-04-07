@@ -66,7 +66,7 @@ impl<'a> State<'a> {
 
             FragmentCanvas::new(&FragmentCanvasDescriptor {
                 sample_processor: &processor,
-                audio_conf: shady_audio::Config::default(),
+                audio_conf: shady_audio::BarProcessorConfig::default(),
                 device: renderer.device(),
                 format: surface_config.format,
                 resolution: [size.width, size.height],

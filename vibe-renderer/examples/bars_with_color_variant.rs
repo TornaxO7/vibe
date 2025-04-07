@@ -1,6 +1,6 @@
 use std::{sync::Arc, time::Instant};
 
-use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::{
     components::{BarVariant, Bars, BarsDescriptor, Component},
     Renderer,
@@ -54,9 +54,9 @@ impl<'a> State<'a> {
         let bars = Bars::new(&BarsDescriptor {
             device: renderer.device(),
             sample_processor: &processor,
-            audio_conf: shady_audio::Config::default(),
+            audio_conf: BarProcessorConfig::default(),
             texture_format: surface_config.format,
-            max_height: 0.5,
+            max_height: 1.,
             variant: BarVariant::Color([0., 0., 1., 1.]),
         })
         .unwrap_or_else(|err| panic!("{}", err));
