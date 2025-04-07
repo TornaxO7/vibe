@@ -3,7 +3,7 @@ mod bars;
 mod fragment_canvas;
 mod value_noise;
 
-pub use aurodio::{Aurodio, AurodioDescriptor};
+pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 pub use value_noise::{ValueNoise, ValueNoiseDescriptor};

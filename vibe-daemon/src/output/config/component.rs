@@ -35,6 +35,7 @@ pub enum ComponentConfig {
         base_color: Rgb,
         movement_speed: f32,
         audio_conf: AurodioAudioConfig,
+        layers: Vec<AurodioLayerConfig>,
     },
 }
 
@@ -131,7 +132,12 @@ impl From<BarAudioConfig> for shady_audio::BarProcessorConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AurodioAudioConfig {
-    pub freq_ranges: Vec<Range<NonZero<u16>>>,
     pub easing: StandardEasing,
     pub sensitivity: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AurodioLayerConfig {
+    pub freq_range: Range<NonZero<u16>>,
+    pub zoom_factor: f32,
 }

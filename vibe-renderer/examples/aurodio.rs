@@ -2,7 +2,7 @@ use std::{num::NonZero, sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{Aurodio, AurodioDescriptor, Component},
+    components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor, Component},
     Renderer,
 };
 use winit::{
@@ -55,10 +55,19 @@ impl<'a> State<'a> {
             renderer: &renderer,
             sample_processor: &processor,
             texture_format: surface_config.format,
-            freq_ranges: &[
-                NonZero::new(50).unwrap()..NonZero::new(250).unwrap(),
-                NonZero::new(500).unwrap()..NonZero::new(2_000).unwrap(),
-                NonZero::new(4_000).unwrap()..NonZero::new(6_000).unwrap(),
+            layers: &[
+                AurodioLayerDescriptor {
+                    freq_range: NonZero::new(50).unwrap()..NonZero::new(250).unwrap(),
+                    zoom_factor: 3.,
+                },
+                AurodioLayerDescriptor {
+                    freq_range: NonZero::new(500).unwrap()..NonZero::new(2_000).unwrap(),
+                    zoom_factor: 5.,
+                },
+                AurodioLayerDescriptor {
+                    freq_range: NonZero::new(4_000).unwrap()..NonZero::new(6_000).unwrap(),
+                    zoom_factor: 10.,
+                },
             ],
             base_color: [0., 0.5, 0.5],
             movement_speed: 0.005,

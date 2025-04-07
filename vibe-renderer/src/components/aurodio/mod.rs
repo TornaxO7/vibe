@@ -43,6 +43,11 @@ const VERTICES: [VertexPosition; 4] = [
     [-1.0, -1.0]  // bottom left
 ];
 
+pub struct AurodioLayerDescriptor {
+    pub freq_range: Range<NonZero<u16>>,
+    pub zoom_factor: f32,
+}
+
 pub struct AurodioDescriptor<'a> {
     pub renderer: &'a Renderer,
     pub sample_processor: &'a SampleProcessor,
@@ -53,7 +58,7 @@ pub struct AurodioDescriptor<'a> {
     pub movement_speed: f32,
 
     // audio config
-    pub freq_ranges: &'a [Range<NonZero<u16>>],
+    pub layers: &'a [AurodioLayerDescriptor],
     pub easing: StandardEasing,
     pub sensitivity: f32,
 }
@@ -70,17 +75,17 @@ pub struct Aurodio {
 
 impl Aurodio {
     pub fn new(desc: &AurodioDescriptor) -> Self {
-        let amount_layers = desc.freq_ranges.len();
+        let amount_layers = desc.layers.len();
         let device = desc.renderer.device();
         let bar_processors = {
             let mut bar_processors = Vec::new();
 
-            for freq_range in desc.freq_ranges.iter() {
+            for layer in desc.layers.iter() {
                 bar_processors.push(BarProcessor::new(
                     desc.sample_processor,
                     BarProcessorConfig {
                         amount_bars: NonZero::new(1).unwrap(),
-                        freq_range: freq_range.clone(),
+                        freq_range: layer.freq_range.clone(),
                         sensitivity: desc.sensitivity,
                         easer: desc.easing,
                         ..Default::default()
@@ -130,7 +135,8 @@ impl Aurodio {
         }
 
         {
-            let zoom_factors: Vec<f32> = get_zoom_factors(amount_layers);
+            let zoom_factors: Vec<f32> =
+                desc.layers.iter().map(|layer| layer.zoom_factor).collect();
 
             bind_group0_builder.insert_buffer(
                 Bindings0::ZoomFactors as u32,
@@ -373,12 +379,6 @@ fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
     }
 
     (points, width as u32)
-}
-
-fn get_zoom_factors(amount_layers: usize) -> Vec<f32> {
-    (0..(amount_layers as u8))
-        .map(|layer_idx| ((layer_idx + 1).pow(2)) as f32)
-        .collect()
 }
 
 fn get_random_seeds(amount_layers: usize) -> Vec<f32> {

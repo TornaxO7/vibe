@@ -12,8 +12,8 @@ use smithay_client_toolkit::{
 use tracing::error;
 use vibe_renderer::{
     components::{
-        Aurodio, AurodioDescriptor, BarVariant, Bars, Component, FragmentCanvas,
-        FragmentCanvasDescriptor,
+        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Component,
+        FragmentCanvas, FragmentCanvasDescriptor,
     },
     Renderer,
 };
@@ -143,16 +143,27 @@ impl OutputCtx {
                         base_color,
                         movement_speed,
                         audio_conf,
-                    } => Ok(Box::new(Aurodio::new(&AurodioDescriptor {
-                        renderer,
-                        sample_processor,
-                        texture_format: surface_config.format,
-                        base_color: base_color.gamma_corrected(),
-                        movement_speed,
-                        freq_ranges: &audio_conf.freq_ranges,
-                        easing: audio_conf.easing,
-                        sensitivity: audio_conf.sensitivity,
-                    })) as Box<dyn Component>),
+                        layers,
+                    } => {
+                        let layers: Vec<AurodioLayerDescriptor> = layers
+                            .iter()
+                            .map(|layer| AurodioLayerDescriptor {
+                                freq_range: layer.freq_range.clone(),
+                                zoom_factor: layer.zoom_factor,
+                            })
+                            .collect();
+
+                        Ok(Box::new(Aurodio::new(&AurodioDescriptor {
+                            renderer,
+                            sample_processor,
+                            texture_format: surface_config.format,
+                            base_color: base_color.gamma_corrected(),
+                            movement_speed,
+                            easing: audio_conf.easing,
+                            sensitivity: audio_conf.sensitivity,
+                            layers: &layers,
+                        })) as Box<dyn Component>)
+                    }
                 }
                 .unwrap_or_else(|msg| {
                     error!("{}", msg);

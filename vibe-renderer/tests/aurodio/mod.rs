@@ -1,7 +1,7 @@
 use std::num::NonZero;
 
 use shady_audio::{fetcher::DummyFetcher, SampleProcessor, StandardEasing};
-use vibe_renderer::components::{Aurodio, AurodioDescriptor, Component};
+use vibe_renderer::components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor, Component};
 
 use crate::Tester;
 
@@ -18,7 +18,10 @@ fn test() {
         texture_format: tester.output_texture_format(),
         base_color: BLUE,
         movement_speed: 0.2,
-        freq_ranges: &[NonZero::new(50).unwrap()..NonZero::new(200).unwrap()],
+        layers: &[AurodioLayerDescriptor {
+            freq_range: NonZero::new(50).unwrap()..NonZero::new(200).unwrap(),
+            zoom_factor: 5.,
+        }],
         easing: StandardEasing::InOutSine,
         sensitivity: 0.2,
     });
