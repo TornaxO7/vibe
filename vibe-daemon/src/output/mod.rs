@@ -65,7 +65,7 @@ impl OutputCtx {
 
             if !surface_caps
                 .alpha_modes
-                .contains(&wgpu::CompositeAlphaMode::Inherit)
+                .contains(&wgpu::CompositeAlphaMode::PreMultiplied)
             {
                 error!(concat![
                     "Ok, now this is getting tricky (great to hear that from a software, right?).\n",
