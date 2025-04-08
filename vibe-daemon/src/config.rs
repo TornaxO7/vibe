@@ -16,6 +16,7 @@ pub enum ConfigError {
 pub struct GraphicsConfig {
     pub power_preference: wgpu::PowerPreference,
     pub backend: wgpu::Backends,
+    pub gpu_name: Option<String>,
 }
 
 impl Default for GraphicsConfig {
@@ -23,6 +24,7 @@ impl Default for GraphicsConfig {
         Self {
             power_preference: wgpu::PowerPreference::LowPower,
             backend: wgpu::Backends::VULKAN,
+            gpu_name: None,
         }
     }
 }
@@ -33,6 +35,7 @@ impl From<GraphicsConfig> for RendererDescriptor {
             power_preference: conf.power_preference,
             backend: conf.backend,
             fallback_to_software_rendering: false,
+            adapter_name: conf.gpu_name,
         }
     }
 }

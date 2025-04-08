@@ -6,7 +6,7 @@ use std::ops::Deref;
 use components::{ValueNoise, ValueNoiseDescriptor};
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{error, info};
 
 pub trait Renderable {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
@@ -23,6 +23,8 @@ pub struct RendererDescriptor {
     /// Set the backend which should be used.
     pub backend: wgpu::Backends,
 
+    pub adapter_name: Option<String>,
+
     /// Enforce software rendering if wgpu can't find a gpu.
     pub fallback_to_software_rendering: bool,
 }
@@ -33,6 +35,7 @@ impl Default for RendererDescriptor {
             power_preference: wgpu::PowerPreference::LowPower,
             backend: wgpu::Backends::VULKAN,
             fallback_to_software_rendering: false,
+            adapter_name: None,
         }
     }
 }
@@ -56,14 +59,36 @@ impl Renderer {
             .with_env(),
         );
 
-        let adapter = instance
-            .request_adapter(&wgpu::RequestAdapterOptions {
-                power_preference: desc.power_preference,
-                force_fallback_adapter: desc.fallback_to_software_rendering,
-                ..Default::default()
-            })
-            .block_on()
-            .expect("Couldn't find GPU device.");
+        let adapter = if let Some(adapter_name) = &desc.adapter_name {
+            let adapters = instance.enumerate_adapters(desc.backend);
+
+            let adapter_names: Vec<String> = adapters
+                .iter()
+                .map(|adapter| adapter.get_info().name)
+                .collect();
+
+            adapters
+                .into_iter()
+                .find(|adapter| &adapter.get_info().name == adapter_name)
+                .clone()
+                .unwrap_or_else(|| {
+                    error!(
+                        "Couldn't find the adapter '{}'. Available adapters are: {:?}",
+                        adapter_name, adapter_names
+                    );
+
+                    panic!("Couldn't find adapter.");
+                })
+        } else {
+            instance
+                .request_adapter(&wgpu::RequestAdapterOptions {
+                    power_preference: desc.power_preference,
+                    force_fallback_adapter: desc.fallback_to_software_rendering,
+                    ..Default::default()
+                })
+                .block_on()
+                .expect("Couldn't find GPU device.")
+        };
 
         info!("Choosing for rendering: {}", adapter.get_info().name);
 
