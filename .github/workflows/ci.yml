@@ -56,7 +56,6 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: TornaxO7/rust-template@v2-ci-actions
+      - uses: NcStudios/VulkanCI@v1.0
       - name: Install vulkan and run tests
-        run: |
-          sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
-          cargo test --verbose
+        run: cargo test --verbose
