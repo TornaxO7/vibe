@@ -56,6 +56,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: TornaxO7/rust-template@v2-ci-actions
-      - uses: NcStudios/VulkanCI@v1.0
+      - name: Install llvmpipe for software rendering
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-utils
+          export LIBGL_ALWAYS_SOFTWARE=1
       - name: Install vulkan and run tests
         run: cargo test --verbose
