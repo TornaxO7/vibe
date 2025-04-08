@@ -56,5 +56,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: TornaxO7/rust-template@v2-ci-actions
+      - name: Install vulkan dependencies
+        run: sudo apt-get install -y mesa-vulkan-drivers libvulkan1 vulkan-tools vulkan-validationlayers
       - name: Running tests
         run: cargo test --verbose
