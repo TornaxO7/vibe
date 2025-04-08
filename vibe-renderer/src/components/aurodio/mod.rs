@@ -382,9 +382,12 @@ fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
 }
 
 fn get_random_seeds(amount_layers: usize) -> Vec<f32> {
-    let mut seeds = vec![0f32; amount_layers];
+    let mut seeds = Vec::with_capacity(amount_layers);
+    let mut rng = rand::rng();
 
-    rand::fill(&mut seeds[..]);
+    for _ in 0..amount_layers {
+        seeds.push(rng.random_range(0f32..100f32));
+    }
 
     seeds
 }
