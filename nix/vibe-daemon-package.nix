@@ -53,7 +53,7 @@ rustPlatform.buildRustPackage rec {
     ])}
   '';
 
-  LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
+  LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}";
 
   cargoLock.lockFile = ../Cargo.lock;
 
