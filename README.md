@@ -26,7 +26,7 @@ It works on my machine and I've implemented basicaly everything I wanted and now
 Feel free to create an issue if you found a bug and/or an idea discussion if you'd like to suggest something.
 However I can't promise to work on every suggestion/bug :>
 
-**Note:** `vibe` isn't stable yet (maybe in the future?) so be prepared for breaking changes.
+**Note:** I'm unsure if I'd declare the config file format(s) of `vibe` as "stable", so for the time being: Be prepared for breaking changes.
 
 # Usage
 
