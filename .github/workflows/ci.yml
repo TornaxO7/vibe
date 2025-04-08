@@ -59,7 +59,8 @@ jobs:
       - name: Install llvmpipe for software rendering
         run: |
           sudo apt-get update
-          sudo apt-get install -y mesa-utils
-          export LIBGL_ALWAYS_SOFTWARE=1
-      - name: Install vulkan and run tests
+          sudo apt-get install -y mesa-vulkan-drivers vulkan-utils
+          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+      - name: Running tests
         run: cargo test --verbose
