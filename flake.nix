@@ -39,6 +39,7 @@
                 pkgs.mkShell {
                   packages = with pkgs; [
                     cargo-flamegraph
+                    mesa
                   ] ++ [ rust-toolchain ];
 
                   buildInputs = vibe.buildInputs;
