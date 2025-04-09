@@ -72,7 +72,6 @@ impl<'a> State<'a> {
                 audio_conf: shady_audio::BarProcessorConfig::default(),
                 device: renderer.device(),
                 format: surface_config.format,
-                resolution: [size.width, size.height],
                 fragment_code: fragment_source,
             })
             .unwrap_or_else(|msg| panic!("{}", msg))

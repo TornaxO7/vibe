@@ -18,15 +18,8 @@ const VERTEX_SURFACE_WIDTH: f32 = 2.;
 #[derive(Debug, Clone)]
 pub enum BarVariant {
     Color(Rgba),
-    PresenceGradient {
-        high: Rgba,
-        low: Rgba,
-    },
-    FragmentCode {
-        /// width, height
-        resolution: [u32; 2],
-        code: ShaderCode,
-    },
+    PresenceGradient { high: Rgba, low: Rgba },
+    FragmentCode(ShaderCode),
 }
 
 #[repr(u32)]
@@ -169,14 +162,15 @@ impl Bars {
                     ),
                 })
             }
-            BarVariant::FragmentCode { resolution, code } => {
+            BarVariant::FragmentCode(code) => {
                 bind_group0_builder.insert_buffer(
                     Bindings0::Resolution as u32,
                     wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    device.create_buffer(&wgpu::BufferDescriptor {
                         label: Some("Bar: iResolution buffer"),
-                        contents: bytemuck::cast_slice(resolution),
+                        size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
                     }),
                 );
 

@@ -113,10 +113,7 @@ impl OutputCtx {
                                 high: high_presence.gamma_corrected(),
                                 low: low_presence.gamma_corrected(),
                             },
-                            BarVariantConfig::FragmentCode(code) => BarVariant::FragmentCode {
-                                resolution: [size.width, size.height],
-                                code,
-                            },
+                            BarVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code),
                         };
 
                         Bars::new(&vibe_renderer::components::BarsDescriptor {
@@ -138,7 +135,6 @@ impl OutputCtx {
                         device: renderer.device(),
                         format: surface_config.format,
                         fragment_code,
-                        resolution: [size.width, size.height],
                     })
                     .map(|canvas| Box::new(canvas) as Box<dyn Component>),
                     ComponentConfig::Aurodio {
