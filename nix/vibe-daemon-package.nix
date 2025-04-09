@@ -37,7 +37,6 @@ rustPlatform.buildRustPackage rec {
     libGL
     libxkbcommon
 
-    mesa
     vulkan-loader
     vulkan-validation-layers
     vulkan-tools
@@ -52,6 +51,7 @@ rustPlatform.buildRustPackage rec {
       wayland
       # Without vulkan-loader present, wgpu won't find any adapter
       vulkan-loader
+      mesa
     ])}
   '';
 
