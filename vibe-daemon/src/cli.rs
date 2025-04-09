@@ -1,11 +1,8 @@
-use clap::{Parser, Subcommand};
-
-#[derive(Subcommand, Debug)]
-pub enum Command {}
+use clap::Parser;
 
 #[derive(Parser, Debug)]
+#[command(version, about)]
 pub struct Args {
-    /// The subcommand which should be executed
-    #[command(subcommand)]
-    pub command: Option<Command>,
+    /// The output name for tinkering the config of the given output.
+    pub output_name: Option<String>,
 }

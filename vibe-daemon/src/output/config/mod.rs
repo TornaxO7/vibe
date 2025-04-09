@@ -40,15 +40,14 @@ impl OutputConfig {
     }
 }
 
-pub fn load(output_info: &OutputInfo) -> Option<anyhow::Result<OutputConfig>> {
-    let name = output_info.name.as_ref().unwrap();
+pub fn load<S: AsRef<str>>(output_name: S) -> Option<anyhow::Result<OutputConfig>> {
     let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
 
     for entry in iterator {
         let entry = entry.unwrap();
         let path = entry.path();
 
-        if path.file_stem().unwrap() == OsStr::new(&name) {
+        if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
             let content = std::fs::read_to_string(&path).unwrap();
 
             return Some(toml::from_str(&content).context(""));
