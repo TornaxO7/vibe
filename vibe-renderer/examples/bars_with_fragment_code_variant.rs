@@ -59,26 +59,29 @@ impl<'a> State<'a> {
             max_height: 0.75,
             variant: BarVariant::FragmentCode {
                 resolution: [size.width, size.height],
-                code: ShaderCode::Wgsl(
-                    "
-                    @fragment
-                    fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                        var uv = pos.xy / iResolution.xy;
-                        uv.y = 1. - uv.y;
-                        uv.x *= iResolution.x / iResolution.y;
+                code: ShaderCode {
+                    language: vibe_renderer::components::ShaderLanguage::Wgsl,
+                    source: vibe_renderer::components::ShaderSource::Code(
+                        "
+                        @fragment
+                        fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+                            var uv = pos.xy / iResolution.xy;
+                            uv.y = 1. - uv.y;
+                            uv.x *= iResolution.x / iResolution.y;
 
-                        var col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
+                            var col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
 
-                        const GAMMA: f32 = 2.2;
-                        col.r = pow(col.r, GAMMA);
-                        col.g = pow(col.g, GAMMA);
-                        col.b = pow(col.b, GAMMA);
+                            const GAMMA: f32 = 2.2;
+                            col.r = pow(col.r, GAMMA);
+                            col.g = pow(col.g, GAMMA);
+                            col.b = pow(col.b, GAMMA);
 
-                        return vec4<f32>(col, uv.y);
-                    }
-                "
-                    .into(),
-                ),
+                            return vec4<f32>(col, uv.y);
+                        }
+                        "
+                        .into(),
+                    ),
+                },
             },
         })
         .unwrap_or_else(|err| panic!("{}", err));

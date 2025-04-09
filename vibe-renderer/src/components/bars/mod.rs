@@ -5,7 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{Component, ParseErrorMsg, ShaderCode};
+use super::{Component, ShaderCode, ShaderCodeError, ShaderLanguage};
 
 // assuming each value is positive
 pub type Rgba = [f32; 4];
@@ -70,7 +70,7 @@ pub struct Bars {
 }
 
 impl Bars {
-    pub fn new(desc: &BarsDescriptor) -> Result<Self, ParseErrorMsg> {
+    pub fn new(desc: &BarsDescriptor) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
@@ -191,18 +191,25 @@ impl Bars {
                     }),
                 );
 
-                let module = match &code {
-                    ShaderCode::Wgsl(code) => {
-                        const PREAMBLE: &str =
-                            include_str!("./shaders/fragment_code_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
-                    }
-                    ShaderCode::Glsl(code) => {
-                        const PREAMBLE: &str =
-                            include_str!("./shaders/fragment_code_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, code)?
+                let module = {
+                    let source = code.source().map_err(ShaderCodeError::from)?;
+
+                    match code.language {
+                        ShaderLanguage::Wgsl => {
+                            const PREAMBLE: &str =
+                                include_str!("./shaders/fragment_code_preamble.wgsl");
+                            super::parse_wgsl_fragment_code(PREAMBLE, &source)
+                                .map_err(ShaderCodeError::ParseError)?
+                        }
+                        ShaderLanguage::Glsl => {
+                            const PREAMBLE: &str =
+                                include_str!("./shaders/fragment_code_preamble.glsl");
+                            super::parse_glsl_fragment_code(PREAMBLE, &source)
+                                .map_err(ShaderCodeError::ParseError)?
+                        }
                     }
                 };
+
                 device.create_shader_module(wgpu::ShaderModuleDescriptor {
                     label: Some("Bar: Fragment code module"),
                     source: wgpu::ShaderSource::Naga(Cow::Owned(module)),

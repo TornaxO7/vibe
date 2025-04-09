@@ -52,17 +52,20 @@ impl<'a> State<'a> {
         surface.configure(renderer.device(), &surface_config);
 
         let canvas = {
-            let fragment_source = ShaderCode::Wgsl(
-                "
+            let fragment_source = ShaderCode {
+                language: vibe_renderer::components::ShaderLanguage::Wgsl,
+                source: vibe_renderer::components::ShaderSource::Code(
+                    "
                     @fragment
                     fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                         let uv = pos.xy / iResolution.xy;
                         // return vec4(sin(uv + iTime + freqs[3]) * .5 + .5, 0., 1.0);
                         return vec4(uv, .0, 1.);
                     }
-            "
-                .into(),
-            );
+                    "
+                    .into(),
+                ),
+            };
 
             FragmentCanvas::new(&FragmentCanvasDescriptor {
                 sample_processor: &processor,

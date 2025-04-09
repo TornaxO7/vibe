@@ -3,6 +3,8 @@ mod bars;
 mod fragment_canvas;
 mod value_noise;
 
+use std::path::PathBuf;
+
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
@@ -13,8 +15,6 @@ use shady_audio::SampleProcessor;
 
 use crate::Renderable;
 
-pub type ParseErrorMsg = String;
-
 pub trait Component: Renderable {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor);
 
@@ -23,10 +23,44 @@ pub trait Component: Renderable {
     fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]);
 }
 
+type ParseErrorMsg = String;
+
+#[derive(thiserror::Error, Debug)]
+pub enum ShaderCodeError {
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    #[error("Couldn't parse shader code: {0}")]
+    ParseError(String),
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ShaderCode {
-    Wgsl(String),
-    Glsl(String),
+#[serde(rename_all = "camelCase")]
+pub enum ShaderSource {
+    Path(PathBuf),
+    Code(String),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum ShaderLanguage {
+    Wgsl,
+    Glsl,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ShaderCode {
+    pub language: ShaderLanguage,
+    #[serde(flatten)]
+    pub source: ShaderSource,
+}
+
+impl ShaderCode {
+    fn source(&self) -> std::io::Result<String> {
+        match self.source.clone() {
+            ShaderSource::Code(code) => Ok(code),
+            ShaderSource::Path(path) => std::fs::read_to_string(path),
+        }
+    }
 }
 
 fn parse_wgsl_fragment_code(
