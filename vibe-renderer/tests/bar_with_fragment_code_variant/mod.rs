@@ -16,7 +16,12 @@ fn wgsl_passes() {
         max_height: 1.,
         variant: BarVariant::FragmentCode {
             resolution: [0, 0],
-            code: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
+            code: ShaderCode {
+                language: vibe_renderer::components::ShaderLanguage::Wgsl,
+                source: vibe_renderer::components::ShaderSource::Code(
+                    include_str!("./frag.wgsl").into(),
+                ),
+            },
         },
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
@@ -42,7 +47,12 @@ fn glsl_passes() {
         max_height: 1.,
         variant: BarVariant::FragmentCode {
             resolution: [0, 0],
-            code: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
+            code: ShaderCode {
+                language: vibe_renderer::components::ShaderLanguage::Glsl,
+                source: vibe_renderer::components::ShaderSource::Code(
+                    include_str!("./frag.glsl").into(),
+                ),
+            },
         },
     })
     .unwrap_or_else(|msg| panic!("{}", msg));

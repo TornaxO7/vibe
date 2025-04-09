@@ -5,7 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{Component, ParseErrorMsg, ShaderCode};
+use super::{Component, ShaderCode, ShaderCodeError};
 
 const ENTRYPOINT: &str = "main";
 
@@ -54,7 +54,7 @@ pub struct FragmentCanvas {
 }
 
 impl FragmentCanvas {
-    pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ParseErrorMsg> {
+    pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
@@ -119,14 +119,18 @@ impl FragmentCanvas {
             });
 
             let fragment_module = {
-                let module = match &desc.fragment_code {
-                    ShaderCode::Wgsl(code) => {
+                let source = desc.fragment_code.source().map_err(ShaderCodeError::from)?;
+
+                let module = match desc.fragment_code.language {
+                    super::ShaderLanguage::Wgsl => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
+                        super::parse_wgsl_fragment_code(PREAMBLE, &source)
+                            .map_err(ShaderCodeError::ParseError)?
                     }
-                    ShaderCode::Glsl(code) => {
+                    super::ShaderLanguage::Glsl => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, code)?
+                        super::parse_glsl_fragment_code(PREAMBLE, &source)
+                            .map_err(ShaderCodeError::ParseError)?
                     }
                 };
 

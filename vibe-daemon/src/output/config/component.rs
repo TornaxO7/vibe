@@ -2,7 +2,7 @@ use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
 use shady_audio::StandardEasing;
-use vibe_renderer::components::ShaderCode;
+use vibe_renderer::components::{ShaderCode, ShaderSource};
 
 const GAMMA: f32 = 2.2;
 
@@ -44,9 +44,10 @@ impl Default for ComponentConfig {
         Self::Bars {
             audio_conf: BarAudioConfig::default(),
             max_height: 0.75,
-            variant: BarVariantConfig::FragmentCode(ShaderCode::Wgsl(
-                DEFAULT_BARS_WGSL_FRAGMENT_CODE.into(),
-            )),
+            variant: BarVariantConfig::FragmentCode(ShaderCode {
+                language: vibe_renderer::components::ShaderLanguage::Wgsl,
+                source: ShaderSource::Code(DEFAULT_BARS_WGSL_FRAGMENT_CODE.into()),
+            }),
         }
     }
 }
