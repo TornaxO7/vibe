@@ -59,7 +59,7 @@ jobs:
       - name: Install llvmpipe for software rendering
         run: |
           sudo apt-get update
-          sudo apt-get install -y mesa-vulkan-drivers vulkan-utils mesa-utils
+          sudo apt-get install -y mesa-vulkan-drivers mesa-utils
       - name: Verify Vulkan renderer
         run: vulkaninfo | grep "deviceName"
       - name: Running tests
