@@ -6,6 +6,7 @@ authors = ["TornaxO7 <tornax@pm.me>"]
 description = "Renderer ecosystem for vibe."
 license = "GPL-2.0"
 repository = "https://github.com/TornaxO7/vibe/vibe-renderer"
+publish = false
 
 [dependencies]
 serde.workspace = true
