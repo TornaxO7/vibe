@@ -60,6 +60,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y mesa-vulkan-drivers vulkan-tools
+          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
       - name: Verify Vulkan renderer
         run: vulkaninfo | grep "deviceName"
       - name: Running tests
