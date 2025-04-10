@@ -5,7 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{Component, ParseErrorMsg, ShaderCode};
+use super::{Component, ShaderCode, ShaderCodeError, ShaderLanguage};
 
 // assuming each value is positive
 pub type Rgba = [f32; 4];
@@ -18,15 +18,8 @@ const VERTEX_SURFACE_WIDTH: f32 = 2.;
 #[derive(Debug, Clone)]
 pub enum BarVariant {
     Color(Rgba),
-    PresenceGradient {
-        high: Rgba,
-        low: Rgba,
-    },
-    FragmentCode {
-        /// width, height
-        resolution: [u32; 2],
-        code: ShaderCode,
-    },
+    PresenceGradient { high: Rgba, low: Rgba },
+    FragmentCode(ShaderCode),
 }
 
 #[repr(u32)]
@@ -70,7 +63,7 @@ pub struct Bars {
 }
 
 impl Bars {
-    pub fn new(desc: &BarsDescriptor) -> Result<Self, ParseErrorMsg> {
+    pub fn new(desc: &BarsDescriptor) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
@@ -169,14 +162,15 @@ impl Bars {
                     ),
                 })
             }
-            BarVariant::FragmentCode { resolution, code } => {
+            BarVariant::FragmentCode(code) => {
                 bind_group0_builder.insert_buffer(
                     Bindings0::Resolution as u32,
                     wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    device.create_buffer(&wgpu::BufferDescriptor {
                         label: Some("Bar: iResolution buffer"),
-                        contents: bytemuck::cast_slice(resolution),
+                        size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                         usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                        mapped_at_creation: false,
                     }),
                 );
 
@@ -191,18 +185,25 @@ impl Bars {
                     }),
                 );
 
-                let module = match &code {
-                    ShaderCode::Wgsl(code) => {
-                        const PREAMBLE: &str =
-                            include_str!("./shaders/fragment_code_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
-                    }
-                    ShaderCode::Glsl(code) => {
-                        const PREAMBLE: &str =
-                            include_str!("./shaders/fragment_code_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, code)?
+                let module = {
+                    let source = code.source().map_err(ShaderCodeError::from)?;
+
+                    match code.language {
+                        ShaderLanguage::Wgsl => {
+                            const PREAMBLE: &str =
+                                include_str!("./shaders/fragment_code_preamble.wgsl");
+                            super::parse_wgsl_fragment_code(PREAMBLE, &source)
+                                .map_err(ShaderCodeError::ParseError)?
+                        }
+                        ShaderLanguage::Glsl => {
+                            const PREAMBLE: &str =
+                                include_str!("./shaders/fragment_code_preamble.glsl");
+                            super::parse_glsl_fragment_code(PREAMBLE, &source)
+                                .map_err(ShaderCodeError::ParseError)?
+                        }
                     }
                 };
+
                 device.create_shader_module(wgpu::ShaderModuleDescriptor {
                     label: Some("Bar: Fragment code module"),
                     source: wgpu::ShaderSource::Naga(Cow::Owned(module)),

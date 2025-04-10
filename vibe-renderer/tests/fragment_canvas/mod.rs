@@ -14,8 +14,12 @@ fn wgsl_passes() {
         audio_conf: BarProcessorConfig::default(),
         device: tester.renderer.device(),
         format: tester.output_texture_format(),
-        resolution: [tester.output_width, tester.output_height],
-        fragment_code: ShaderCode::Wgsl(include_str!("./frag.wgsl").into()),
+        fragment_code: ShaderCode {
+            language: vibe_renderer::components::ShaderLanguage::Wgsl,
+            source: vibe_renderer::components::ShaderSource::Code(
+                include_str!("./frag.wgsl").into(),
+            ),
+        },
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
@@ -39,8 +43,12 @@ fn glsl_passes() {
         audio_conf: BarProcessorConfig::default(),
         device: tester.renderer.device(),
         format: tester.output_texture_format(),
-        resolution: [tester.output_width, tester.output_height],
-        fragment_code: ShaderCode::Glsl(include_str!("./frag.glsl").into()),
+        fragment_code: ShaderCode {
+            language: vibe_renderer::components::ShaderLanguage::Glsl,
+            source: vibe_renderer::components::ShaderSource::Code(
+                include_str!("./frag.glsl").into(),
+            ),
+        },
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

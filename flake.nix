@@ -23,8 +23,8 @@
           };
 
           packages = rec {
-            default = vibe-daemon;
-            vibe-daemon = pkgs.callPackage (import ./nix/vibe-daemon-package.nix) { };
+            default = vibe;
+            vibe = pkgs.callPackage (import ./nix/vibe-package.nix) { };
           };
 
           devShells =
@@ -34,7 +34,7 @@
             {
               default =
                 let
-                  vibe = pkgs.callPackage (import ./nix/vibe-daemon-package.nix) { };
+                  vibe = pkgs.callPackage (import ./nix/vibe-package.nix) { };
                 in
                 pkgs.mkShell {
                   packages = with pkgs; [

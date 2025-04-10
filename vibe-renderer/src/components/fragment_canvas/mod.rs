@@ -5,7 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{Component, ParseErrorMsg, ShaderCode};
+use super::{Component, ShaderCode, ShaderCodeError};
 
 const ENTRYPOINT: &str = "main";
 
@@ -37,8 +37,6 @@ pub struct FragmentCanvasDescriptor<'a> {
     pub format: wgpu::TextureFormat,
 
     // fragment shader relevant stuff
-    /// Canvas/Resolution size: (width, height).
-    pub resolution: [u32; 2],
     pub fragment_code: ShaderCode,
 }
 
@@ -54,7 +52,7 @@ pub struct FragmentCanvas {
 }
 
 impl FragmentCanvas {
-    pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ParseErrorMsg> {
+    pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
@@ -66,10 +64,11 @@ impl FragmentCanvas {
         bind_group0_builder.insert_buffer(
             Bindings0::IResolution as u32,
             wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Fragment canvas: `iResolution` buffer"),
-                contents: bytemuck::bytes_of(&desc.resolution),
+                size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             }),
         );
 
@@ -119,14 +118,18 @@ impl FragmentCanvas {
             });
 
             let fragment_module = {
-                let module = match &desc.fragment_code {
-                    ShaderCode::Wgsl(code) => {
+                let source = desc.fragment_code.source().map_err(ShaderCodeError::from)?;
+
+                let module = match desc.fragment_code.language {
+                    super::ShaderLanguage::Wgsl => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, code)?
+                        super::parse_wgsl_fragment_code(PREAMBLE, &source)
+                            .map_err(ShaderCodeError::ParseError)?
                     }
-                    ShaderCode::Glsl(code) => {
+                    super::ShaderLanguage::Glsl => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, code)?
+                        super::parse_glsl_fragment_code(PREAMBLE, &source)
+                            .map_err(ShaderCodeError::ParseError)?
                     }
                 };
 

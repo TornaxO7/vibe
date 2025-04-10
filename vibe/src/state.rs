@@ -175,10 +175,10 @@ impl OutputHandler for State {
 
         info!("Detected output: '{}'", &name);
 
-        let config = match crate::output::config::load(&info) {
-            Some(res) => match res {
+        let config = match crate::output::config::load(&name) {
+            Some((path, res)) => match res {
                 Ok(config) => {
-                    info!("Reusing config of output '{}'.", name);
+                    info!("Reusing '{}'.", path.to_string_lossy());
                     config
                 }
                 Err(err) => {
