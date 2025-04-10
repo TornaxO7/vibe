@@ -4,10 +4,10 @@ use std::{
     time::Instant,
 };
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
-use tracing::{error, info, warn};
+use tracing::{error, warn};
 use vibe_renderer::{
     components::{Component, ShaderCodeError},
     Renderer, RendererDescriptor,
@@ -115,15 +115,27 @@ impl<'a> OutputRenderer<'a> {
         let processor =
             SampleProcessor::new(SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap());
 
-        let output_config = {
-            let Some(config) = crate::output::config::load(&output_name) else {
-                anyhow::bail!(
+        let (output_config_path, output_config) = {
+            let Some((path, config)) = crate::output::config::load(&output_name) else {
+                bail!(
                     "The config file for '{}' does not exist. Can't start hot reloading.`",
                     output_name
                 );
             };
 
-            config?
+            match config {
+                Ok(config) => (path, config),
+                Err(err) => {
+                    error!("{:?}", err);
+                    (
+                        path,
+                        OutputConfig {
+                            enable: true,
+                            components: Vec::new(),
+                        },
+                    )
+                }
+            }
         };
 
         let lookup_paths = output_config.hot_reloading_paths();
@@ -135,7 +147,6 @@ impl<'a> OutputRenderer<'a> {
         }
 
         // don't forget to watch the actual config file as well
-        let output_config_path = crate::output::config::get_path(&output_name);
         watcher.watch(&output_config_path, notify::RecursiveMode::NonRecursive)?;
 
         Ok(Self {
@@ -169,56 +180,49 @@ impl<'a> OutputRenderer<'a> {
         false
     }
 
-    pub fn refresh_config(&mut self) {
+    // Retunrs `Err` if something un-saveable happened. => Signal for exiting
+    pub fn refresh_config(&mut self) -> anyhow::Result<()> {
         self.output_config = {
-            let Some(output_config) = crate::output::config::load(&self.output_name) else {
-                error!(
+            let Some((path, output_config)) = crate::output::config::load(&self.output_name) else {
+                bail!(
                     "The config file of your output '{}' got removed. `vibe` will stop rendering...",
                     self.output_name
                 );
-                panic!();
             };
+
+            let _ = self.watcher.unwatch(&path);
+            self.watcher
+                .watch(&path, notify::RecursiveMode::NonRecursive)
+                .context("Start watching the output config file.")?;
 
             match output_config {
                 Ok(conf) => conf,
                 Err(err) => {
                     error!("{:?}", err);
-                    return;
+                    return Ok(());
                 }
             }
         };
 
         // refresh lookup paths
         while let Some(path) = self.lookup_paths.pop() {
-            self.watcher.unwatch(&path).unwrap_or_else(|err| {
-                error!("Couldn't unwatch paths of the previous config: {}", err);
-                panic!();
-            });
+            let _ = self.watcher.unwatch(&path);
         }
-
-        // don't forget the config path as well
-        let output_config_file_path = crate::output::config::get_path(&self.output_name);
-        let _ = self.watcher.unwatch(&output_config_file_path);
-        self.watcher
-            .watch(
-                &output_config_file_path,
-                notify::RecursiveMode::NonRecursive,
-            )
-            .unwrap();
 
         // add all paths within the config file as well
         for path in self.output_config.hot_reloading_paths() {
             self.lookup_paths.push(path.clone());
-            self.watcher
+
+            if let Err(err) = self
+                .watcher
                 .watch(&path, notify::RecursiveMode::NonRecursive)
-                .unwrap_or_else(|err| {
-                    error!(
-                        "Couldn't start watching file '{}':\n{}",
-                        path.to_string_lossy(),
-                        err
-                    );
-                    panic!();
-                });
+            {
+                bail!(
+                    "Couldn't start watching file '{}':\n{}",
+                    path.to_string_lossy(),
+                    err
+                );
+            }
         }
 
         // update components to render
@@ -231,6 +235,8 @@ impl<'a> OutputRenderer<'a> {
                 error!("{}", err);
             }
         }
+
+        Ok(())
     }
 }
 
@@ -241,7 +247,11 @@ impl<'a> ApplicationHandler for OutputRenderer<'a> {
             .expect("Create window");
 
         self.state = Some(State::new(window, &self.renderer));
-        self.refresh_config();
+
+        if let Err(err) = self.refresh_config() {
+            error!("{:?}", err);
+            event_loop.exit();
+        }
     }
 
     fn window_event(
@@ -251,7 +261,11 @@ impl<'a> ApplicationHandler for OutputRenderer<'a> {
         event: WindowEvent,
     ) {
         if self.config_is_modified() {
-            self.refresh_config();
+            if let Err(err) = self.refresh_config() {
+                error!("{:?}", err);
+                event_loop.exit();
+                return;
+            }
         }
 
         let state = self.state.as_mut().unwrap();

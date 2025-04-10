@@ -6,7 +6,6 @@ use anyhow::Context;
 use component::ComponentConfig;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
-use tracing::info;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
@@ -71,7 +70,7 @@ impl OutputConfig {
     }
 }
 
-pub fn load<S: AsRef<str>>(output_name: S) -> Option<anyhow::Result<OutputConfig>> {
+pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<OutputConfig>)> {
     let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
 
     for entry in iterator {
@@ -79,23 +78,10 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<anyhow::Result<OutputConfig
         let path = entry.path();
 
         if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
-            info!(
-                "Found config file of '{}' at '{}'",
-                output_name.as_ref(),
-                path.to_string_lossy()
-            );
             let content = std::fs::read_to_string(&path).unwrap();
-
-            return Some(toml::from_str(&content).context(""));
+            return Some((path, toml::from_str(&content).context("")));
         }
     }
 
     None
-}
-
-/// Returns the config path of the given output name.
-pub fn get_path<S: AsRef<str>>(output_name: S) -> PathBuf {
-    let mut path = crate::get_output_config_dir();
-    path.push(format!("{}.toml", output_name.as_ref()));
-    path
 }

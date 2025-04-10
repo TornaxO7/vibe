@@ -9,6 +9,7 @@ use std::{path::PathBuf, sync::OnceLock};
 
 use clap::Parser;
 use state::State;
+use tracing::error;
 use tracing_subscriber::EnvFilter;
 use wayland_client::{globals::registry_queue_init, Connection};
 use xdg::BaseDirectories;
@@ -19,7 +20,7 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     init_logging();
 
     let args = cli::Args::parse();
@@ -29,7 +30,9 @@ fn main() -> anyhow::Result<()> {
         run_daemon()
     };
 
-    result
+    if let Err(err) = result {
+        error!("{:?}", err);
+    }
 }
 
 fn run_daemon() -> anyhow::Result<()> {
