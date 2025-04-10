@@ -39,6 +39,8 @@
                 pkgs.mkShell {
                   packages = with pkgs; [
                     cargo-flamegraph
+                    cargo-release
+                    git-cliff
                   ] ++ [ rust-toolchain ];
 
                   buildInputs = vibe.buildInputs;
