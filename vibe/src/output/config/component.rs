@@ -1,8 +1,14 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use shady_audio::StandardEasing;
-use vibe_renderer::components::{ShaderCode, ShaderSource};
+use shady_audio::{SampleProcessor, StandardEasing};
+use vibe_renderer::{
+    components::{
+        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Component,
+        FragmentCanvas, FragmentCanvasDescriptor, ShaderCode, ShaderCodeError, ShaderSource,
+    },
+    Renderer,
+};
 
 const GAMMA: f32 = 2.2;
 
@@ -48,6 +54,81 @@ impl Default for ComponentConfig {
                 language: vibe_renderer::components::ShaderLanguage::Wgsl,
                 source: ShaderSource::Code(DEFAULT_BARS_WGSL_FRAGMENT_CODE.into()),
             }),
+        }
+    }
+}
+
+impl ComponentConfig {
+    pub fn to_component(
+        &self,
+        renderer: &Renderer,
+        processor: &SampleProcessor,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn Component>, ShaderCodeError> {
+        match self {
+            ComponentConfig::Bars {
+                audio_conf,
+                max_height,
+                variant,
+            } => {
+                let variant = match variant {
+                    BarVariantConfig::Color(rgba) => BarVariant::Color(rgba.gamma_corrected()),
+                    BarVariantConfig::PresenceGradient {
+                        high_presence,
+                        low_presence,
+                    } => BarVariant::PresenceGradient {
+                        high: high_presence.gamma_corrected(),
+                        low: low_presence.gamma_corrected(),
+                    },
+                    BarVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
+                };
+
+                Bars::new(&vibe_renderer::components::BarsDescriptor {
+                    device: renderer.device(),
+                    sample_processor: processor,
+                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    texture_format,
+                    max_height: *max_height,
+                    variant,
+                })
+                .map(|bars| Box::new(bars) as Box<dyn Component>)
+            }
+            ComponentConfig::FragmentCanvas {
+                audio_conf,
+                fragment_code,
+            } => FragmentCanvas::new(&FragmentCanvasDescriptor {
+                sample_processor: processor,
+                audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                device: renderer.device(),
+                format: texture_format,
+                fragment_code: fragment_code.clone(),
+            })
+            .map(|canvas| Box::new(canvas) as Box<dyn Component>),
+            ComponentConfig::Aurodio {
+                base_color,
+                movement_speed,
+                audio_conf,
+                layers,
+            } => {
+                let layers: Vec<AurodioLayerDescriptor> = layers
+                    .iter()
+                    .map(|layer| AurodioLayerDescriptor {
+                        freq_range: layer.freq_range.clone(),
+                        zoom_factor: layer.zoom_factor,
+                    })
+                    .collect();
+
+                Ok(Box::new(Aurodio::new(&AurodioDescriptor {
+                    renderer,
+                    sample_processor: processor,
+                    texture_format,
+                    base_color: base_color.gamma_corrected(),
+                    movement_speed: *movement_speed,
+                    easing: audio_conf.easing,
+                    sensitivity: audio_conf.sensitivity,
+                    layers: &layers,
+                })) as Box<dyn Component>)
+            }
         }
     }
 }
@@ -128,6 +209,12 @@ impl From<BarAudioConfig> for shady_audio::BarProcessorConfig {
             easer: conf.easing,
             ..Default::default()
         }
+    }
+}
+
+impl From<&BarAudioConfig> for shady_audio::BarProcessorConfig {
+    fn from(value: &BarAudioConfig) -> Self {
+        Self::from(value.clone())
     }
 }
 

@@ -23,11 +23,13 @@ fn main() -> anyhow::Result<()> {
     init_logging();
 
     let args = cli::Args::parse();
-    if let Some(output_name) = args.output_name {
+    let result = if let Some(output_name) = args.output_name {
         window::run(output_name)
     } else {
         run_daemon()
-    }
+    };
+
+    result
 }
 
 fn run_daemon() -> anyhow::Result<()> {
