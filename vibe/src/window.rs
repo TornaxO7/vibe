@@ -145,7 +145,7 @@ impl OutputRenderer<'_> {
             }
         };
 
-        let lookup_paths = output_config.hot_reloading_paths();
+        let lookup_paths = output_config.external_paths();
 
         let (tx, rx) = std::sync::mpsc::channel::<notify::Result<notify::Event>>();
         let mut watcher = notify::recommended_watcher(tx)?;
@@ -217,7 +217,7 @@ impl OutputRenderer<'_> {
         }
 
         // add all paths within the config file as well
-        for path in self.output_config.hot_reloading_paths() {
+        for path in self.output_config.external_paths() {
             self.lookup_paths.push(path.clone());
 
             if let Err(err) = self

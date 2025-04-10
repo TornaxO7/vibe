@@ -39,8 +39,11 @@ impl OutputConfig {
         Ok(())
     }
 
-    // Return all paths to relevant files for hot reloading.
-    pub fn hot_reloading_paths(&self) -> Vec<PathBuf> {
+    /// Returns all relevant paths which are occuring inside the config file.
+    ///
+    /// Only relevant for hot reloading to know which other files have to be watched as
+    /// well.
+    pub fn external_paths(&self) -> Vec<PathBuf> {
         let mut paths = Vec::new();
 
         for component in self.components.iter() {
@@ -82,4 +85,41 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
     }
 
     None
+}
+
+#[cfg(test)]
+mod tests {
+    use component::BarAudioConfig;
+    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
+
+    use super::*;
+
+    #[test]
+    fn extrenal_paths() {
+        let output_config = OutputConfig {
+            enable: true,
+            components: vec![
+                ComponentConfig::FragmentCanvas {
+                    audio_conf: BarAudioConfig::default(),
+                    fragment_code: ShaderCode {
+                        language: ShaderLanguage::Wgsl,
+                        source: ShaderSource::Path("/dir/file1".into()),
+                    },
+                },
+                ComponentConfig::Bars {
+                    audio_conf: BarAudioConfig::default(),
+                    max_height: 0.69,
+                    variant: component::BarVariantConfig::FragmentCode(ShaderCode {
+                        language: ShaderLanguage::Glsl,
+                        source: ShaderSource::Path("/dir/file2".into()),
+                    }),
+                },
+            ],
+        };
+
+        assert_eq!(
+            output_config.external_paths(),
+            vec![PathBuf::from("/dir/file1"), PathBuf::from("/dir/file2")]
+        );
+    }
 }
