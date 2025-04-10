@@ -58,7 +58,14 @@ impl<'a> State<'a> {
         let mut new_components = Vec::with_capacity(comp_configs.len());
 
         for config in comp_configs.iter() {
-            let component = config.to_component(renderer, processor, self.surface_config.format)?;
+            let mut component =
+                config.to_component(renderer, processor, self.surface_config.format)?;
+
+            component.update_resolution(
+                renderer.queue(),
+                [self.surface_config.width, self.surface_config.height],
+            );
+
             new_components.push(component);
         }
 
