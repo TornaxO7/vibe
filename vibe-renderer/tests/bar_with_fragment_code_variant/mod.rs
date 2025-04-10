@@ -14,15 +14,12 @@ fn wgsl_passes() {
         audio_conf: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
         max_height: 1.,
-        variant: BarVariant::FragmentCode {
-            resolution: [0, 0],
-            code: ShaderCode {
-                language: vibe_renderer::components::ShaderLanguage::Wgsl,
-                source: vibe_renderer::components::ShaderSource::Code(
-                    include_str!("./frag.wgsl").into(),
-                ),
-            },
-        },
+        variant: BarVariant::FragmentCode(ShaderCode {
+            language: vibe_renderer::components::ShaderLanguage::Wgsl,
+            source: vibe_renderer::components::ShaderSource::Code(
+                include_str!("./frag.wgsl").into(),
+            ),
+        }),
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
@@ -45,15 +42,12 @@ fn glsl_passes() {
         audio_conf: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
         max_height: 1.,
-        variant: BarVariant::FragmentCode {
-            resolution: [0, 0],
-            code: ShaderCode {
-                language: vibe_renderer::components::ShaderLanguage::Glsl,
-                source: vibe_renderer::components::ShaderSource::Code(
-                    include_str!("./frag.glsl").into(),
-                ),
-            },
-        },
+        variant: BarVariant::FragmentCode(ShaderCode {
+            language: vibe_renderer::components::ShaderLanguage::Glsl,
+            source: vibe_renderer::components::ShaderSource::Code(
+                include_str!("./frag.glsl").into(),
+            ),
+        }),
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

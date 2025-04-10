@@ -1,5 +1,5 @@
 [workspace]
-members = ["vibe-renderer", "vibe-daemon"]
+members = ["vibe-renderer", "vibe"]
 resolver = "2"
 
 [workspace.dependencies]

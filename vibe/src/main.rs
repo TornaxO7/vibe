@@ -1,11 +1,15 @@
+mod cli;
 mod config;
 mod output;
 mod state;
 mod types;
+mod window;
 
 use std::{path::PathBuf, sync::OnceLock};
 
+use clap::Parser;
 use state::State;
+use tracing::error;
 use tracing_subscriber::EnvFilter;
 use wayland_client::{globals::registry_queue_init, Connection};
 use xdg::BaseDirectories;
@@ -16,9 +20,22 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
-fn main() -> anyhow::Result<()> {
+fn main() {
     init_logging();
 
+    let args = cli::Args::parse();
+    let result = if let Some(output_name) = args.output_name {
+        window::run(output_name)
+    } else {
+        run_daemon()
+    };
+
+    if let Err(err) = result {
+        error!("{:?}", err);
+    }
+}
+
+fn run_daemon() -> anyhow::Result<()> {
     let (mut state, mut event_loop) = {
         let conn = Connection::connect_to_env()?;
         let (globals, event_loop) = registry_queue_init(&conn)?;

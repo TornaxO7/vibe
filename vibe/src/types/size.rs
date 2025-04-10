@@ -1,5 +1,6 @@
 use smithay_client_toolkit::output::OutputInfo;
 use wgpu::SurfaceConfiguration;
+use winit::dpi::PhysicalSize;
 
 /// A simple `Size` struct which saves `width` and `height`.
 #[derive(Debug, Clone, Copy)]
@@ -33,6 +34,15 @@ impl From<&SurfaceConfiguration> for Size {
         Self {
             width: value.width,
             height: value.height,
+        }
+    }
+}
+
+impl From<PhysicalSize<u32>> for Size {
+    fn from(size: PhysicalSize<u32>) -> Self {
+        Self {
+            width: size.width,
+            height: size.height,
         }
     }
 }

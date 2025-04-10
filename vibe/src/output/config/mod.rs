@@ -1,0 +1,125 @@
+pub mod component;
+
+use std::{ffi::OsStr, io, path::PathBuf};
+
+use anyhow::Context;
+use component::ComponentConfig;
+use serde::{Deserialize, Serialize};
+use smithay_client_toolkit::output::OutputInfo;
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OutputConfig {
+    pub enable: bool,
+    pub components: Vec<ComponentConfig>,
+}
+
+impl OutputConfig {
+    pub fn new(info: &OutputInfo) -> anyhow::Result<Self> {
+        let name = info.name.as_ref().unwrap();
+
+        let new = Self {
+            enable: true,
+            components: vec![ComponentConfig::default()],
+        };
+
+        new.save(name)?;
+        Ok(new)
+    }
+
+    pub fn save(&self, name: impl AsRef<str>) -> io::Result<()> {
+        let string = toml::to_string(self).unwrap();
+        let save_path = {
+            let mut path = crate::get_output_config_dir();
+            path.push(format!("{}.toml", name.as_ref()));
+            path
+        };
+
+        std::fs::write(save_path, string)?;
+
+        Ok(())
+    }
+
+    /// Returns all relevant paths which are occuring inside the config file.
+    ///
+    /// Only relevant for hot reloading to know which other files have to be watched as
+    /// well.
+    pub fn external_paths(&self) -> Vec<PathBuf> {
+        let mut paths = Vec::new();
+
+        for component in self.components.iter() {
+            match component {
+                ComponentConfig::Bars {
+                    variant: component::BarVariantConfig::FragmentCode(code),
+                    ..
+                } => {
+                    if let vibe_renderer::components::ShaderSource::Path(path) = &code.source {
+                        paths.push(path.clone());
+                    }
+                }
+                ComponentConfig::FragmentCanvas { fragment_code, .. } => {
+                    if let vibe_renderer::components::ShaderSource::Path(path) =
+                        &fragment_code.source
+                    {
+                        paths.push(path.clone());
+                    }
+                }
+                _ => {}
+            };
+        }
+
+        paths
+    }
+}
+
+pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<OutputConfig>)> {
+    let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
+
+    for entry in iterator {
+        let entry = entry.unwrap();
+        let path = entry.path();
+
+        if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
+            let content = std::fs::read_to_string(&path).unwrap();
+            return Some((path, toml::from_str(&content).context("")));
+        }
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod tests {
+    use component::BarAudioConfig;
+    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
+
+    use super::*;
+
+    #[test]
+    fn extrenal_paths() {
+        let output_config = OutputConfig {
+            enable: true,
+            components: vec![
+                ComponentConfig::FragmentCanvas {
+                    audio_conf: BarAudioConfig::default(),
+                    fragment_code: ShaderCode {
+                        language: ShaderLanguage::Wgsl,
+                        source: ShaderSource::Path("/dir/file1".into()),
+                    },
+                },
+                ComponentConfig::Bars {
+                    audio_conf: BarAudioConfig::default(),
+                    max_height: 0.69,
+                    variant: component::BarVariantConfig::FragmentCode(ShaderCode {
+                        language: ShaderLanguage::Glsl,
+                        source: ShaderSource::Path("/dir/file2".into()),
+                    }),
+                },
+            ],
+        };
+
+        assert_eq!(
+            output_config.external_paths(),
+            vec![PathBuf::from("/dir/file1"), PathBuf::from("/dir/file2")]
+        );
+    }
+}

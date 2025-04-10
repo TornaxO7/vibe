@@ -57,12 +57,10 @@ impl<'a> State<'a> {
             audio_conf: BarProcessorConfig::default(),
             texture_format: surface_config.format,
             max_height: 0.75,
-            variant: BarVariant::FragmentCode {
-                resolution: [size.width, size.height],
-                code: ShaderCode {
-                    language: vibe_renderer::components::ShaderLanguage::Wgsl,
-                    source: vibe_renderer::components::ShaderSource::Code(
-                        "
+            variant: BarVariant::FragmentCode(ShaderCode {
+                language: vibe_renderer::components::ShaderLanguage::Wgsl,
+                source: vibe_renderer::components::ShaderSource::Code(
+                    "
                         @fragment
                         fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
                             var uv = pos.xy / iResolution.xy;
@@ -79,10 +77,9 @@ impl<'a> State<'a> {
                             return vec4<f32>(col, uv.y);
                         }
                         "
-                        .into(),
-                    ),
-                },
-            },
+                    .into(),
+                ),
+            }),
         })
         .unwrap_or_else(|err| panic!("{}", err));
 

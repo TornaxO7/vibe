@@ -1,11 +1,11 @@
 [package]
-name = "vibe-daemon"
+name = "vibe"
 version = "0.0.1"
 edition = "2021"
 authors = ["TornaxO7 <tornax@pm.me>"]
-description = "A desktop music visualizer."
+description = "A desktop music visualizer for wayland."
 license = "GPL-2.0"
-repository = "https://github.com/TornaxO7/vibe-daemon"
+repository = "https://github.com/TornaxO7/vibe"
 
 [dependencies]
 serde.workspace = true
@@ -26,3 +26,7 @@ smithay-client-toolkit = "0.19"
 vibe-renderer = { path = "../vibe-renderer" }
 xdg = "2.5"
 toml = "0.8"
+
+winit = "0.30"
+notify = "8"
+clap = { version = "4.5", features = ["derive"] }

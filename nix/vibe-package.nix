@@ -14,7 +14,7 @@
 , makeWrapper
 }:
 let
-  cargoToml = builtins.fromTOML (builtins.readFile ../vibe-daemon/Cargo.toml);
+  cargoToml = builtins.fromTOML (builtins.readFile ../vibe/Cargo.toml);
 in
 rustPlatform.buildRustPackage rec {
   pname = cargoToml.package.name;

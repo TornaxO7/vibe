@@ -94,8 +94,8 @@ impl<'a> State<'a> {
             .create_view(&wgpu::TextureViewDescriptor::default());
 
         self.renderer.render(&view, &[&self.bars]);
-
         surface_texture.present();
+
         Ok(())
     }
 }

@@ -37,8 +37,6 @@ pub struct FragmentCanvasDescriptor<'a> {
     pub format: wgpu::TextureFormat,
 
     // fragment shader relevant stuff
-    /// Canvas/Resolution size: (width, height).
-    pub resolution: [u32; 2],
     pub fragment_code: ShaderCode,
 }
 
@@ -66,10 +64,11 @@ impl FragmentCanvas {
         bind_group0_builder.insert_buffer(
             Bindings0::IResolution as u32,
             wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Fragment canvas: `iResolution` buffer"),
-                contents: bytemuck::bytes_of(&desc.resolution),
+                size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             }),
         );
 
