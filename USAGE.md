@@ -2,7 +2,7 @@
 
 1. Install the dependencies (see the [`Dependencies`](https://github.com/TornaxO7/vibe/blob/main/USAGE.md#dependencies) section below).
 2. (optional) set the rust toolchain `rustup default stable`
-3. Enter the `vibe-daemon` directory (`cd vibe-daemon`)
+3. Enter the `vibe` directory (`cd vibe`)
 4. Compile and run the binary with `cargo run --release`.
 5. Your microphone is very likely be catched as the audio source.
    To fix that start the application `pavucontrol` and set the audio source (see: https://github.com/TornaxO7/shady?tab=readme-ov-file#shady-audio-doesnt-listen-to-my-systems-audio).
