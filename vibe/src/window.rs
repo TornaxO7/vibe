@@ -30,8 +30,8 @@ struct State<'a> {
     components: Vec<Box<dyn Component>>,
 }
 
-impl<'a> State<'a> {
-    pub fn new<'b>(window: Window, renderer: &'b Renderer) -> Self {
+impl State<'_> {
+    pub fn new(window: Window, renderer: &Renderer) -> Self {
         let window = Arc::new(window);
         let size = window.inner_size();
 
@@ -112,7 +112,7 @@ struct OutputRenderer<'a> {
     time: Instant,
 }
 
-impl<'a> OutputRenderer<'a> {
+impl OutputRenderer<'_> {
     pub fn new(output_name: String) -> anyhow::Result<Self> {
         let renderer = {
             let config = crate::config::load()?;
@@ -247,7 +247,7 @@ impl<'a> OutputRenderer<'a> {
     }
 }
 
-impl<'a> ApplicationHandler for OutputRenderer<'a> {
+impl ApplicationHandler for OutputRenderer<'_> {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let window = event_loop
             .create_window(winit::window::WindowAttributes::default())

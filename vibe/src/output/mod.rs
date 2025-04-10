@@ -113,9 +113,9 @@ impl OutputCtx {
     }
 }
 
-pub fn get_surface_config<'a>(
+pub fn get_surface_config(
     adapter: &wgpu::Adapter,
-    surface: &wgpu::Surface<'a>,
+    surface: &wgpu::Surface<'_>,
     size: Size,
 ) -> wgpu::SurfaceConfiguration {
     let surface_caps = surface.get_capabilities(adapter);

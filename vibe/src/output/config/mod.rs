@@ -45,21 +45,19 @@ impl OutputConfig {
 
         for component in self.components.iter() {
             match component {
-                ComponentConfig::Bars { variant, .. } => match variant {
-                    component::BarVariantConfig::FragmentCode(code) => match &code.source {
-                        vibe_renderer::components::ShaderSource::Path(path) => {
-                            paths.push(path.clone());
-                        }
-                        _ => {}
-                    },
-                    _ => {}
-                },
+                ComponentConfig::Bars {
+                    variant: component::BarVariantConfig::FragmentCode(code),
+                    ..
+                } => {
+                    if let vibe_renderer::components::ShaderSource::Path(path) = &code.source {
+                        paths.push(path.clone());
+                    }
+                }
                 ComponentConfig::FragmentCanvas { fragment_code, .. } => {
-                    match &fragment_code.source {
-                        vibe_renderer::components::ShaderSource::Path(path) => {
-                            paths.push(path.clone());
-                        }
-                        _ => {}
+                    if let vibe_renderer::components::ShaderSource::Path(path) =
+                        &fragment_code.source
+                    {
+                        paths.push(path.clone());
                     }
                 }
                 _ => {}
