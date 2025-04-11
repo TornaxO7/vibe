@@ -8,6 +8,7 @@
 , libxkbcommon
 , wayland
 
+, mesa
 , vulkan-loader
 , vulkan-validation-layers
 , vulkan-tools
@@ -50,10 +51,11 @@ rustPlatform.buildRustPackage rec {
       wayland
       # Without vulkan-loader present, wgpu won't find any adapter
       vulkan-loader
+      mesa
     ])}
   '';
 
-  LD_LIBRARY_PATH = lib.makeLibraryPath buildInputs;
+  LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}";
 
   cargoLock.lockFile = ../Cargo.lock;
 
