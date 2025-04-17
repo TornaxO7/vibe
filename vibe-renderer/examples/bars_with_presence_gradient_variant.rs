@@ -38,7 +38,7 @@ impl<'a> State<'a> {
         let surface_config = {
             let capabilities = surface.get_capabilities(renderer.adapter());
 
-            let format = capabilities.formats.iter().find(|f| f.is_srgb()).unwrap();
+            let format = capabilities.formats.iter().find(|f| !f.is_srgb()).unwrap();
 
             wgpu::SurfaceConfiguration {
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,

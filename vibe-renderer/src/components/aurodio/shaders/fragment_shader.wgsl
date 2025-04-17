@@ -106,10 +106,5 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 
     col += dust_layer(uv, base_color2);
     col = clamp(col, vec4<f32>(0.), vec4<f32>(1.));
-    
-    const GAMMA: f32 = 2.2;
-    col.r = pow(col.r, GAMMA);
-    col.g = pow(col.g, GAMMA);
-    col.b = pow(col.b, GAMMA);
     return col;
 }
