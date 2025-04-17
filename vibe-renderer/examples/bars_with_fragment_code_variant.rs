@@ -35,7 +35,7 @@ impl<'a> State<'a> {
         let surface_config = {
             let capabilities = surface.get_capabilities(renderer.adapter());
 
-            let format = capabilities.formats.iter().find(|f| f.is_srgb()).unwrap();
+            let format = capabilities.formats.iter().find(|f| !f.is_srgb()).unwrap();
 
             wgpu::SurfaceConfiguration {
                 usage: wgpu::TextureUsages::RENDER_ATTACHMENT,
@@ -67,13 +67,7 @@ impl<'a> State<'a> {
                             uv.y = 1. - uv.y;
                             uv.x *= iResolution.x / iResolution.y;
 
-                            var col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
-
-                            const GAMMA: f32 = 2.2;
-                            col.r = pow(col.r, GAMMA);
-                            col.g = pow(col.g, GAMMA);
-                            col.b = pow(col.b, GAMMA);
-
+                            let col: vec3<f32> = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
                             return vec4<f32>(col, uv.y);
                         }
                         "

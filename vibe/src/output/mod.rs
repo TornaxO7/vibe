@@ -122,7 +122,7 @@ pub fn get_surface_config(
     let format = surface_caps
         .formats
         .iter()
-        .find(|f| f.is_srgb())
+        .find(|f| !f.is_srgb())
         .copied()
         .unwrap();
 

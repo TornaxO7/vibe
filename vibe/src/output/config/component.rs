@@ -15,14 +15,10 @@ const GAMMA: f32 = 2.2;
 const DEFAULT_BARS_WGSL_FRAGMENT_CODE: &str = "
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-    var color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
+    let color: vec3<f32> = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
+    let alpha = 1. - pos.y / iResolution.y);
 
-    // apply gamma correction
-    const GAMMA: f32 = 2.2;
-    color.r = pow(color.r, GAMMA);
-    color.g = pow(color.g, GAMMA);
-    color.b = pow(color.b, GAMMA);
-    return vec4<f32>(color, 1. - pos.y / iResolution.y);
+    return vec4<f32>(color, alpha);
 }
 ";
 
@@ -72,13 +68,13 @@ impl ComponentConfig {
                 variant,
             } => {
                 let variant = match variant {
-                    BarVariantConfig::Color(rgba) => BarVariant::Color(rgba.gamma_corrected()),
+                    BarVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
                     BarVariantConfig::PresenceGradient {
                         high_presence,
                         low_presence,
                     } => BarVariant::PresenceGradient {
-                        high: high_presence.gamma_corrected(),
-                        low: low_presence.gamma_corrected(),
+                        high: high_presence.as_f32(),
+                        low: low_presence.as_f32(),
                     },
                     BarVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
                 };
@@ -137,7 +133,7 @@ impl ComponentConfig {
 pub struct Rgba(pub [u8; 4]);
 
 impl Rgba {
-    pub fn gamma_corrected(&self) -> [f32; 4] {
+    pub fn as_f32(&self) -> [f32; 4] {
         let mut rgba_f32 = [0f32; 4];
         for (idx, value) in self.0.iter().enumerate() {
             rgba_f32[idx] = (*value as f32) / 255f32;
