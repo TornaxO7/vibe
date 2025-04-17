@@ -2,13 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.2 - 2025-04-17
+## 0.0.3 - 2025-04-17
 
-[7696451](7696451247d7996f06d4a73528d1f440b816ae79)...[9f73b36](9f73b36667a49d7c764f021ef832b3132cb545d7)
+[2cd8024](2cd8024918f77b205e235b312cae56c64481291b)...[10e615d](10e615df0298f1d81764352f719987b0ebc93e8d)
+
+### Bug Fixes
+
+- Move `release.toml` to root of repository ([10e615d](10e615df0298f1d81764352f719987b0ebc93e8d))
+
+## ibe-v0.0.2 - 2025-04-17
+
+[7696451](7696451247d7996f06d4a73528d1f440b816ae79)...[2cd8024](2cd8024918f77b205e235b312cae56c64481291b)
 
 ### Bug Fixes
 
 - Remove gamma correction requirement for shaders ([c856ed9](c856ed9ad560078910d7b1cb7e448e250d6df832))
+
+### Miscellaneous Tasks
+
+- Release ([2cd8024](2cd8024918f77b205e235b312cae56c64481291b))
 
 ### Refactor
 
