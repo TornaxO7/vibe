@@ -8,6 +8,7 @@ use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
+/// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
 }
@@ -23,6 +24,7 @@ pub struct RendererDescriptor {
     /// Set the backend which should be used.
     pub backend: wgpu::Backends,
 
+    /// Optionally provide the name for the adapter to use.
     pub adapter_name: Option<String>,
 
     /// Enforce software rendering if wgpu can't find a gpu.
@@ -40,6 +42,7 @@ impl Default for RendererDescriptor {
     }
 }
 
+/// The main renderer which renders the effects.
 #[derive(Debug, Clone)]
 pub struct Renderer {
     instance: wgpu::Instance,
@@ -49,6 +52,7 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    /// Create a new instance of this struct.
     pub fn new(desc: &RendererDescriptor) -> Self {
         let instance = wgpu::Instance::new(
             &wgpu::InstanceDescriptor {
@@ -105,6 +109,7 @@ impl Renderer {
         }
     }
 
+    /// Start rendering multiple (or one) [`Renderable`].
     pub fn render<'a, 'r, R: Deref<Target: Renderable> + 'r>(
         &self,
         view: &'a wgpu::TextureView,
