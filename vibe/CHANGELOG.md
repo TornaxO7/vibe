@@ -4,11 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ## 0.0.4 - 2025-04-28
 
-[c43a2d9](c43a2d99577703a2b833ce880079fa786fc8ccf9)...[4a67324](4a67324517204484e7beb1f620f60b49771abb32)
+[c43a2d9](c43a2d99577703a2b833ce880079fa786fc8ccf9)...[8a9a214](8a9a21421f97096aa655b1d00eca9ba3ce4b47ef)
 
 ### Bug Fixes
 
 - Fix missing bracket in the default shader code ([4a67324](4a67324517204484e7beb1f620f60b49771abb32))
+
+### Miscellaneous Tasks
+
+- Update changelog ([8a9a214](8a9a21421f97096aa655b1d00eca9ba3ce4b47ef))
 
 ## ibe-v0.0.3 - 2025-04-17
 
