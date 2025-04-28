@@ -2,13 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.3 - 2025-04-17
+## 0.0.4 - 2025-04-28
 
-[2cd8024](2cd8024918f77b205e235b312cae56c64481291b)...[10e615d](10e615df0298f1d81764352f719987b0ebc93e8d)
+[c43a2d9](c43a2d99577703a2b833ce880079fa786fc8ccf9)...[4a67324](4a67324517204484e7beb1f620f60b49771abb32)
+
+### Bug Fixes
+
+- Fix missing bracket in the default shader code ([4a67324](4a67324517204484e7beb1f620f60b49771abb32))
+
+## ibe-v0.0.3 - 2025-04-17
+
+[2cd8024](2cd8024918f77b205e235b312cae56c64481291b)...[c43a2d9](c43a2d99577703a2b833ce880079fa786fc8ccf9)
 
 ### Bug Fixes
 
 - Move `release.toml` to root of repository ([10e615d](10e615df0298f1d81764352f719987b0ebc93e8d))
+
+### Miscellaneous Tasks
+
+- Release ([c43a2d9](c43a2d99577703a2b833ce880079fa786fc8ccf9))
 
 ## ibe-v0.0.2 - 2025-04-17
 
