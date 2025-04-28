@@ -16,7 +16,7 @@ const DEFAULT_BARS_WGSL_FRAGMENT_CODE: &str = "
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     let color: vec3<f32> = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
-    let alpha = 1. - pos.y / iResolution.y);
+    let alpha = 1. - (pos.y / iResolution.y);
 
     return vec4<f32>(color, alpha);
 }
