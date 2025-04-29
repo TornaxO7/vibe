@@ -5,22 +5,12 @@ use shady_audio::{SampleProcessor, StandardEasing};
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Component,
-        FragmentCanvas, FragmentCanvasDescriptor, ShaderCode, ShaderCodeError, ShaderSource,
+        FragmentCanvas, FragmentCanvasDescriptor, ShaderCode, ShaderCodeError,
     },
     Renderer,
 };
 
 const GAMMA: f32 = 2.2;
-
-const DEFAULT_BARS_WGSL_FRAGMENT_CODE: &str = "
-@fragment
-fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-    let color: vec3<f32> = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
-    let alpha = 1. - (pos.y / iResolution.y);
-
-    return vec4<f32>(color, alpha);
-}
-";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ComponentConfig {
@@ -46,10 +36,7 @@ impl Default for ComponentConfig {
         Self::Bars {
             audio_conf: BarAudioConfig::default(),
             max_height: 0.75,
-            variant: BarVariantConfig::FragmentCode(ShaderCode {
-                language: vibe_renderer::components::ShaderLanguage::Wgsl,
-                source: ShaderSource::Code(DEFAULT_BARS_WGSL_FRAGMENT_CODE.into()),
-            }),
+            variant: BarVariantConfig::Color(Rgba::TURQUOISE),
         }
     }
 }
@@ -133,6 +120,8 @@ impl ComponentConfig {
 pub struct Rgba(pub [u8; 4]);
 
 impl Rgba {
+    pub const TURQUOISE: Self = Self([0, 255, 255, 255]);
+
     pub fn as_f32(&self) -> [f32; 4] {
         let mut rgba_f32 = [0f32; 4];
         for (idx, value) in self.0.iter().enumerate() {
