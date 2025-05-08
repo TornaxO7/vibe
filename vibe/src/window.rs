@@ -62,7 +62,7 @@ impl State<'_> {
                 config.to_component(renderer, processor, self.surface_config.format)?;
 
             component.update_resolution(
-                &renderer,
+                renderer,
                 [self.surface_config.width, self.surface_config.height],
             );
 
@@ -81,7 +81,7 @@ impl State<'_> {
                 .configure(renderer.device(), &self.surface_config);
 
             for component in self.components.iter_mut() {
-                component.update_resolution(&renderer, [new_size.width, new_size.height]);
+                component.update_resolution(renderer, [new_size.width, new_size.height]);
             }
         }
     }

@@ -4,9 +4,9 @@ use serde::{Deserialize, Serialize};
 use shady_audio::{SampleProcessor, StandardEasing};
 use vibe_renderer::{
     components::{
-        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Component,
-        FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphVariant, ShaderCode,
-        ShaderCodeError,
+        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Circle,
+        CircleDescriptor, CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor,
+        Graph, GraphDescriptor, GraphVariant, ShaderCode, ShaderCodeError,
     },
     Renderer,
 };
@@ -34,6 +34,12 @@ pub enum ComponentConfig {
         audio_conf: GraphAudioConfig,
         max_height: f32,
         variant: GraphVariantConfig,
+    },
+    Circle {
+        audio_conf: BarAudioConfig,
+        variant: CircleVariantConfig,
+        radius: f32,
+        rotation: vibe_renderer::components::Degree,
     },
 }
 
@@ -148,6 +154,32 @@ impl ComponentConfig {
                     max_height: *max_height,
                 })) as Box<dyn Component>)
             }
+            ComponentConfig::Circle {
+                audio_conf,
+                variant,
+                radius,
+                rotation,
+            } => {
+                let variant = match variant {
+                    CircleVariantConfig::Graph {
+                        spike_sensitivity,
+                        color,
+                    } => CircleVariant::Graph {
+                        spike_sensitivity: *spike_sensitivity,
+                        color: color.as_f32(),
+                    },
+                };
+
+                Ok(Box::new(Circle::new(&CircleDescriptor {
+                    device: renderer.device(),
+                    sample_processor: processor,
+                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    texture_format,
+                    variant,
+                    radius: *radius,
+                    rotation: *rotation,
+                })))
+            }
         }
     }
 }
@@ -190,6 +222,11 @@ impl Rgb {
 
         rgba_f32
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum CircleVariantConfig {
+    Graph { spike_sensitivity: f32, color: Rgba },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

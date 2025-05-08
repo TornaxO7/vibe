@@ -96,7 +96,7 @@ impl OutputCtx {
                 .configure(renderer.device(), &self.surface_config);
 
             for component in self.components.iter_mut() {
-                component.update_resolution(&renderer, [new_size.width, new_size.height]);
+                component.update_resolution(renderer, [new_size.width, new_size.height]);
             }
         }
     }
