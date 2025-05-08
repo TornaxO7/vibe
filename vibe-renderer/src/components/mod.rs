@@ -1,5 +1,6 @@
 mod aurodio;
 mod bars;
+mod circle;
 mod fragment_canvas;
 mod value_noise;
 
