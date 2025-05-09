@@ -44,9 +44,9 @@ impl ValueNoise {
     pub fn new(desc: &ValueNoiseDescriptor) -> Self {
         let device = desc.device;
 
-        let mut bind_group0_manager = BindGroupManager::builder(Some("Value noise bind group 0"));
+        let mut bind_group0 = BindGroupManager::new(Some("Value noise bind group 0"));
 
-        bind_group0_manager.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::Octaves as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -56,7 +56,7 @@ impl ValueNoise {
             }),
         );
 
-        bind_group0_manager.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::Seed as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -66,7 +66,7 @@ impl ValueNoise {
             }),
         );
 
-        bind_group0_manager.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::Brightness as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -76,7 +76,7 @@ impl ValueNoise {
             }),
         );
 
-        bind_group0_manager.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::CanvasSize as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -95,7 +95,7 @@ impl ValueNoise {
         let pipeline = {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Value noise: `pipeline layout`"),
-                bind_group_layouts: &[&bind_group0_manager.get_bind_group_layout(device)],
+                bind_group_layouts: &[&bind_group0.get_bind_group_layout(device)],
                 push_constant_ranges: &[],
             });
 
@@ -156,8 +156,10 @@ impl ValueNoise {
             })
         };
 
+        bind_group0.build_bind_group(device);
+
         Self {
-            bind_group0: bind_group0_manager.build(device),
+            bind_group0,
             pipeline,
             vbuffer,
         }
@@ -178,7 +180,9 @@ impl Component for ValueNoise {
 
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
-    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+    fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
+        let queue = renderer.queue();
+
         if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::CanvasSize as u32) {
             queue.write_buffer(
                 buffer,

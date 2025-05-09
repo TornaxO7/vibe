@@ -9,6 +9,10 @@ mod bar_with_presence_gradient_variant;
 
 mod fragment_canvas;
 
+mod graph_color_variant;
+mod graph_horizontal_gradient_variant;
+mod graph_vertical_gradient_variant;
+
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
 
 pub struct Tester<'a> {

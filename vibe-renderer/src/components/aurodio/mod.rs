@@ -96,10 +96,10 @@ impl Aurodio {
             bar_processors.into_boxed_slice()
         };
 
-        let mut bind_group0_builder = BindGroupManager::builder(Some("Aurodio: Bind group 0"));
-        let mut bind_group1_builder = BindGroupManager::builder(Some("Aurodio: Bind group 1"));
+        let mut bind_group0 = BindGroupManager::new(Some("Aurodio: Bind group 0"));
+        let mut bind_group1 = BindGroupManager::new(Some("Aurodio: Bind group 1"));
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::IResolution as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -113,7 +113,7 @@ impl Aurodio {
         {
             let (points, width) = get_points(amount_layers);
 
-            bind_group0_builder.insert_buffer(
+            bind_group0.insert_buffer(
                 Bindings0::Points as u32,
                 wgpu::ShaderStages::FRAGMENT,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -123,7 +123,7 @@ impl Aurodio {
                 }),
             );
 
-            bind_group0_builder.insert_buffer(
+            bind_group0.insert_buffer(
                 Bindings0::PointsWidth as u32,
                 wgpu::ShaderStages::FRAGMENT,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -138,7 +138,7 @@ impl Aurodio {
             let zoom_factors: Vec<f32> =
                 desc.layers.iter().map(|layer| layer.zoom_factor).collect();
 
-            bind_group0_builder.insert_buffer(
+            bind_group0.insert_buffer(
                 Bindings0::ZoomFactors as u32,
                 wgpu::ShaderStages::FRAGMENT,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -152,7 +152,7 @@ impl Aurodio {
         {
             let random_seeds: Vec<f32> = get_random_seeds(amount_layers);
 
-            bind_group0_builder.insert_buffer(
+            bind_group0.insert_buffer(
                 Bindings0::RandomSeeds as u32,
                 wgpu::ShaderStages::FRAGMENT,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -163,7 +163,7 @@ impl Aurodio {
             );
         }
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::BaseColor as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -186,20 +186,20 @@ impl Aurodio {
                 ..Default::default()
             });
 
-            bind_group0_builder.insert_texture(
+            bind_group0.insert_texture(
                 Bindings0::ValueNoiseTexture as u32,
                 wgpu::ShaderStages::FRAGMENT,
                 value_noise_texture,
             );
 
-            bind_group0_builder.insert_sampler(
+            bind_group0.insert_sampler(
                 Bindings0::ValueNoiseSampler as u32,
                 wgpu::ShaderStages::FRAGMENT,
                 sampler,
             );
         }
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::MovementSpeed as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -209,7 +209,7 @@ impl Aurodio {
             }),
         );
 
-        bind_group1_builder.insert_buffer(
+        bind_group1.insert_buffer(
             Bindings1::ITime as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -220,7 +220,7 @@ impl Aurodio {
             }),
         );
 
-        bind_group1_builder.insert_buffer(
+        bind_group1.insert_buffer(
             Bindings1::Freqs as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -255,8 +255,8 @@ impl Aurodio {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Aurodio: Pipeline layout"),
                 bind_group_layouts: &[
-                    &bind_group0_builder.get_bind_group_layout(device),
-                    &bind_group1_builder.get_bind_group_layout(device),
+                    &bind_group0.get_bind_group_layout(device),
+                    &bind_group1.get_bind_group_layout(device),
                 ],
                 push_constant_ranges: &[],
             });
@@ -304,11 +304,14 @@ impl Aurodio {
             })
         };
 
+        bind_group0.build_bind_group(device);
+        bind_group1.build_bind_group(device);
+
         Self {
             bar_processors,
 
-            bind_group0: bind_group0_builder.build(device),
-            bind_group1: bind_group1_builder.build(device),
+            bind_group0,
+            bind_group1,
 
             vbuffer,
             pipeline,
@@ -349,7 +352,9 @@ impl Component for Aurodio {
         }
     }
 
-    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+    fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
+        let queue = renderer.queue();
+
         if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::IResolution as u32) {
             queue.write_buffer(
                 buffer,

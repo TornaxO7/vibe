@@ -79,7 +79,7 @@ impl<'a> State<'a> {
                 .configure(self.renderer.device(), &self.surface_config);
 
             self.bars
-                .update_resolution(self.renderer.queue(), [new_size.width, new_size.height]);
+                .update_resolution(&self.renderer, [new_size.width, new_size.height]);
         }
     }
 

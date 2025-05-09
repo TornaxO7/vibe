@@ -4,30 +4,7 @@ type BindingIdx = u32;
 
 #[derive(Debug)]
 pub struct BindGroupManager {
-    bind_group: wgpu::BindGroup,
-    buffers: FastHashMap<BindingIdx, wgpu::Buffer>,
-}
-
-impl BindGroupManager {
-    pub fn builder(label: Option<&'static str>) -> BindGroupManagerBuilder {
-        BindGroupManagerBuilder::new(label)
-    }
-
-    pub fn is_empty(&self) -> bool {
-        self.buffers.is_empty()
-    }
-
-    pub fn get_bind_group(&self) -> &wgpu::BindGroup {
-        &self.bind_group
-    }
-
-    pub fn get_buffer(&self, binding: BindingIdx) -> Option<&wgpu::Buffer> {
-        self.buffers.get(&binding)
-    }
-}
-
-#[derive(Debug)]
-pub struct BindGroupManagerBuilder {
+    bind_group: Option<wgpu::BindGroup>,
     label: Option<&'static str>,
 
     bind_group_layout_entries: Vec<wgpu::BindGroupLayoutEntry>,
@@ -36,15 +13,29 @@ pub struct BindGroupManagerBuilder {
     samplers: FastHashMap<BindingIdx, wgpu::Sampler>,
 }
 
-impl BindGroupManagerBuilder {
-    fn new(label: Option<&'static str>) -> Self {
+impl BindGroupManager {
+    pub fn new(label: Option<&'static str>) -> Self {
         Self {
             label,
-            bind_group_layout_entries: vec![],
+            bind_group: None,
+            bind_group_layout_entries: Vec::new(),
             buffers: FastHashMap::default(),
             textures: FastHashMap::default(),
             samplers: FastHashMap::default(),
         }
+    }
+
+    pub fn get_bind_group(&self) -> &wgpu::BindGroup {
+        self.bind_group.as_ref().unwrap()
+    }
+
+    pub fn get_buffer(&self, binding: BindingIdx) -> Option<&wgpu::Buffer> {
+        self.buffers.get(&binding)
+    }
+
+    pub fn replace_buffer(&mut self, binding: BindingIdx, new_buffer: wgpu::Buffer) {
+        let buffer = self.buffers.get_mut(&binding).unwrap();
+        *buffer = new_buffer;
     }
 
     pub fn insert_buffer(
@@ -135,7 +126,7 @@ impl BindGroupManagerBuilder {
         })
     }
 
-    pub fn build(self, device: &wgpu::Device) -> BindGroupManager {
+    pub fn build_bind_group(&mut self, device: &wgpu::Device) {
         let layout = self.get_bind_group_layout(device);
 
         let mut bind_group_entries = Vec::new();
@@ -167,9 +158,6 @@ impl BindGroupManagerBuilder {
             entries: &bind_group_entries,
         });
 
-        BindGroupManager {
-            bind_group,
-            buffers: self.buffers,
-        }
+        self.bind_group = Some(bind_group);
     }
 }
