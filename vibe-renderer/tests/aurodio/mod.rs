@@ -26,7 +26,7 @@ fn test() {
         sensitivity: 0.2,
     });
 
-    aurodio.update_resolution(tester.renderer.queue(), [255, 255]);
+    aurodio.update_resolution(&tester.renderer, [255, 255]);
 
     let _img = tester.render(aurodio);
 

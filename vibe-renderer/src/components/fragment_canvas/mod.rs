@@ -56,12 +56,10 @@ impl FragmentCanvas {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        let mut bind_group0_builder =
-            BindGroupManager::builder(Some("Fragment canvas: Bind group 0"));
-        let mut bind_group1_builder =
-            BindGroupManager::builder(Some("Fragment canvas: Bind group 1"));
+        let mut bind_group0 = BindGroupManager::new(Some("Fragment canvas: Bind group 0"));
+        let mut bind_group1 = BindGroupManager::new(Some("Fragment canvas: Bind group 1"));
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::IResolution as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -72,7 +70,7 @@ impl FragmentCanvas {
             }),
         );
 
-        bind_group1_builder.insert_buffer(
+        bind_group1.insert_buffer(
             Bindings1::Freqs as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -85,7 +83,7 @@ impl FragmentCanvas {
             }),
         );
 
-        bind_group1_builder.insert_buffer(
+        bind_group1.insert_buffer(
             Bindings1::ITime as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -106,8 +104,8 @@ impl FragmentCanvas {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas pipeline layout"),
                 bind_group_layouts: &[
-                    &bind_group0_builder.get_bind_group_layout(device),
-                    &bind_group1_builder.get_bind_group_layout(device),
+                    &bind_group0.get_bind_group_layout(device),
+                    &bind_group1.get_bind_group_layout(device),
                 ],
                 push_constant_ranges: &[],
             });
@@ -182,13 +180,16 @@ impl FragmentCanvas {
             })
         };
 
+        bind_group0.build_bind_group(device);
+        bind_group1.build_bind_group(device);
+
         Ok(Self {
             bar_processor,
 
             vbuffer,
 
-            bind_group0: bind_group0_builder.build(device),
-            bind_group1: bind_group1_builder.build(device),
+            bind_group0,
+            bind_group1,
 
             pipeline,
         })
@@ -197,13 +198,8 @@ impl FragmentCanvas {
 
 impl Renderable for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        if !self.bind_group0.is_empty() {
-            pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
-        }
-
-        if !self.bind_group1.is_empty() {
-            pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
-        }
+        pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
+        pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
 
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
@@ -212,7 +208,9 @@ impl Renderable for FragmentCanvas {
 }
 
 impl Component for FragmentCanvas {
-    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+    fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
+        let queue = renderer.queue();
+
         if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::IResolution as u32) {
             queue.write_buffer(
                 buffer,

@@ -24,7 +24,7 @@ pub enum BarVariant {
 
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
-pub enum Bindings0 {
+enum Bindings0 {
     ColumnWidth = 0,
     Padding = 1,
     MaxHeight = 2,
@@ -36,7 +36,7 @@ pub enum Bindings0 {
 
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
-pub enum Bindings1 {
+enum Bindings1 {
     Freqs = 0,
     Time = 1,
 }
@@ -68,13 +68,13 @@ impl Bars {
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        let mut bind_group0_builder = BindGroupManager::builder(Some("Bars: Bind group 0"));
-        let mut bind_group1_builder = BindGroupManager::builder(Some("Bars: Bind group 1"));
+        let mut bind_group0 = BindGroupManager::new(Some("Bars: Bind group 0"));
+        let mut bind_group1 = BindGroupManager::new(Some("Bars: Bind group 1"));
 
         let column_width = VERTEX_SURFACE_WIDTH / u16::from(amount_bars) as f32;
         let padding = column_width / 5.;
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::ColumnWidth as u32,
             wgpu::ShaderStages::VERTEX,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -84,7 +84,7 @@ impl Bars {
             }),
         );
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::Padding as u32,
             wgpu::ShaderStages::VERTEX,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -94,7 +94,7 @@ impl Bars {
             }),
         );
 
-        bind_group0_builder.insert_buffer(
+        bind_group0.insert_buffer(
             Bindings0::MaxHeight as u32,
             wgpu::ShaderStages::VERTEX,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -104,7 +104,7 @@ impl Bars {
             }),
         );
 
-        bind_group1_builder.insert_buffer(
+        bind_group1.insert_buffer(
             Bindings1::Freqs as u32,
             wgpu::ShaderStages::VERTEX,
             device.create_buffer(&wgpu::BufferDescriptor {
@@ -117,7 +117,7 @@ impl Bars {
 
         let fragment_module = match &desc.variant {
             BarVariant::Color(rgba) => {
-                bind_group0_builder.insert_buffer(
+                bind_group0.insert_buffer(
                     Bindings0::Color as u32,
                     wgpu::ShaderStages::FRAGMENT,
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -135,7 +135,7 @@ impl Bars {
                 })
             }
             BarVariant::PresenceGradient { high, low } => {
-                bind_group0_builder.insert_buffer(
+                bind_group0.insert_buffer(
                     Bindings0::GradientHighPresenceColor as u32,
                     wgpu::ShaderStages::FRAGMENT,
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -145,7 +145,7 @@ impl Bars {
                     }),
                 );
 
-                bind_group0_builder.insert_buffer(
+                bind_group0.insert_buffer(
                     Bindings0::GradientLowPresenceColor as u32,
                     wgpu::ShaderStages::FRAGMENT,
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -163,7 +163,7 @@ impl Bars {
                 })
             }
             BarVariant::FragmentCode(code) => {
-                bind_group0_builder.insert_buffer(
+                bind_group0.insert_buffer(
                     Bindings0::Resolution as u32,
                     wgpu::ShaderStages::FRAGMENT,
                     device.create_buffer(&wgpu::BufferDescriptor {
@@ -174,7 +174,7 @@ impl Bars {
                     }),
                 );
 
-                bind_group1_builder.insert_buffer(
+                bind_group1.insert_buffer(
                     Bindings1::Time as u32,
                     wgpu::ShaderStages::FRAGMENT,
                     device.create_buffer(&wgpu::BufferDescriptor {
@@ -215,8 +215,8 @@ impl Bars {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bar pipeline layout"),
                 bind_group_layouts: &[
-                    &bind_group0_builder.get_bind_group_layout(device),
-                    &bind_group1_builder.get_bind_group_layout(device),
+                    &bind_group0.get_bind_group_layout(device),
+                    &bind_group1.get_bind_group_layout(device),
                 ],
                 push_constant_ranges: &[],
             });
@@ -263,12 +263,15 @@ impl Bars {
             })
         };
 
+        bind_group0.build_bind_group(device);
+        bind_group1.build_bind_group(device);
+
         Ok(Self {
             amount_bars,
             bar_processor,
 
-            bind_group0: bind_group0_builder.build(device),
-            bind_group1: bind_group1_builder.build(device),
+            bind_group0,
+            bind_group1,
 
             pipeline,
         })
@@ -277,13 +280,8 @@ impl Bars {
 
 impl Renderable for Bars {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        if !self.bind_group0.is_empty() {
-            pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
-        }
-
-        if !self.bind_group1.is_empty() {
-            pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
-        }
+        pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
+        pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
 
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
@@ -304,7 +302,9 @@ impl Component for Bars {
         }
     }
 
-    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]) {
+    fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
+        let queue = renderer.queue();
+
         if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::Resolution as u32) {
             queue.write_buffer(
                 buffer,

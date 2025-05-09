@@ -1,6 +1,7 @@
 mod aurodio;
 mod bars;
 mod fragment_canvas;
+mod graph;
 mod value_noise;
 
 use std::path::PathBuf;
@@ -8,19 +9,20 @@ use std::path::PathBuf;
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
+pub use graph::{Graph, GraphDescriptor, GraphVariant};
 pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
 
 use serde::{Deserialize, Serialize};
 use shady_audio::SampleProcessor;
 
-use crate::Renderable;
+use crate::{Renderable, Renderer};
 
 pub trait Component: Renderable {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor);
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32);
 
-    fn update_resolution(&mut self, queue: &wgpu::Queue, new_resolution: [u32; 2]);
+    fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
 }
 
 type ParseErrorMsg = String;

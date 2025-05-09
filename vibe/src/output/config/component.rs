@@ -5,7 +5,8 @@ use shady_audio::{SampleProcessor, StandardEasing};
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Component,
-        FragmentCanvas, FragmentCanvasDescriptor, ShaderCode, ShaderCodeError,
+        FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphVariant, ShaderCode,
+        ShaderCodeError,
     },
     Renderer,
 };
@@ -28,6 +29,11 @@ pub enum ComponentConfig {
         movement_speed: f32,
         audio_conf: AurodioAudioConfig,
         layers: Vec<AurodioLayerConfig>,
+    },
+    Graph {
+        audio_conf: GraphAudioConfig,
+        max_height: f32,
+        variant: GraphVariantConfig,
     },
 }
 
@@ -112,6 +118,36 @@ impl ComponentConfig {
                     layers: &layers,
                 })) as Box<dyn Component>)
             }
+            ComponentConfig::Graph {
+                audio_conf,
+                max_height,
+                variant,
+            } => {
+                let variant = match variant {
+                    GraphVariantConfig::Color(rgba) => GraphVariant::Color(rgba.as_f32()),
+                    GraphVariantConfig::HorizontalGradient { left, right } => {
+                        GraphVariant::HorizontalGradient {
+                            left: left.as_f32(),
+                            right: right.as_f32(),
+                        }
+                    }
+                    GraphVariantConfig::VerticalGradient { top, bottom } => {
+                        GraphVariant::VerticalGradient {
+                            top: top.as_f32(),
+                            bottom: bottom.as_f32(),
+                        }
+                    }
+                };
+
+                Ok(Box::new(Graph::new(&GraphDescriptor {
+                    device: renderer.device(),
+                    sample_processor: processor,
+                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    output_texture_format: texture_format,
+                    variant,
+                    max_height: *max_height,
+                })) as Box<dyn Component>)
+            }
         }
     }
 }
@@ -154,6 +190,13 @@ impl Rgb {
 
         rgba_f32
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GraphVariantConfig {
+    Color(Rgba),
+    HorizontalGradient { left: Rgba, right: Rgba },
+    VerticalGradient { top: Rgba, bottom: Rgba },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -203,6 +246,23 @@ impl From<&BarAudioConfig> for shady_audio::BarProcessorConfig {
     }
 }
 
+impl From<GraphAudioConfig> for shady_audio::BarProcessorConfig {
+    fn from(conf: GraphAudioConfig) -> Self {
+        Self {
+            freq_range: conf.freq_range,
+            sensitivity: conf.sensitivity,
+            easer: conf.easing,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&GraphAudioConfig> for shady_audio::BarProcessorConfig {
+    fn from(conf: &GraphAudioConfig) -> Self {
+        Self::from(conf.clone())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AurodioAudioConfig {
     pub easing: StandardEasing,
@@ -213,4 +273,11 @@ pub struct AurodioAudioConfig {
 pub struct AurodioLayerConfig {
     pub freq_range: Range<NonZero<u16>>,
     pub zoom_factor: f32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphAudioConfig {
+    pub freq_range: Range<NonZero<u16>>,
+    pub sensitivity: f32,
+    pub easing: StandardEasing,
 }
