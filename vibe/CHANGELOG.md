@@ -4,13 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ## 0.0.5 - 2025-05-09
 
-[495fb38](495fb384cc55cf080e136d64abd0a9e09eacf118)...[8aec2aa](8aec2aa6f08c4a220d0bff5d53515bc662697058)
+[495fb38](495fb384cc55cf080e136d64abd0a9e09eacf118)...[ef5e2c0](ef5e2c05623720e8b2ab7c81e4208ffeafb8f155)
 
 ### Miscellaneous Tasks
 
 - Change default component to filled bars ([e4a79d1](e4a79d13b68d79d3a93de46c47b3991c2c3ff12a))
 - First structure for graph ([22e1808](22e1808d2af20e53f878f5001bc95a8e3130193a))
-- Update changelog ([8aec2aa](8aec2aa6f08c4a220d0bff5d53515bc662697058))
+- Update changelog ([ef5e2c0](ef5e2c05623720e8b2ab7c81e4208ffeafb8f155))
 
 ## ibe-v0.0.4 - 2025-04-28
 
