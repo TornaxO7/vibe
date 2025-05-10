@@ -10,6 +10,7 @@
    2. At the top: Click on `Recording`
    3. There should be an entry (something like `ALSA[vibe]`). On the right, click on the drop down menu.
    4. Select the audio source (often "Monitor _bla_ Built-in Audio _bla_")
+6. (optional) [Configure](https://github.com/TornaxO7/vibe/wiki/Config) `vibe`!
 
 # Dependencies
 
