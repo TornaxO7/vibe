@@ -1,21 +1,21 @@
 mod aurodio;
 mod bars;
+mod circle;
 mod fragment_canvas;
 mod graph;
 mod value_noise;
 
-use std::path::PathBuf;
-
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor};
+pub use circle::{Circle, CircleDescriptor, CircleVariant, Degree};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 pub use graph::{Graph, GraphDescriptor, GraphVariant};
 pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
 
+use crate::{Renderable, Renderer};
 use serde::{Deserialize, Serialize};
 use shady_audio::SampleProcessor;
-
-use crate::{Renderable, Renderer};
+use std::path::PathBuf;
 
 pub trait Component: Renderable {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor);
