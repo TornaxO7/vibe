@@ -66,7 +66,7 @@ fn init_logging() {
 }
 
 fn get_xdg() -> &'static BaseDirectories {
-    XDG.get_or_init(|| BaseDirectories::with_prefix(APP_NAME).unwrap())
+    XDG.get_or_init(|| BaseDirectories::with_prefix(APP_NAME))
 }
 
 /// Returns the path to the directory where the config files of each output lies.
