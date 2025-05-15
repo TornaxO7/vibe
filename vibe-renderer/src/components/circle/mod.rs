@@ -3,9 +3,7 @@ use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::Component;
-
-pub type Rgba = [f32; 4];
+use super::{Component, Rgba};
 
 type VertexPosition = [f32; 2];
 

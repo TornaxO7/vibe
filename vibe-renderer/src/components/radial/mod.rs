@@ -6,7 +6,7 @@ use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::Component;
+use super::{Component, Rgba};
 
 #[repr(u32)]
 enum Binding0 {
@@ -15,6 +15,9 @@ enum Binding0 {
     BarWidth = 2,
     CircleRadius = 3,
     Resolution = 4,
+    BarHeightSensitivity = 5,
+
+    Color = 6,
 }
 
 #[repr(u32)]
@@ -22,14 +25,21 @@ enum Binding1 {
     Freqs = 0,
 }
 
+pub enum RadialVariant {
+    Color(Rgba),
+}
+
 pub struct RadialDescriptor<'a> {
     pub device: &'a wgpu::Device,
     pub processor: &'a SampleProcessor,
     pub audio_conf: shady_audio::BarProcessorConfig,
     pub output_texture_format: wgpu::TextureFormat,
+    pub variant: RadialVariant,
 
     pub init_rotation: Deg<f32>,
     pub circle_radius: f32,
+    pub bar_height_sensitivity: f32,
+    pub bar_width: f32,
 }
 
 pub struct Radial {
@@ -117,7 +127,7 @@ impl Radial {
             wgpu::ShaderStages::VERTEX,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Radial: `bar_width` buffer"),
-                contents: bytemuck::bytes_of(&0.01f32),
+                contents: bytemuck::bytes_of(&desc.bar_width),
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
@@ -142,6 +152,30 @@ impl Radial {
                 mapped_at_creation: false,
             }),
         );
+
+        bind_group0.insert_buffer(
+            Binding0::BarHeightSensitivity as u32,
+            wgpu::ShaderStages::VERTEX,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Radial: `bar_height_sensitivity` buffer"),
+                contents: bytemuck::bytes_of(&desc.bar_height_sensitivity),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
+
+        match desc.variant {
+            RadialVariant::Color(rgba) => {
+                bind_group0.insert_buffer(
+                    Binding0::Color as u32,
+                    wgpu::ShaderStages::FRAGMENT,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Radial: `color` buffer"),
+                        contents: bytemuck::bytes_of(&rgba),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                );
+            }
+        };
 
         bind_group1.insert_buffer(
             Binding1::Freqs as u32,
@@ -206,6 +240,7 @@ impl Radial {
             };
 
             let inverse_descriptor = wgpu::RenderPipelineDescriptor {
+                label: Some("Radial: Pipeline for other half of circle"),
                 vertex: wgpu::VertexState {
                     module: &shader,
                     entry_point: Some("vertex_main_inverted"),

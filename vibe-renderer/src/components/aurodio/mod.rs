@@ -6,9 +6,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable, Renderer};
 
-use super::Component;
-
-type Rgb = [f32; 3];
+use super::{Component, Rgb};
 
 const ENTRY_POINT: &str = "main";
 

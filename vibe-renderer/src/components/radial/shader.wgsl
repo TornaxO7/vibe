@@ -13,6 +13,12 @@ var<uniform> circle_radius: f32;
 @group(0) @binding(4)
 var<uniform> iResolution: vec2f;
 
+@group(0) @binding(5)
+var<uniform> bar_height_sensitivity: f32;
+
+@group(0) @binding(6)
+var<uniform> color: vec4f;
+
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
 
@@ -21,14 +27,10 @@ struct Input {
     @builtin(vertex_index) vertex_idx: u32,
 };
 
-struct Output {
-    @builtin(position) pos: vec4f,
-};
-
 @vertex
-fn vertex_main(in: Input) -> Output {
+fn vertex_main(in: Input) -> @builtin(position) vec4f {
     let width: f32 = bar_width / 2.;
-    let height: f32 = 0.5 * freqs[in.instance_idx] + circle_radius;
+    let height: f32 = bar_height_sensitivity * freqs[in.instance_idx] + circle_radius;
     var pos: vec2f;
 
     if (in.vertex_idx == 0) {
@@ -42,16 +44,12 @@ fn vertex_main(in: Input) -> Output {
     }
 
     pos = bar_rotation[in.instance_idx] * pos;
-    var out: Output;
-
     pos.x /= iResolution.x / iResolution.y;
-    out.pos = vec4f(pos, 0., 1.);
-
-    return out;
+    return vec4f(pos, 0., 1.);
 }
 
 @vertex
-fn vertex_main_inverted(in: Input) -> Output {
+fn vertex_main_inverted(in: Input) -> @builtin(position) vec4f {
     let width: f32 = bar_width / 2.;
     let height: f32 = 0.5 * freqs[in.instance_idx] + circle_radius;
     var pos: vec2f;
@@ -67,16 +65,11 @@ fn vertex_main_inverted(in: Input) -> Output {
     }
 
     pos = inverse_bar_rotation[in.instance_idx] * pos;
-    var out: Output;
-
     pos.x /= iResolution.x / iResolution.y;
-    out.pos = vec4f(pos, 0., 1.);
-
-    return out;
+    return vec4f(pos, 0., 1.);
 }
 
 @fragment
-fn fragment_main(in: Output) -> @location(0) vec4f {
-    let col = vec3f(255., 204., 51.) / 255.;
-    return vec4f(col, 1.);
+fn fragment_main() -> @location(0) vec4f {
+    return color;
 }

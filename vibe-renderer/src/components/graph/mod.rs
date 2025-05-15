@@ -3,7 +3,7 @@ use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{bind_group_manager::BindGroupManager, Renderable, Renderer};
 
-use super::Component;
+use super::{Component, Rgba};
 
 const SHADER_ENTRYTPOINT: &str = "main";
 
@@ -13,9 +13,6 @@ const POSITIONS: [VertexPosition; 3] = [
     [1., -3.], // right bottom corner
     [-3., 1.], // top left corner
 ];
-
-// like fragment output
-pub type Rgba = [f32; 4];
 
 #[derive(Debug, Clone)]
 pub enum GraphVariant {

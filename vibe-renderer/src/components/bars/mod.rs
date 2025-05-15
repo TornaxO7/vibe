@@ -5,10 +5,7 @@ use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{Component, ShaderCode, ShaderCodeError, ShaderLanguage};
-
-// assuming each value is positive
-pub type Rgba = [f32; 4];
+use super::{Component, Rgba, ShaderCode, ShaderCodeError, ShaderLanguage};
 
 const SHADER_ENTRYPOINT: &str = "main";
 

@@ -2,7 +2,7 @@ use std::{num::NonZero, sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{Component, Radial, RadialDescriptor},
+    components::{Component, Radial, RadialDescriptor, RadialVariant},
     Renderer,
 };
 use winit::{
@@ -59,8 +59,13 @@ impl<'a> State<'a> {
                 ..Default::default()
             },
             output_texture_format: surface_config.format,
+
+            variant: RadialVariant::Color([1., 0., 0., 1.]),
+
             init_rotation: cgmath::Deg(90.),
             circle_radius: 0.2,
+            bar_height_sensitivity: 0.5,
+            bar_width: 0.015,
         });
 
         Self {
