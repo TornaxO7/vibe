@@ -2,15 +2,33 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.5 - 2025-05-09
+## 0.0.6 - 2025-05-15
 
-[495fb38](495fb384cc55cf080e136d64abd0a9e09eacf118)...[ef5e2c0](ef5e2c05623720e8b2ab7c81e4208ffeafb8f155)
+[571e7b3](571e7b3a8d19825c48ecf889910209e9b6db84c2)...[a98b2d9](a98b2d9e67aa1c784835bad2e21e1ad89020ed0d)
+
+### Bug Fixes
+
+- Apply changes for xdg ([e4a0ab6](e4a0ab68a5189b075860cf7f9842499f8efa0e18))
+
+### Features
+
+- Add graph circle ([aee713a](aee713aae7a87f9b1ea1a1aa34ef932f7e28bec9))
+- Init config code ([92c5571](92c5571b9269584b7bf471bc2ce5b936ff2b9b16))
+
+### Build
+
+- Bump xdg from 2.5.2 to 3.0.0 ([50afcb9](50afcb98e78b624ee3240392e47bb09034917efb)), Signed-off-by:dependabot[bot] <support@github.com>
+
+## ibe-v0.0.5 - 2025-05-09
+
+[495fb38](495fb384cc55cf080e136d64abd0a9e09eacf118)...[571e7b3](571e7b3a8d19825c48ecf889910209e9b6db84c2)
 
 ### Miscellaneous Tasks
 
 - Change default component to filled bars ([e4a79d1](e4a79d13b68d79d3a93de46c47b3991c2c3ff12a))
 - First structure for graph ([22e1808](22e1808d2af20e53f878f5001bc95a8e3130193a))
 - Update changelog ([ef5e2c0](ef5e2c05623720e8b2ab7c81e4208ffeafb8f155))
+- Release ([571e7b3](571e7b3a8d19825c48ecf889910209e9b6db84c2))
 
 ## ibe-v0.0.4 - 2025-04-28
 
