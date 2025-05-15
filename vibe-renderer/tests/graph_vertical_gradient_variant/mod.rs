@@ -21,6 +21,7 @@ fn test() {
             top: BLUE,
             bottom: RED,
         },
+        smoothness: 0.01,
     });
 
     let _img = tester.render(graph);

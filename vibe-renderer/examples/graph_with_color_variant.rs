@@ -61,6 +61,7 @@ impl<'a> State<'a> {
             output_texture_format: surface_config.format,
             variant: GraphVariant::Color([0., 0., 1., 1.]),
             max_height: 0.5,
+            smoothness: 0.01,
         });
 
         Self {

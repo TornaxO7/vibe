@@ -64,6 +64,7 @@ impl<'a> State<'a> {
                 right: [0., 0., 1., 1.],
             },
             max_height: 0.5,
+            smoothness: 0.01,
         });
 
         Self {
