@@ -20,7 +20,7 @@ fn test() {
             color: WHITE,
         },
         radius: 0.1,
-        rotation: 0.0,
+        rotation: cgmath::Deg(90.),
     });
 
     let _img = tester.render(circle);

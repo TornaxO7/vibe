@@ -1,23 +1,27 @@
 use shady_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
+use vibe_renderer::components::{Radial, RadialDescriptor, RadialVariant};
 
-use crate::{Tester, RED};
+use crate::Tester;
 
 #[test]
 fn test() {
     let mut tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new());
-    let graph = Graph::new(&GraphDescriptor {
+    let radial = Radial::new(&RadialDescriptor {
         device: tester.renderer.device(),
-        sample_processor: &sample_processor,
+        processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
-        max_height: 1.,
-        variant: GraphVariant::Color(RED),
+        variant: RadialVariant::Color(super::RED),
+
+        init_rotation: cgmath::Deg(90.0),
+        circle_radius: 0.01,
+        bar_height_sensitivity: 0.3,
+        bar_width: 0.1,
     });
 
-    let _img = tester.render(graph);
+    let _img = tester.render(radial);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

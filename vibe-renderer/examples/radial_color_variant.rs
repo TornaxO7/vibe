@@ -1,8 +1,8 @@
-use std::{sync::Arc, time::Instant};
+use std::{num::NonZero, sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
-    components::{Circle, CircleDescriptor, CircleVariant, Component},
+    components::{Component, Radial, RadialDescriptor, RadialVariant},
     Renderer,
 };
 use winit::{
@@ -20,7 +20,7 @@ struct State<'a> {
     window: Arc<Window>,
     time: Instant,
 
-    circle: Circle,
+    radial: Radial,
 }
 
 impl<'a> State<'a> {
@@ -51,21 +51,21 @@ impl<'a> State<'a> {
 
         surface.configure(renderer.device(), &surface_config);
 
-        let circle = Circle::new(&CircleDescriptor {
+        let radial = Radial::new(&RadialDescriptor {
             device: renderer.device(),
-            sample_processor: processor,
+            processor,
             audio_conf: shady_audio::BarProcessorConfig {
-                amount_bars: std::num::NonZero::new(30).unwrap(),
+                amount_bars: NonZero::new(30).unwrap(),
                 ..Default::default()
             },
-            texture_format: surface_config.format,
-            variant: CircleVariant::Graph {
-                spike_sensitivity: 0.3,
-                color: [0., 1., 1., 1.],
-            },
+            output_texture_format: surface_config.format,
 
-            radius: 0.1,
-            rotation: cgmath::Deg(90.),
+            variant: RadialVariant::Color([1., 0., 0., 1.]),
+
+            init_rotation: cgmath::Deg(90.),
+            circle_radius: 0.2,
+            bar_height_sensitivity: 0.5,
+            bar_width: 0.015,
         });
 
         Self {
@@ -74,7 +74,7 @@ impl<'a> State<'a> {
             surface,
             window,
             surface_config,
-            circle,
+            radial,
         }
     }
 
@@ -85,14 +85,14 @@ impl<'a> State<'a> {
             self.surface
                 .configure(self.renderer.device(), &self.surface_config);
 
-            self.circle
+            self.radial
                 .update_resolution(&self.renderer, [new_size.width, new_size.height]);
         }
     }
 
     pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
-        self.circle.update_audio(self.renderer.queue(), processor);
-        self.circle
+        self.radial.update_audio(self.renderer.queue(), processor);
+        self.radial
             .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
         let surface_texture = self.surface.get_current_texture()?;
 
@@ -100,9 +100,9 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, &[&self.circle]);
-
+        self.renderer.render(&view, &[&self.radial]);
         surface_texture.present();
+
         Ok(())
     }
 }

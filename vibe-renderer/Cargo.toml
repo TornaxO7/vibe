@@ -14,6 +14,7 @@ shady-audio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
+cgmath.workspace = true
 
 pollster = "0.4"
 bytemuck = "1.23"
