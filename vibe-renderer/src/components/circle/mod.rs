@@ -1,10 +1,10 @@
+use cgmath::{Deg, Matrix2};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
 use super::Component;
 
-pub type Degree = f32;
 pub type Rgba = [f32; 4];
 
 type VertexPosition = [f32; 2];
@@ -50,7 +50,7 @@ pub struct CircleDescriptor<'a> {
     pub variant: CircleVariant,
 
     pub radius: f32,
-    pub rotation: Degree,
+    pub rotation: Deg<f32>,
 }
 
 pub struct Circle {
@@ -99,12 +99,13 @@ impl Circle {
             }),
         );
 
+        let rotation: [[f32; 2]; 2] = Matrix2::from_angle(desc.rotation).into();
         bind_group0.insert_buffer(
             Bindings0::Rotation as u32,
             wgpu::ShaderStages::FRAGMENT,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Circle: `rotation` buffer"),
-                contents: bytemuck::cast_slice(&get_rotation_matrix(desc.rotation)),
+                contents: bytemuck::cast_slice(&rotation),
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
@@ -264,12 +265,4 @@ impl Component for Circle {
             );
         }
     }
-}
-
-fn get_rotation_matrix(degree: f32) -> [f32; 4] {
-    let radiant = degree * std::f32::consts::PI / 180.;
-
-    let cos = radiant.cos();
-    let sin = radiant.sin();
-    [cos, -sin, sin, cos]
 }

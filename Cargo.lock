@@ -174,6 +174,15 @@ checksum = "fca387cdc0a1f9c7a7c26556d584aa2d07fc529843082e4861003cde4ab914ed"
 
 [[package]]
 name = "approx"
+version = "0.4.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3f2a05fd1bd10b2527e20a2cd32d8873d115b8b39fe219ee25f42a8aca6ba278"
+dependencies = [
+ "num-traits",
+]
+
+[[package]]
+name = "approx"
 version = "0.5.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "cab112f0a86d568ea0e627cc1d6be74a1e9cd55214684db5561995f6dad897c6"
@@ -455,6 +464,17 @@ name = "cfg_aliases"
 version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
+
+[[package]]
+name = "cgmath"
+version = "0.18.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1a98d30140e3296250832bbaaff83b27dcd6fa3cc70fb6f1f3e5c9c0023b5317"
+dependencies = [
+ "approx 0.4.0",
+ "num-traits",
+ "serde",
+]
 
 [[package]]
 name = "clang-sys"
@@ -1413,7 +1433,7 @@ version = "0.33.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "26aecdf64b707efd1310e3544d709c5c0ac61c13756046aaaba41be5c4f66a3b"
 dependencies = [
- "approx",
+ "approx 0.5.1",
  "matrixmultiply",
  "nalgebra-macros",
  "num-complex",
@@ -2474,7 +2494,7 @@ version = "0.9.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b3a386a501cd104797982c15ae17aafe8b9261315b5d07e3ec803f2ea26be0fa"
 dependencies = [
- "approx",
+ "approx 0.5.1",
  "num-complex",
  "num-traits",
  "paste",
@@ -2948,6 +2968,7 @@ name = "vibe-renderer"
 version = "0.0.1"
 dependencies = [
  "bytemuck",
+ "cgmath",
  "image",
  "pollster",
  "rand 0.9.1",
