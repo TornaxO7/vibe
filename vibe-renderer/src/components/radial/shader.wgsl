@@ -27,6 +27,7 @@ struct Input {
     @builtin(vertex_index) vertex_idx: u32,
 };
 
+// TODO: Somehow avoid duplicated code between `vertex_main` and `vertex_main_invertex`
 @vertex
 fn vertex_main(in: Input) -> @builtin(position) vec4f {
     let width: f32 = bar_width / 2.;

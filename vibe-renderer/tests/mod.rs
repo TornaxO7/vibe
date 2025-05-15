@@ -15,7 +15,12 @@ mod graph_vertical_gradient_variant;
 
 mod circle_graph;
 
+mod radial_with_color_variant;
+
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
+
+// some colors
+const RED: [f32; 4] = [1., 0., 0., 1.];
 
 pub struct Tester<'a> {
     pub output_width: u32,
