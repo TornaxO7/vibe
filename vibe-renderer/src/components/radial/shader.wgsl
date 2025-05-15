@@ -27,30 +27,17 @@ struct Input {
     @builtin(vertex_index) vertex_idx: u32,
 };
 
-// TODO: Somehow avoid duplicated code between `vertex_main` and `vertex_main_invertex`
 @vertex
 fn vertex_main(in: Input) -> @builtin(position) vec4f {
-    let width: f32 = bar_width / 2.;
-    let height: f32 = bar_height_sensitivity * freqs[in.instance_idx] + circle_radius;
-    var pos: vec2f;
-
-    if (in.vertex_idx == 0) {
-        pos = vec2f(circle_radius, width);
-    } else if (in.vertex_idx == 1) {
-        pos = vec2f(circle_radius, -width);
-    } else if (in.vertex_idx == 2) {
-        pos = vec2f(height, width);
-    } else { // in.vertex_idx == 3
-        pos = vec2f(height, -width);
-    }
-
-    pos = bar_rotation[in.instance_idx] * pos;
-    pos.x /= iResolution.x / iResolution.y;
-    return vec4f(pos, 0., 1.);
+    return _inner_vertex_main(in, bar_rotation[in.instance_idx]);
 }
 
 @vertex
 fn vertex_main_inverted(in: Input) -> @builtin(position) vec4f {
+    return _inner_vertex_main(in, inverse_bar_rotation[in.instance_idx]);
+}
+
+fn _inner_vertex_main(in: Input, bar_rotation: mat2x2f) -> vec4f {
     let width: f32 = bar_width / 2.;
     let height: f32 = bar_height_sensitivity * freqs[in.instance_idx] + circle_radius;
     var pos: vec2f;
@@ -65,7 +52,7 @@ fn vertex_main_inverted(in: Input) -> @builtin(position) vec4f {
         pos = vec2f(height, -width);
     }
 
-    pos = inverse_bar_rotation[in.instance_idx] * pos;
+    pos = bar_rotation * pos;
     pos.x /= iResolution.x / iResolution.y;
     return vec4f(pos, 0., 1.);
 }
