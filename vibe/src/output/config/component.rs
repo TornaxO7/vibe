@@ -40,7 +40,6 @@ pub enum ComponentConfig {
         audio_conf: BarAudioConfig,
         variant: CircleVariantConfig,
         radius: f32,
-        #[serde(flatten)]
         rotation: cgmath::Deg<f32>,
     },
     Radial {
