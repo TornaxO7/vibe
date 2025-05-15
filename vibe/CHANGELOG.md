@@ -2,9 +2,17 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.6 - 2025-05-15
+## 0.0.7 - 2025-05-15
 
-[571e7b3](571e7b3a8d19825c48ecf889910209e9b6db84c2)...[a98b2d9](a98b2d9e67aa1c784835bad2e21e1ad89020ed0d)
+[a39d710](a39d710e6be162ec981b44c770114561466f2c2c)...[e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92)
+
+### Bug Fixes
+
+- Remove missused attribute ([e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92))
+
+## ibe-v0.0.6 - 2025-05-15
+
+[571e7b3](571e7b3a8d19825c48ecf889910209e9b6db84c2)...[a39d710](a39d710e6be162ec981b44c770114561466f2c2c)
 
 ### Bug Fixes
 
@@ -14,6 +22,10 @@ All notable changes to this project will be documented in this file.
 
 - Add graph circle ([aee713a](aee713aae7a87f9b1ea1a1aa34ef932f7e28bec9))
 - Init config code ([92c5571](92c5571b9269584b7bf471bc2ce5b936ff2b9b16))
+
+### Miscellaneous Tasks
+
+- Release ([a39d710](a39d710e6be162ec981b44c770114561466f2c2c))
 
 ### Build
 
