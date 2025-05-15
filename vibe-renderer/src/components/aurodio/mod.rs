@@ -109,7 +109,7 @@ impl Aurodio {
         );
 
         {
-            let (points, width) = get_points(amount_layers);
+            let (points, width) = get_points(amount_layers * 2);
 
             bind_group0.insert_buffer(
                 Bindings0::Points as u32,
