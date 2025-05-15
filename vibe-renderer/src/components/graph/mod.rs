@@ -32,6 +32,7 @@ enum Binding0 {
     CanvasWidth = 5,
     VerticalGradientTop = 6,
     VerticalGradientBottom = 7,
+    Smoothness = 8,
 }
 
 #[repr(u32)]
@@ -48,6 +49,7 @@ pub struct GraphDescriptor<'a> {
 
     pub variant: GraphVariant,
     pub max_height: f32,
+    pub smoothness: f32,
 }
 
 pub struct Graph {
@@ -90,6 +92,16 @@ impl Graph {
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Graph: `max_height` buffer"),
                 contents: bytemuck::bytes_of(&desc.max_height),
+                usage: wgpu::BufferUsages::UNIFORM,
+            }),
+        );
+
+        bind_group0.insert_buffer(
+            Binding0::Smoothness as u32,
+            wgpu::ShaderStages::FRAGMENT,
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Graph: `smoothness` buffer"),
+                contents: bytemuck::bytes_of(&desc.smoothness),
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
