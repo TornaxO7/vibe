@@ -31,10 +31,6 @@ fn get_uv(pos: vec4f) -> vec2f {
     return rotation * uv;
 }
 
-fn aa(x: f32) -> f32 {
-    return clamp(.5 + x / fwidth(x), 0., 1.);
-}
-
 @fragment
 fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     let uv: vec2f = get_uv(pos);
@@ -74,6 +70,6 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     }
 
     let x = abs(length(uv) - (radius + radius_offset * spike_sensitivity));
-    let y = smoothstep(aa(radius_offset) * .001 + .005, .0, abs(x));
+    let y = smoothstep(radius_offset * .01 + .005, .0, abs(x));
     return color * y;
 }
