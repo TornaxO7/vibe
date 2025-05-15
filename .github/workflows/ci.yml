@@ -56,5 +56,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: TornaxO7/rust-template@v2-ci-actions
+      - name: Install Vulkan software renderer
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mesa-vulkan-drivers vulkan-tools
+          # Verify the installation of mesa-vulkan-drivers
+          dpkg -l | grep mesa-vulkan-drivers || { echo "mesa-vulkan-drivers not installed!"; exit 1; }
+      - name: Set Vulkan environment variables
+        run: |
+          export VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json
+          export VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d
+          echo "VK_ICD_FILENAMES=/usr/share/vulkan/icd.d/lvp_icd.x86_64.json" >> $GITHUB_ENV
+          echo "VK_LAYER_PATH=/usr/share/vulkan/explicit_layer.d" >> $GITHUB_ENV
+    
+      - name: Verify Vulkan renderer
+        run: vulkaninfo | grep "deviceName"
       - name: Running tests
         run: cargo test --verbose
