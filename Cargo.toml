@@ -14,6 +14,7 @@ serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
 shady-audio = { version = "14", features = ["serde"] }
 thiserror = "2"
+cgmath = { version = "0.18", features = ["serde"] }
 
 [profile.release-lto]
 inherits = "release"

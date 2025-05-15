@@ -52,7 +52,7 @@ fn vertex_main(in: Input) -> @builtin(position) vec4f {
 @vertex
 fn vertex_main_inverted(in: Input) -> @builtin(position) vec4f {
     let width: f32 = bar_width / 2.;
-    let height: f32 = 0.5 * freqs[in.instance_idx] + circle_radius;
+    let height: f32 = bar_height_sensitivity * freqs[in.instance_idx] + circle_radius;
     var pos: vec2f;
 
     if (in.vertex_idx == 0) {

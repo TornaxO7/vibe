@@ -6,7 +6,8 @@ use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, Circle,
         CircleDescriptor, CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor,
-        Graph, GraphDescriptor, GraphVariant, ShaderCode, ShaderCodeError,
+        Graph, GraphDescriptor, GraphVariant, Radial, RadialDescriptor, RadialVariant, ShaderCode,
+        ShaderCodeError,
     },
     Renderer,
 };
@@ -39,7 +40,17 @@ pub enum ComponentConfig {
         audio_conf: BarAudioConfig,
         variant: CircleVariantConfig,
         radius: f32,
-        rotation: vibe_renderer::components::Degree,
+        #[serde(flatten)]
+        rotation: cgmath::Deg<f32>,
+    },
+    Radial {
+        audio_conf: RadialAudioConfig,
+        variant: RadialVariantConfig,
+
+        init_rotation: cgmath::Deg<f32>,
+        circle_radius: f32,
+        bar_height_sensitivity: f32,
+        bar_width: f32,
     },
 }
 
@@ -180,6 +191,30 @@ impl ComponentConfig {
                     rotation: *rotation,
                 })))
             }
+            ComponentConfig::Radial {
+                audio_conf,
+                variant,
+                init_rotation,
+                circle_radius,
+                bar_height_sensitivity,
+                bar_width,
+            } => {
+                let variant = match variant {
+                    RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()),
+                };
+
+                Ok(Box::new(Radial::new(&RadialDescriptor {
+                    device: renderer.device(),
+                    processor,
+                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    output_texture_format: texture_format,
+                    variant,
+                    init_rotation: *init_rotation,
+                    circle_radius: *circle_radius,
+                    bar_height_sensitivity: *bar_height_sensitivity,
+                    bar_width: *bar_width,
+                })))
+            }
         }
     }
 }
@@ -247,6 +282,11 @@ pub enum BarVariantConfig {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RadialVariantConfig {
+    Color(Rgba),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarAudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: Range<NonZero<u16>>,
@@ -300,6 +340,24 @@ impl From<&GraphAudioConfig> for shady_audio::BarProcessorConfig {
     }
 }
 
+impl From<RadialAudioConfig> for shady_audio::BarProcessorConfig {
+    fn from(conf: RadialAudioConfig) -> Self {
+        Self {
+            amount_bars: conf.amount_bars,
+            freq_range: conf.freq_range,
+            sensitivity: conf.sensitivity,
+            easer: conf.easing,
+            ..Default::default()
+        }
+    }
+}
+
+impl From<&RadialAudioConfig> for shady_audio::BarProcessorConfig {
+    fn from(conf: &RadialAudioConfig) -> Self {
+        Self::from(conf.clone())
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AurodioAudioConfig {
     pub easing: StandardEasing,
@@ -314,6 +372,14 @@ pub struct AurodioLayerConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphAudioConfig {
+    pub freq_range: Range<NonZero<u16>>,
+    pub sensitivity: f32,
+    pub easing: StandardEasing,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RadialAudioConfig {
+    pub amount_bars: NonZero<u16>,
     pub freq_range: Range<NonZero<u16>>,
     pub sensitivity: f32,
     pub easing: StandardEasing,

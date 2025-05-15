@@ -2945,6 +2945,7 @@ name = "vibe"
 version = "0.0.5"
 dependencies = [
  "anyhow",
+ "cgmath",
  "clap",
  "notify",
  "raw-window-handle",

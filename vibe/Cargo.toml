@@ -14,6 +14,7 @@ shady-audio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
+cgmath.workspace = true
 
 anyhow = "1"
 raw-window-handle = "0.6"

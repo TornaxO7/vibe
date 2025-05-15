@@ -14,11 +14,11 @@ shady-audio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
+cgmath.workspace = true
 
 pollster = "0.4"
 bytemuck = "1.23"
 rand = "0.9"
-cgmath = { version = "0.18", features = ["serde"] }
 
 [dev-dependencies]
 winit = "0.30"
