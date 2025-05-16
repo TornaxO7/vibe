@@ -16,6 +16,7 @@ You can click on the image below to see a live demo.
 - support for (multiple) [shadertoy]-_like_-shaders (you can probably use most shaders from [shadertoy], but you can't just simply copy+paste them)
 - audio processing support for shaders
 - [wgsl] and [glsl] support for shaders
+- some [predefined effects](https://github.com/TornaxO7/vibe/wiki/Config#components) which you can choose from
 
 # State
 
