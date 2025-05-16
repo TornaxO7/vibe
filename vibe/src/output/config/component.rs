@@ -35,6 +35,7 @@ pub enum ComponentConfig {
         audio_conf: GraphAudioConfig,
         max_height: f32,
         variant: GraphVariantConfig,
+        smoothness: f32,
     },
     Circle {
         audio_conf: BarAudioConfig,
@@ -138,6 +139,7 @@ impl ComponentConfig {
                 audio_conf,
                 max_height,
                 variant,
+                smoothness,
             } => {
                 let variant = match variant {
                     GraphVariantConfig::Color(rgba) => GraphVariant::Color(rgba.as_f32()),
@@ -162,6 +164,7 @@ impl ComponentConfig {
                     output_texture_format: texture_format,
                     variant,
                     max_height: *max_height,
+                    smoothness: *smoothness,
                 })) as Box<dyn Component>)
             }
             ComponentConfig::Circle {
