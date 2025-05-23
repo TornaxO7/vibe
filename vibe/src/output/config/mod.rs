@@ -122,4 +122,11 @@ mod tests {
             vec![PathBuf::from("/dir/file1"), PathBuf::from("/dir/file2")]
         );
     }
+
+    #[test]
+    fn accept_reference_config() -> Result<(), toml::de::Error> {
+        let reference_config = include_str!("./reference-config.toml");
+        let _conf = toml::from_str::<OutputConfig>(reference_config)?;
+        Ok(())
+    }
 }
