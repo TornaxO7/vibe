@@ -1,3 +1,4 @@
+use cgmath::Deg;
 use shady_audio::BarProcessor;
 use wgpu::{include_wgsl, util::DeviceExt};
 
@@ -13,6 +14,19 @@ const POSITIONS: [VertexPosition; 3] = [
     [1., -3.], // right bottom corner
     [-3., 1.], // top left corner
 ];
+
+#[derive(Debug, Clone)]
+pub enum GraphPlacement {
+    Bottom,
+    Top,
+    Right,
+    Left,
+    Custom {
+        // Convention: (0., 0.) is the top left corner of the screen
+        bottom_left_corner: (f32, f32),
+        rotation: Deg<f32>,
+    },
+}
 
 #[derive(Debug, Clone)]
 pub enum GraphVariant {
@@ -50,6 +64,7 @@ pub struct GraphDescriptor<'a> {
     pub variant: GraphVariant,
     pub max_height: f32,
     pub smoothness: f32,
+    pub placement: GraphPlacement,
 }
 
 pub struct Graph {
