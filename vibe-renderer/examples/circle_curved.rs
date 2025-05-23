@@ -66,6 +66,7 @@ impl<'a> State<'a> {
 
             radius: 0.1,
             rotation: cgmath::Deg(90.),
+            position: (0.5, 0.5),
         });
 
         Self {

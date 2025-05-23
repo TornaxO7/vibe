@@ -57,6 +57,7 @@ pub enum ComponentConfig {
         variant: CircleVariantConfig,
         radius: f32,
         rotation: cgmath::Deg<f32>,
+        position: (f32, f32),
     },
     Radial {
         audio_conf: RadialAudioConfig,
@@ -66,6 +67,7 @@ pub enum ComponentConfig {
         circle_radius: f32,
         bar_height_sensitivity: f32,
         bar_width: f32,
+        position: (f32, f32),
     },
 }
 
@@ -184,6 +186,7 @@ impl ComponentConfig {
                 variant,
                 radius,
                 rotation,
+                position,
             } => {
                 let variant = match variant {
                     CircleVariantConfig::Graph {
@@ -203,6 +206,7 @@ impl ComponentConfig {
                     variant,
                     radius: *radius,
                     rotation: *rotation,
+                    position: *position,
                 })))
             }
             ComponentConfig::Radial {
@@ -212,6 +216,7 @@ impl ComponentConfig {
                 circle_radius,
                 bar_height_sensitivity,
                 bar_width,
+                position,
             } => {
                 let variant = match variant {
                     RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()),
@@ -227,6 +232,7 @@ impl ComponentConfig {
                     circle_radius: *circle_radius,
                     bar_height_sensitivity: *bar_height_sensitivity,
                     bar_width: *bar_width,
+                    position: *position,
                 })))
             }
         }

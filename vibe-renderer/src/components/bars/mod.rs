@@ -16,7 +16,9 @@ const VERTEX_SURFACE_WIDTH: f32 = 2.;
 #[derive(Debug, Clone)]
 pub enum BarsPlacement {
     Custom {
-        // Convention: (0., 0.) is the bottom left corner
+        // Convention:
+        // - (0., 0.) is the top left corner
+        // - (1., 1.) is the bottom right corner
         bottom_left_corner: (f32, f32),
         // percentage of the screen width (so it should be within the range [0, 1])
         width_factor: f32,
@@ -108,8 +110,9 @@ impl Bars {
                     rotation,
                 } => {
                     let bottom_left_corner = {
-                        let mut pos =
-                            2. * Vector2::from(bottom_left_corner) - Vector2::from([1f32; 2]);
+                        let mut pos = (2. * Vector2::from(bottom_left_corner)
+                            - Vector2::from([1f32; 2])) // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
+                            + Vector2::from((-1., 1.)); // use it as an offset of the top left corner
                         pos.x = pos.x.clamp(-1., 1.);
                         pos.y = pos.y.clamp(-1., 1.);
                         pos

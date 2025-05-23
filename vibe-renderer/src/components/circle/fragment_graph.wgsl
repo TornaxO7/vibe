@@ -16,6 +16,9 @@ var<uniform> freq_radiant_step: f32;
 @group(0) @binding(5)
 var<uniform> color: vec4f;
 
+@group(0) @binding(6)
+var<uniform> position_offset: vec2f;
+
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
 
@@ -25,15 +28,15 @@ fn rotate(r: f32) -> mat2x2f {
     return mat2x2f(cos(r), -sin(r), sin(r), cos(r));
 }
 
-fn get_uv(pos: vec4f) -> vec2f {
-    var uv = pos.xy / iResolution.xy - .5;
+fn get_uv(pos: vec2f) -> vec2f {
+    var uv = pos.xy / iResolution.xy - position_offset;
     uv.x *= iResolution.x / iResolution.y;
     return rotation * uv;
 }
 
 @fragment
 fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
-    let uv: vec2f = get_uv(pos);
+    let uv: vec2f = get_uv(pos.xy);
 
     let freqs_length: u32 = arrayLength(&freqs);
     let radiant: f32 = abs(atan2(uv.y, uv.x));

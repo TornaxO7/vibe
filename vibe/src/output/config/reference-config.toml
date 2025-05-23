@@ -240,6 +240,7 @@ bottom = [2, 111, 114, 255]
 [components.Circle]
 radius = 0.1
 rotation = 90.0
+position = [0.5, 0.5]
 [components.Circle.audio_conf]
 amount_bars = 30
 easing = "OutExponential"
@@ -258,6 +259,7 @@ init_rotation = 90.0
 circle_radius = 0.2
 bar_height_sensitivity = 1.0
 bar_width = 0.01
+position = [0.5, 0.5]
 [components.Radial.audio_conf]
 amount_bars = 60
 easing = "OutExponential"

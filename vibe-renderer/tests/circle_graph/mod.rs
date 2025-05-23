@@ -21,6 +21,7 @@ fn test() {
         },
         radius: 0.1,
         rotation: cgmath::Deg(90.),
+        position: (0.5, 0.5),
     });
 
     let _img = tester.render(circle);
