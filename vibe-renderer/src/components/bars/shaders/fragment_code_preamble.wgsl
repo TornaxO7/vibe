@@ -1,7 +1,7 @@
 // Holds the screen resolution.
 //   - `iResolution[0]`: Width
 //   - `iResolution[1]`: Height
-@group(0) @binding(4)
+@group(0) @binding(6)
 var<uniform> iResolution: vec2<f32>;
 
 // Contains the time how long the shader has been running.

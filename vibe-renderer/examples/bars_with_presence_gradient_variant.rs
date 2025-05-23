@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::{
-    components::{BarVariant, Bars, BarsDescriptor, Component},
+    components::{BarVariant, Bars, BarsDescriptor, BarsPlacement, Component},
     Renderer,
 };
 use winit::{
@@ -64,6 +64,7 @@ impl<'a> State<'a> {
                 high: TURQUOISE,
                 low: DARK_BLUE,
             },
+            placement: BarsPlacement::Right,
         })
         .unwrap_or_else(|err| panic!("{}", err));
 

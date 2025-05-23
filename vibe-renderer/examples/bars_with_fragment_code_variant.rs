@@ -57,6 +57,7 @@ impl<'a> State<'a> {
             audio_conf: BarProcessorConfig::default(),
             texture_format: surface_config.format,
             max_height: 0.75,
+            placement: vibe_renderer::components::BarsPlacement::Top,
             variant: BarVariant::FragmentCode(ShaderCode {
                 language: vibe_renderer::components::ShaderLanguage::Wgsl,
                 source: vibe_renderer::components::ShaderSource::Code(

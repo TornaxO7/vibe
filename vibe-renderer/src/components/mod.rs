@@ -7,7 +7,7 @@ mod radial;
 mod value_noise;
 
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
-pub use bars::{BarVariant, Bars, BarsDescriptor};
+pub use bars::{BarVariant, Bars, BarsDescriptor, BarsPlacement};
 pub use circle::{Circle, CircleDescriptor, CircleVariant};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 pub use graph::{Graph, GraphDescriptor, GraphVariant};

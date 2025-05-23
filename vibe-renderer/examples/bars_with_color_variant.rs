@@ -2,7 +2,7 @@ use std::{sync::Arc, time::Instant};
 
 use shady_audio::{fetcher::SystemAudioFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::{
-    components::{BarVariant, Bars, BarsDescriptor, Component},
+    components::{BarVariant, Bars, BarsDescriptor, BarsPlacement, Component},
     Renderer,
 };
 use winit::{
@@ -54,10 +54,18 @@ impl<'a> State<'a> {
         let bars = Bars::new(&BarsDescriptor {
             device: renderer.device(),
             sample_processor: &processor,
-            audio_conf: BarProcessorConfig::default(),
+            audio_conf: BarProcessorConfig {
+                amount_bars: std::num::NonZero::new(5).unwrap(),
+                ..Default::default()
+            },
             texture_format: surface_config.format,
             max_height: 1.,
             variant: BarVariant::Color([0., 0., 1., 1.]),
+            placement: BarsPlacement::Custom {
+                bottom_left_corner: (0.5, 0.5),
+                width_factor: 0.25,
+                rotation: cgmath::Deg(45.),
+            },
         })
         .unwrap_or_else(|err| panic!("{}", err));
 

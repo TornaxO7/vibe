@@ -1,4 +1,4 @@
-@group(0) @binding(3)
+@group(0) @binding(5)
 var<uniform> color: vec4<f32>;
 
 @fragment
