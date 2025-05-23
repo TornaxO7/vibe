@@ -49,7 +49,7 @@ impl OutputConfig {
         for component in self.components.iter() {
             match component {
                 ComponentConfig::Bars {
-                    variant: component::BarVariantConfig::FragmentCode(code),
+                    variant: component::BarsVariantConfig::FragmentCode(code),
                     ..
                 } => {
                     if let vibe_renderer::components::ShaderSource::Path(path) = &code.source {
@@ -89,7 +89,7 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 
 #[cfg(test)]
 mod tests {
-    use component::BarAudioConfig;
+    use component::BarsAudioConfig;
     use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
     use super::*;
@@ -100,19 +100,20 @@ mod tests {
             enable: true,
             components: vec![
                 ComponentConfig::FragmentCanvas {
-                    audio_conf: BarAudioConfig::default(),
+                    audio_conf: component::FragmentCanvasAudioConfig::default(),
                     fragment_code: ShaderCode {
                         language: ShaderLanguage::Wgsl,
                         source: ShaderSource::Path("/dir/file1".into()),
                     },
                 },
                 ComponentConfig::Bars {
-                    audio_conf: BarAudioConfig::default(),
+                    audio_conf: BarsAudioConfig::default(),
                     max_height: 0.69,
-                    variant: component::BarVariantConfig::FragmentCode(ShaderCode {
+                    variant: component::BarsVariantConfig::FragmentCode(ShaderCode {
                         language: ShaderLanguage::Glsl,
                         source: ShaderSource::Path("/dir/file2".into()),
                     }),
+                    placement: component::BarsPlacementConfig::Bottom,
                 },
             ],
         };
@@ -126,7 +127,11 @@ mod tests {
     #[test]
     fn accept_reference_config() -> Result<(), toml::de::Error> {
         let reference_config = include_str!("./reference-config.toml");
-        let _conf = toml::from_str::<OutputConfig>(reference_config)?;
+
+        if let Err(err) = toml::from_str::<OutputConfig>(reference_config).context("") {
+            panic!("{:?}", err);
+        }
+
         Ok(())
     }
 }

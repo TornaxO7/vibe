@@ -5,6 +5,7 @@ enable = true
 ## Bars - Color
 [[components]]
 [components.Bars]
+placement = "Bottom"
 max_height = 0.75
 [components.Bars.audio_conf]
 amount_bars = 60
@@ -18,6 +19,7 @@ Color = [0, 255, 255, 255]
 [[components]]
 [components.Bars]
 max_height = 0.75
+placement = "Top"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -31,6 +33,7 @@ low_presence = [13, 0, 82, 255]
 [[components]]
 [components.Bars]
 max_height = 0.75
+placement = "Left"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -44,6 +47,7 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.Bars]
 max_height = 0.75
+placement = "Right"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -57,6 +61,10 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.Bars]
 max_height = 0.75
+[components.Bars.placement.Custom]
+bottom_left_corner = [0.0, 0.0]
+width_factor = 1.0
+rotation = 0.0
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -77,6 +85,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 [[components]]
 [components.Bars]
 max_height = 0.75
+placement = "Bottom"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -90,6 +99,7 @@ path = "/tmp/fragment_code.glsl"
 [[components]]
 [components.Bars]
 max_height = 0.75
+placement = "Bottom"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -104,6 +114,8 @@ void main() {
     fragColor = vec4(col, alpha);
 }
 """
+
+# Fragment canvas
 
 ## Fragment canvas - Wgsl - Path
 [[components]]
