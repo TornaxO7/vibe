@@ -1,0 +1,252 @@
+enable = true
+
+# Bars
+
+## Bars - Color
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant]
+Color = [0, 255, 255, 255]
+
+## Bars - Presence gradient
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant.PresenceGradient]
+high_presence = [0, 255, 255, 255]
+low_presence = [13, 0, 82, 255]
+
+## Bars - Fragment code - Wgsl - Path
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant.FragmentCode]
+language = "Wgsl"
+path = "/tmp/fragment_code.wgsl"
+
+## Bars - Fragment code - Wgsl - Path
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant.FragmentCode]
+language = "Wgsl"
+path = "/tmp/fragment_code.wgsl"
+
+## Bars - Fragment code - Wgsl - Code
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant.FragmentCode]
+language = "Wgsl"
+code = """
+@fragment
+fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+    let color = sin(vec3<f32>(2., 4., 8.) * iTime * .25) * .2 + .6;
+    let alpha = 1. - (pos.y / iResolution.y);
+    return vec4<f32>(color, alpha);
+}
+"""
+
+## Bars - Fragment code - Glsl - Path
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant.FragmentCode]
+language = "Glsl"
+path = "/tmp/fragment_code.glsl"
+
+## Bars - Fragment code - Glsl - Code
+[[components]]
+[components.Bars]
+max_height = 0.75
+[components.Bars.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Bars.variant.FragmentCode]
+language = "Glsl"
+code = """
+void main() {
+    vec3 col = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
+    float alpha = 1. - gl_FragCoord.y / iResolution.y;
+    fragColor = vec4(col, alpha);
+}
+"""
+
+## Fragment canvas - Wgsl - Path
+[[components]]
+[components.FragmentCanvas.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.FragmentCanvas.fragment_code]
+language = "Wgsl"
+path = "/tmp/fragment_code.wgsl"
+
+## Fragment canvas - Wgsl - Code
+[[components]]
+[components.FragmentCanvas.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.FragmentCanvas.fragment_code]
+language = "Wgsl"
+code = """
+@fragment
+fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+    // create a black screen
+    var color = vec3(0.);
+    return vec4<f32>(color, 1.);
+}
+"""
+
+## Fragment canvas - Glsl - Path
+[[components]]
+[components.FragmentCanvas.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.FragmentCanvas.fragment_code]
+language = "Glsl"
+path = "/tmp/fragment_code.wgsl"
+
+## Fragment canvas - Glsl - Code
+[[components]]
+[components.FragmentCanvas.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.FragmentCanvas.fragment_code]
+language = "Glsl"
+code = """
+void main() {
+    // also create a black screen...
+    vec3 col = vec3(0.);
+    fragColor = vec4(col, 1.);
+}
+"""
+
+## Aurodio
+[[components]]
+[components.Aurodio]
+base_color = [0, 122, 122]
+movement_speed = 0.009999999776482582
+
+[components.Aurodio.audio_conf]
+easing = "OutExponential"
+sensitivity = 0.1
+[[components.Aurodio.layers]]
+freq_range = { start = 50, end = 500 }
+zoom_factor = 5.0
+[[components.Aurodio.layers]]
+freq_range = { start = 600, end = 2000 }
+zoom_factor = 10.0
+
+# Graph
+
+## Graph - Color
+[[components]]
+[components.Graph]
+max_height = 0.5
+smoothness = 0.01
+[components.Graph.audio_conf]
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 5000 }
+[components.Graph.variant]
+Color = [0, 0, 255, 255]
+
+## Graph - Horizontal Gradient
+[[components]]
+[components.Graph]
+max_height = 0.5
+smoothness = 0.01
+[components.Graph.audio_conf]
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 5000 }
+[components.Graph.variant.HorizontalGradient]
+left = [255, 0, 0, 255]
+right = [0, 0, 255, 255]
+
+## Graph - Vertical Gradient
+[[components]]
+[components.Graph]
+max_height = 0.5
+smoothness = 0.01
+[components.Graph.audio_conf]
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 5000 }
+[components.Graph.variant.VerticalGradient]
+top = [3, 185, 191, 255]
+bottom = [2, 111, 114, 255]
+
+# Circle
+
+## Circle - Graph
+[[components]]
+[components.Circle]
+radius = 0.1
+rotation = 90.0
+[components.Circle.audio_conf]
+amount_bars = 30
+easing = "OutExponential"
+sensitivity = 0.15
+freq_range = { start = 50, end = 10000 }
+[components.Circle.variant.Graph]
+spike_sensitivity = 0.2
+color = [255, 255, 255, 255]
+
+# Radial
+
+## Radial - Color
+[[components]]
+[components.Radial]
+init_rotation = 90.0
+circle_radius = 0.2
+bar_height_sensitivity = 1.0
+bar_width = 0.01
+[components.Radial.audio_conf]
+amount_bars = 60
+easing = "OutExponential"
+sensitivity = 0.1
+freq_range = { start = 50, end = 10000 }
+[components.Radial.variant]
+Color = [0, 255, 0, 255]
