@@ -19,6 +19,9 @@ var<uniform> bar_height_sensitivity: f32;
 @group(0) @binding(6)
 var<uniform> color: vec4f;
 
+@group(0) @binding(7)
+var<uniform> position_offset: vec2f;
+
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
 
@@ -37,6 +40,14 @@ fn vertex_main_inverted(in: Input) -> @builtin(position) vec4f {
     return _inner_vertex_main(in, inverse_bar_rotation[in.instance_idx]);
 }
 
+// Assuming (the "tip" of the bar is on the right not in the top):
+//
+// 2    0
+//  ----
+//  |\ |
+//  | \|
+//  ----
+// 3    1
 fn _inner_vertex_main(in: Input, bar_rotation: mat2x2f) -> vec4f {
     let width: f32 = bar_width / 2.;
     let height: f32 = bar_height_sensitivity * freqs[in.instance_idx] + circle_radius;
@@ -54,6 +65,8 @@ fn _inner_vertex_main(in: Input, bar_rotation: mat2x2f) -> vec4f {
 
     pos = bar_rotation * pos;
     pos.x /= iResolution.x / iResolution.y;
+    pos += position_offset;
+
     return vec4f(pos, 0., 1.);
 }
 

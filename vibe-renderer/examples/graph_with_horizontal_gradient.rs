@@ -65,6 +65,7 @@ impl<'a> State<'a> {
             },
             max_height: 0.5,
             smoothness: 0.01,
+            placement: vibe_renderer::components::GraphPlacement::Left,
         });
 
         Self {

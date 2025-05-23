@@ -62,6 +62,7 @@ impl<'a> State<'a> {
             variant: GraphVariant::Color([0., 0., 1., 1.]),
             max_height: 0.5,
             smoothness: 0.01,
+            placement: vibe_renderer::components::GraphPlacement::Left,
         });
 
         Self {

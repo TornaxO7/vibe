@@ -66,6 +66,7 @@ impl<'a> State<'a> {
             circle_radius: 0.2,
             bar_height_sensitivity: 0.5,
             bar_width: 0.015,
+            position: (0.5, 0.5),
         });
 
         Self {

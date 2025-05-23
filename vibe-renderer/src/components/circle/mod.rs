@@ -17,16 +17,16 @@ const POSITIONS: [VertexPosition; 3] = [
 #[repr(u32)]
 #[derive(Debug, Clone, Copy)]
 enum Bindings0 {
-    Resolution,
-    CircleRadius,
-    Rotation,
-    SpikeSensitivity,
+    Resolution = 0,
+    CircleRadius = 1,
+    Rotation = 2,
+    SpikeSensitivity = 3,
 
     // The radiant distance between two frequency spikes.
     // `0.9` instead of `1.0` due to floating point errors
-    FreqRadiantStep,
-
-    WaveColor,
+    FreqRadiantStep = 4,
+    WaveColor = 5,
+    PositionOffset = 6,
 }
 
 #[repr(u32)]
@@ -37,7 +37,6 @@ enum Bindings1 {
 
 pub enum CircleVariant {
     Graph { spike_sensitivity: f32, color: Rgba },
-    // Bars,
 }
 
 pub struct CircleDescriptor<'a> {
@@ -49,6 +48,8 @@ pub struct CircleDescriptor<'a> {
 
     pub radius: f32,
     pub rotation: Deg<f32>,
+    // (0, 0) is top left
+    pub position: (f32, f32),
 }
 
 pub struct Circle {
@@ -120,6 +121,21 @@ impl Circle {
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
+
+        {
+            let rel_x_offset = desc.position.0.clamp(0., 1.);
+            let rel_y_offset = desc.position.1.clamp(0., 1.);
+
+            bind_group0.insert_buffer(
+                Bindings0::PositionOffset as u32,
+                wgpu::ShaderStages::FRAGMENT,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Circle: `position_offset` buffer"),
+                    contents: bytemuck::cast_slice(&[rel_x_offset, rel_y_offset]),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            );
+        }
 
         bind_group1.insert_buffer(
             Bindings1::Freqs as u32,

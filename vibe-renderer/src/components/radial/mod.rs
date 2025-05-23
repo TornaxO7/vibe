@@ -1,6 +1,6 @@
 use std::num::NonZero;
 
-use cgmath::{Deg, Matrix2, Rad, SquareMatrix};
+use cgmath::{Deg, Matrix2, Rad, SquareMatrix, Vector2};
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
@@ -18,6 +18,7 @@ enum Binding0 {
     BarHeightSensitivity = 5,
 
     Color = 6,
+    PositionOffset = 7,
 }
 
 #[repr(u32)]
@@ -40,6 +41,9 @@ pub struct RadialDescriptor<'a> {
     pub circle_radius: f32,
     pub bar_height_sensitivity: f32,
     pub bar_width: f32,
+    // [0, 0]: top left corner
+    // [1, 1]: bottom right corner
+    pub position: (f32, f32),
 }
 
 pub struct Radial {
@@ -162,6 +166,24 @@ impl Radial {
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
+
+        {
+            let x_factor = desc.position.0.clamp(0., 1.);
+            let y_factor = desc.position.1.clamp(0., 1.);
+
+            let coord_system_origin: Vector2<f32> = Vector2::from((-1., 1.));
+            let pos_offset = coord_system_origin + Vector2::from((2. * x_factor, 2. * -y_factor));
+
+            bind_group0.insert_buffer(
+                Binding0::PositionOffset as u32,
+                wgpu::ShaderStages::VERTEX,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Radial: `position_offset` buffer"),
+                    contents: bytemuck::cast_slice(&[pos_offset.x, pos_offset.y]),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            );
+        }
 
         match desc.variant {
             RadialVariant::Color(rgba) => {

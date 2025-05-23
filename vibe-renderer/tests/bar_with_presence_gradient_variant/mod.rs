@@ -21,6 +21,7 @@ fn test() {
             high: RED,
             low: BLUE,
         },
+        placement: vibe_renderer::components::BarsPlacement::Right,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

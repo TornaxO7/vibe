@@ -1,10 +1,20 @@
 @group(0) @binding(0)
-var<uniform> column_width: f32;
+var<uniform> bottom_left_corner: vec2f;
 
+// Normalized
 @group(0) @binding(1)
-var<uniform> padding: f32;
+var<uniform> up_direction: vec2f;
 
+// Not normalized.
+// Length equals a full column "slot" (with the direction to the next column)
 @group(0) @binding(2)
+var<uniform> column_direction: vec2f;
+
+// Length: The step required for the padding
+@group(0) @binding(3)
+var<uniform> padding: vec2f;
+
+@group(0) @binding(4)
 var<uniform> max_height: f32;
 
 @group(1) @binding(0)
@@ -30,19 +40,20 @@ struct Output {
 // 2    3
 @vertex
 fn main(in: Input) -> Output {
-    var pos = vec2<f32>(-1., -1.);
+    var pos: vec2f = bottom_left_corner;
 
     // x
-    if (in.vertex_idx == 0 || in.vertex_idx == 2) {
-        pos.x += f32(in.instance_idx) * column_width + padding;
+    let is_bar_left_side = in.vertex_idx == 0 || in.vertex_idx == 2;
+    if (is_bar_left_side) {
+        pos += f32(in.instance_idx) * column_direction + padding;
     } else {
-        pos.x += f32(in.instance_idx + 1) * column_width - padding;
+        pos += f32(in.instance_idx + 1) * column_direction - padding;
     }
 
     // y
-    if (in.vertex_idx <= 1) {
-        const CANVAS_HEIGHT: f32 = 2.;
-        pos.y += CANVAS_HEIGHT * freqs[in.instance_idx] * max_height;
+    let is_top_vertex = in.vertex_idx <= 1; 
+    if (is_top_vertex) {
+        pos += up_direction * freqs[in.instance_idx] * max_height;
     }
 
     var output: Output;

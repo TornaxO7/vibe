@@ -20,6 +20,7 @@ fn wgsl_passes() {
                 include_str!("./frag.wgsl").into(),
             ),
         }),
+        placement: vibe_renderer::components::BarsPlacement::Left,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
@@ -48,6 +49,7 @@ fn glsl_passes() {
                 include_str!("./frag.glsl").into(),
             ),
         }),
+        placement: vibe_renderer::components::BarsPlacement::Left,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

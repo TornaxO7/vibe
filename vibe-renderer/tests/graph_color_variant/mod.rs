@@ -16,6 +16,7 @@ fn test() {
         max_height: 1.,
         variant: GraphVariant::Color(RED),
         smoothness: 0.01,
+        placement: vibe_renderer::components::GraphPlacement::Bottom,
     });
 
     let _img = tester.render(graph);

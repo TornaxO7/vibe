@@ -22,6 +22,7 @@ fn test() {
             right: BLUE,
         },
         smoothness: 0.01,
+        placement: vibe_renderer::components::GraphPlacement::Left,
     });
 
     let _img = tester.render(graph);

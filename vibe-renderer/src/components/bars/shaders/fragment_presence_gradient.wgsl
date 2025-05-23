@@ -1,7 +1,7 @@
-@group(0) @binding(5)
+@group(0) @binding(7)
 var<uniform> top_color: vec4<f32>;
 
-@group(0) @binding(6)
+@group(0) @binding(8)
 var<uniform> bottom_color: vec4<f32>;
 
 struct Input {
