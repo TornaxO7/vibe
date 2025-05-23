@@ -12,8 +12,8 @@ use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsPlacement,
         Circle, CircleDescriptor, CircleVariant, Component, FragmentCanvas,
-        FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphVariant, Radial, RadialDescriptor,
-        RadialVariant, ShaderCode, ShaderCodeError,
+        FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphPlacement, GraphVariant, Radial,
+        RadialDescriptor, RadialVariant, ShaderCode, ShaderCodeError,
     },
     Renderer,
 };
@@ -22,7 +22,7 @@ pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
 pub use bars::{BarsAudioConfig, BarsPlacementConfig, BarsVariantConfig};
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use fragment_canvas::FragmentCanvasAudioConfig;
-pub use graph::{GraphAudioConfig, GraphVariantConfig};
+pub use graph::{GraphAudioConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialVariantConfig};
 
 const GAMMA: f32 = 2.2;
@@ -50,6 +50,7 @@ pub enum ComponentConfig {
         max_height: f32,
         variant: GraphVariantConfig,
         smoothness: f32,
+        placement: GraphPlacementConfig,
     },
     Circle {
         audio_conf: CircleAudioConfig,
@@ -162,22 +163,10 @@ impl ComponentConfig {
                 max_height,
                 variant,
                 smoothness,
+                placement,
             } => {
-                let variant = match variant {
-                    GraphVariantConfig::Color(rgba) => GraphVariant::Color(rgba.as_f32()),
-                    GraphVariantConfig::HorizontalGradient { left, right } => {
-                        GraphVariant::HorizontalGradient {
-                            left: left.as_f32(),
-                            right: right.as_f32(),
-                        }
-                    }
-                    GraphVariantConfig::VerticalGradient { top, bottom } => {
-                        GraphVariant::VerticalGradient {
-                            top: top.as_f32(),
-                            bottom: bottom.as_f32(),
-                        }
-                    }
-                };
+                let variant = GraphVariant::from(variant);
+                let placement = GraphPlacement::from(placement);
 
                 Ok(Box::new(Graph::new(&GraphDescriptor {
                     device: renderer.device(),
@@ -187,6 +176,7 @@ impl ComponentConfig {
                     variant,
                     max_height: *max_height,
                     smoothness: *smoothness,
+                    placement,
                 })) as Box<dyn Component>)
             }
             ComponentConfig::Circle {

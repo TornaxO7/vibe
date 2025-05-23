@@ -197,6 +197,7 @@ zoom_factor = 10.0
 [components.Graph]
 max_height = 0.5
 smoothness = 0.01
+placement = "Top"
 [components.Graph.audio_conf]
 easing = "OutExponential"
 sensitivity = 0.1
@@ -209,6 +210,7 @@ Color = [0, 0, 255, 255]
 [components.Graph]
 max_height = 0.5
 smoothness = 0.01
+placement = "Bottom"
 [components.Graph.audio_conf]
 easing = "OutExponential"
 sensitivity = 0.1
@@ -222,6 +224,7 @@ right = [0, 0, 255, 255]
 [components.Graph]
 max_height = 0.5
 smoothness = 0.01
+placement = "Right"
 [components.Graph.audio_conf]
 easing = "OutExponential"
 sensitivity = 0.1
