@@ -183,7 +183,7 @@ impl Bars {
             wgpu::ShaderStages::VERTEX,
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Bar: `max_height` buffer"),
-                contents: bytemuck::bytes_of(&desc.max_height),
+                contents: bytemuck::bytes_of(&(desc.max_height * VERTEX_SURFACE_WIDTH)),
                 usage: wgpu::BufferUsages::UNIFORM,
             }),
         );
