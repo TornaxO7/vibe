@@ -12,7 +12,7 @@ wgpu = { version = "24.0", default-features = false, features = [
 
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
-shady-audio = { version = "14", features = ["serde"] }
+shady-audio = { version = "15", features = ["serde"] }
 thiserror = "2"
 cgmath = { version = "0.18", features = ["serde"] }
 
