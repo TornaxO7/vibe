@@ -20,7 +20,7 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     init_logging();
 
     let args = cli::Args::parse();
@@ -32,7 +32,10 @@ fn main() {
 
     if let Err(err) = result {
         error!("{:?}", err);
+        anyhow::bail!("Fatal error");
     }
+
+    Ok(())
 }
 
 fn run_daemon() -> anyhow::Result<()> {

@@ -3,7 +3,7 @@ use raw_window_handle::{
 };
 
 use anyhow::Context;
-use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState, Region},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry,
@@ -57,9 +57,6 @@ impl State {
             panic!("wlr_layer_shell protocol is not supported by compositor.");
         };
 
-        let sample_processor =
-            SampleProcessor::new(SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap());
-
         let vibe_config = crate::config::load().unwrap_or_else(|err| {
             let config_path = crate::get_config_path();
             let default_config = crate::config::Config::default();
@@ -102,6 +99,8 @@ impl State {
 
             default_config
         });
+
+        let sample_processor = vibe_config.sample_processor()?;
 
         let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::from(
             vibe_config.graphics_config,
