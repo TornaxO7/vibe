@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
-use shady_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use shady_audio::SampleProcessor;
 use tracing::{error, warn};
 use vibe_renderer::{
     components::{Component, ShaderCodeError},
@@ -114,13 +114,10 @@ struct OutputRenderer<'a> {
 
 impl OutputRenderer<'_> {
     pub fn new(output_name: String) -> anyhow::Result<Self> {
-        let renderer = {
-            let config = crate::config::load()?;
-            Renderer::new(&RendererDescriptor::from(config.graphics_config))
-        };
+        let config = crate::config::load()?;
 
-        let processor =
-            SampleProcessor::new(SystemAudioFetcher::default(|err| panic!("{}", err)).unwrap());
+        let renderer = Renderer::new(&RendererDescriptor::from(config.graphics_config.clone()));
+        let processor = config.sample_processor()?;
 
         let (output_config_path, output_config) = {
             let Some((path, config)) = crate::output::config::load(&output_name) else {

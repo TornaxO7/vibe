@@ -2460,9 +2460,9 @@ dependencies = [
 
 [[package]]
 name = "shady-audio"
-version = "15.0.0"
+version = "16.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16de0fe19f65e04c1d3d2c85ada442da9d06fc1db0bbac93a47067adabfd2529"
+checksum = "09eccf278217e54ebd41426163c25b495784c31b619db729574aa096f0dfb1bf"
 dependencies = [
  "apodize",
  "cpal",
@@ -2968,8 +2968,10 @@ dependencies = [
 name = "vibe-renderer"
 version = "0.0.2"
 dependencies = [
+ "anyhow",
  "bytemuck",
  "cgmath",
+ "clap",
  "image",
  "pollster",
  "rand 0.9.1",

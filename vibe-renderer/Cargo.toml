@@ -21,5 +21,8 @@ bytemuck = "1.23"
 rand = "0.9"
 
 [dev-dependencies]
+anyhow.workspace = true
+clap.workspace = true
+
 winit = "0.30"
 image = "0.25"

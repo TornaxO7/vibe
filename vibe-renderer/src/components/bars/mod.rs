@@ -110,9 +110,15 @@ impl Bars {
                     rotation,
                 } => {
                     let bottom_left_corner = {
-                        let mut pos = (2. * Vector2::from(bottom_left_corner)
-                            - Vector2::from([1f32; 2])) // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
-                            + Vector2::from((-1., 1.)); // use it as an offset of the top left corner
+                        // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
+                        let mut pos = {
+                            let bottom_left_corner = Vector2::from(bottom_left_corner);
+
+                            let x = 2. * bottom_left_corner.x - 1.0;
+                            let y = -(2. * bottom_left_corner.y - 1.0);
+
+                            Vector2::from((x, y))
+                        };
                         pos.x = pos.x.clamp(-1., 1.);
                         pos.y = pos.y.clamp(-1., 1.);
                         pos

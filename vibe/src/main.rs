@@ -9,7 +9,7 @@ use std::{path::PathBuf, sync::OnceLock};
 
 use clap::Parser;
 use state::State;
-use tracing::error;
+use tracing::{error, info};
 use tracing_subscriber::EnvFilter;
 use wayland_client::{globals::registry_queue_init, Connection};
 use xdg::BaseDirectories;
@@ -20,10 +20,18 @@ const CONFIG_FILE_NAME: &str = "config.toml";
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     init_logging();
 
     let args = cli::Args::parse();
+    if args.show_output_devices {
+        info!(
+            concat!["Availabe output devices:\n\n", "{:#?}\n"],
+            shady_audio::util::get_device_names(shady_audio::util::DeviceType::Output)?
+        );
+        return Ok(());
+    }
+
     let result = if let Some(output_name) = args.output_name {
         window::run(output_name)
     } else {
@@ -32,7 +40,10 @@ fn main() {
 
     if let Err(err) = result {
         error!("{:?}", err);
+        anyhow::bail!("Fatal error");
     }
+
+    Ok(())
 }
 
 fn run_daemon() -> anyhow::Result<()> {
