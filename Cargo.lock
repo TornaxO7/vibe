@@ -2968,8 +2968,10 @@ dependencies = [
 name = "vibe-renderer"
 version = "0.0.2"
 dependencies = [
+ "anyhow",
  "bytemuck",
  "cgmath",
+ "clap",
  "image",
  "pollster",
  "rand 0.9.1",

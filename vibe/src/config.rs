@@ -64,7 +64,7 @@ impl Config {
     pub fn sample_processor(&self) -> anyhow::Result<SampleProcessor> {
         let device = match self
             .audio_config
-            .clone() // honestly... this doesn't hurt
+            .clone()
             .unwrap_or_default()
             .output_device_name
         {

@@ -33,6 +33,12 @@ pub trait Component: Renderable {
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
 }
 
+impl Renderable for Box<dyn Component> {
+    fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
+        self.as_ref().render_with_renderpass(pass)
+    }
+}
+
 #[derive(thiserror::Error, Debug)]
 pub enum ShaderCodeError {
     #[error(transparent)]

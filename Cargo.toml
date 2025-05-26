@@ -3,6 +3,7 @@ members = ["vibe-renderer", "vibe"]
 resolver = "2"
 
 [workspace.dependencies]
+anyhow = "1"
 wgpu = { version = "24.0", default-features = false, features = [
   "wgsl",
   "glsl",
@@ -15,6 +16,7 @@ tracing = "0.1"
 shady-audio = { version = "16", features = ["serde"] }
 thiserror = "2"
 cgmath = { version = "0.18", features = ["serde"] }
+clap = { version = "4.5", features = ["derive"] }
 
 [profile.release-lto]
 inherits = "release"
