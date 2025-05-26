@@ -74,7 +74,7 @@ impl Config {
                     None => {
                         anyhow::bail!(
                             concat![
-                                "\n== Available output devices ==\n{:#?}\n",
+                                "Available output devices:\n\n{:#?}\n",
                                 "\nThere's no output device called \"{}\" as you've set in \"{}\"\n",
                                 "Please choose one from the list and add it to your config."
                             ],
@@ -90,7 +90,7 @@ impl Config {
                 None => {
                     anyhow::bail!(
                         concat![
-                            "\n== Available output devices ==\n{:#?}\n",
+                            "Available output devices:\n\n{:#?}\n",
                             "\nCouldn't find the default output device on your system.\n",
                             "Please choose one from the list and add it to your config in \"{}\"."
                         ],
