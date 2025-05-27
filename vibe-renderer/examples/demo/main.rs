@@ -11,9 +11,9 @@ use shady_audio::{
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
-        BarsPlacement, Circle, CircleDescriptor, CircleVariant, Component, FragmentCanvas,
-        FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphVariant, Radial, RadialDescriptor,
-        RadialVariant, ShaderCode, ValueNoise, ValueNoiseDescriptor,
+        BarsFormat, BarsPlacement, Circle, CircleDescriptor, CircleVariant, Component,
+        FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphVariant, Radial,
+        RadialDescriptor, RadialVariant, ShaderCode, ValueNoise, ValueNoiseDescriptor,
     },
     Renderer,
 };
@@ -100,18 +100,19 @@ impl<'a> State<'a> {
                 device: renderer.device(),
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
-                    amount_bars: std::num::NonZero::new(5).unwrap(),
+                    amount_bars: std::num::NonZero::new(30).unwrap(),
                     ..Default::default()
                 },
                 texture_format: surface_config.format,
                 max_height: 1.,
                 variant: BarVariant::Color([0., 0., 1., 1.]),
-                placement: BarsPlacement::Custom {
-                    bottom_left_corner: (0.5, 0.5),
-                    width_factor: 0.5,
-                    rotation: cgmath::Deg(45.),
-                },
-                // placement: BarsPlacement::Bottom,
+                // placement: BarsPlacement::Custom {
+                //     bottom_left_corner: (0.5, 0.5),
+                //     width_factor: 0.5,
+                //     rotation: cgmath::Deg(45.),
+                // },
+                placement: BarsPlacement::Bottom,
+                format: BarsFormat::TrebleBassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsFragmentCodeVariant => Bars::new(&BarsDescriptor {
@@ -138,6 +139,7 @@ impl<'a> State<'a> {
                         .into(),
                     ),
                 }),
+                format: BarsFormat::BassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
@@ -151,6 +153,7 @@ impl<'a> State<'a> {
                     low: DARK_BLUE,
                 },
                 placement: BarsPlacement::Right,
+                format: BarsFormat::BassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::ValueNoise => Ok(Box::new(ValueNoise::new(&ValueNoiseDescriptor {

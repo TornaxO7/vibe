@@ -1,7 +1,10 @@
 use shady_audio::BarProcessor;
 use wgpu::{include_wgsl, util::DeviceExt};
 
-use crate::{bind_group_manager::BindGroupManager, Renderable, Renderer};
+use crate::{
+    bind_group_manager::BindGroupManager, util::SimpleRenderPipelineDescriptor, Renderable,
+    Renderer,
+};
 
 use super::{Component, Rgba};
 
@@ -208,47 +211,37 @@ impl Graph {
 
             let vertex_shader = device.create_shader_module(include_wgsl!("./vertex_shader.wgsl"));
 
-            device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-                label: Some("Graph: Render pipeline`"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &vertex_shader,
-                    entry_point: Some("main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[wgpu::VertexBufferLayout {
-                        array_stride: std::mem::size_of::<VertexPosition>() as wgpu::BufferAddress,
-                        step_mode: wgpu::VertexStepMode::Vertex,
-                        attributes: &[wgpu::VertexAttribute {
-                            format: wgpu::VertexFormat::Float32x2,
-                            offset: 0,
-                            shader_location: 0,
+            device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
+                SimpleRenderPipelineDescriptor {
+                    label: "Graph: Render pipeline`",
+                    layout: &pipeline_layout,
+                    vertex: wgpu::VertexState {
+                        module: &vertex_shader,
+                        entry_point: Some("main"),
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        buffers: &[wgpu::VertexBufferLayout {
+                            array_stride: std::mem::size_of::<VertexPosition>()
+                                as wgpu::BufferAddress,
+                            step_mode: wgpu::VertexStepMode::Vertex,
+                            attributes: &[wgpu::VertexAttribute {
+                                format: wgpu::VertexFormat::Float32x2,
+                                offset: 0,
+                                shader_location: 0,
+                            }],
                         }],
-                    }],
+                    },
+                    fragment: (wgpu::FragmentState {
+                        module: &fragment_shader,
+                        entry_point: Some(fragment_entrypoint),
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        targets: &[Some(wgpu::ColorTargetState {
+                            format: desc.output_texture_format,
+                            blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                            write_mask: wgpu::ColorWrites::all(),
+                        })],
+                    }),
                 },
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleList,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: None,
-                    unclipped_depth: false,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &fragment_shader,
-                    entry_point: Some(fragment_entrypoint),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    targets: &[Some(wgpu::ColorTargetState {
-                        format: desc.output_texture_format,
-                        blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
-                        write_mask: wgpu::ColorWrites::all(),
-                    })],
-                }),
-                multiview: None,
-                cache: None,
-            })
+            ))
         };
 
         bind_group0.build_bind_group(device);
