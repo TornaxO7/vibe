@@ -231,35 +231,24 @@ impl Radial {
                 write_mask: wgpu::ColorWrites::all(),
             })];
 
-            let descriptor = wgpu::RenderPipelineDescriptor {
-                label: Some("Radial: Renderpipeline"),
-                layout: Some(&pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some("vertex_main"),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[],
+            let descriptor = crate::util::simple_pipeline_descriptor(
+                crate::util::SimpleRenderPipelineDescriptor {
+                    label: "Radial: Renderpipeline",
+                    layout: &pipeline_layout,
+                    vertex: wgpu::VertexState {
+                        module: &shader,
+                        entry_point: Some("vertex_main"),
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        buffers: &[],
+                    },
+                    fragment: wgpu::FragmentState {
+                        module: &shader,
+                        entry_point: None,
+                        compilation_options: wgpu::PipelineCompilationOptions::default(),
+                        targets: &fragment_targets,
+                    },
                 },
-                primitive: wgpu::PrimitiveState {
-                    topology: wgpu::PrimitiveTopology::TriangleStrip,
-                    strip_index_format: None,
-                    front_face: wgpu::FrontFace::Ccw,
-                    cull_mode: None,
-                    unclipped_depth: false,
-                    polygon_mode: wgpu::PolygonMode::Fill,
-                    conservative: false,
-                },
-                depth_stencil: None,
-                multisample: wgpu::MultisampleState::default(),
-                fragment: Some(wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: None,
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    targets: &fragment_targets,
-                }),
-                multiview: None,
-                cache: None,
-            };
+            );
 
             let inverse_descriptor = wgpu::RenderPipelineDescriptor {
                 label: Some("Radial: Pipeline for other half of circle"),

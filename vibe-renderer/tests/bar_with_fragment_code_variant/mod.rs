@@ -1,5 +1,7 @@
 use shady_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, Component, ShaderCode};
+use vibe_renderer::components::{
+    BarVariant, Bars, BarsDescriptor, BarsFormat, Component, ShaderCode,
+};
 
 use crate::Tester;
 
@@ -21,6 +23,7 @@ fn wgsl_passes() {
             ),
         }),
         placement: vibe_renderer::components::BarsPlacement::Left,
+        format: BarsFormat::BassTrebleBass,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
@@ -50,6 +53,7 @@ fn glsl_passes() {
             ),
         }),
         placement: vibe_renderer::components::BarsPlacement::Left,
+        format: BarsFormat::TrebleBass,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

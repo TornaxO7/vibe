@@ -1,5 +1,6 @@
 mod bind_group_manager;
 pub mod components;
+pub(crate) mod util;
 
 use std::ops::Deref;
 

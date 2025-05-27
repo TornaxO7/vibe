@@ -10,8 +10,8 @@ use shady_audio::{SampleProcessor, StandardEasing};
 use std::num::NonZero;
 use vibe_renderer::{
     components::{
-        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsPlacement,
-        Circle, CircleDescriptor, CircleVariant, Component, FragmentCanvas,
+        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
+        BarsPlacement, Circle, CircleDescriptor, CircleVariant, Component, FragmentCanvas,
         FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphPlacement, GraphVariant, Radial,
         RadialDescriptor, RadialVariant, ShaderCode, ShaderCodeError,
     },
@@ -19,7 +19,7 @@ use vibe_renderer::{
 };
 
 pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
-pub use bars::{BarsAudioConfig, BarsPlacementConfig, BarsVariantConfig};
+pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVariantConfig};
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphPlacementConfig, GraphVariantConfig};
@@ -34,6 +34,7 @@ pub enum ComponentConfig {
         max_height: f32,
         variant: BarsVariantConfig,
         placement: BarsPlacementConfig,
+        format: BarsFormatConfig,
     },
     FragmentCanvas {
         audio_conf: FragmentCanvasAudioConfig,
@@ -83,6 +84,7 @@ impl Default for ComponentConfig {
             max_height: 0.75,
             variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
             placement: BarsPlacementConfig::Bottom,
+            format: BarsFormatConfig::BassTreble,
         }
     }
 }
@@ -100,6 +102,7 @@ impl ComponentConfig {
                 max_height,
                 variant,
                 placement,
+                format,
             } => {
                 let variant = match variant {
                     BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
@@ -121,6 +124,7 @@ impl ComponentConfig {
                     max_height: *max_height,
                     variant,
                     placement: BarsPlacement::from(placement),
+                    format: BarsFormat::from(format),
                 })
                 .map(|bars| Box::new(bars) as Box<dyn Component>)
             }
