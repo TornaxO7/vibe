@@ -30,6 +30,15 @@ pub enum BarsPlacement {
     Left,
 }
 
+#[derive(Debug, Clone, Default)]
+pub enum BarsFormat {
+    #[default]
+    BassTreble,
+    TrebleBass,
+    TrebleBassTreble,
+    BassTrebleBass,
+}
+
 #[derive(Debug, Clone)]
 pub enum BarVariant {
     Color(Rgba),
@@ -70,6 +79,7 @@ pub struct BarsDescriptor<'a> {
     pub max_height: f32,
 
     pub placement: BarsPlacement,
+    pub format: BarsFormat,
 }
 
 pub struct Bars {
@@ -318,12 +328,23 @@ impl Bars {
                 ),
             });
 
+            let vertex_entry_point = match desc.format {
+                BarsFormat::BassTreble => "bass_treble",
+                BarsFormat::TrebleBass => "treble_bass",
+                BarsFormat::TrebleBassTreble => {
+                    todo!()
+                }
+                BarsFormat::BassTrebleBass => {
+                    todo!()
+                }
+            };
+
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
                 label: Some("Bar render pipeline"),
                 layout: Some(&pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &vertex_module,
-                    entry_point: Some(SHADER_ENTRYPOINT),
+                    entry_point: Some(&vertex_entry_point),
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                     buffers: &[],
                 },
