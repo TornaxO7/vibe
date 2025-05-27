@@ -112,7 +112,7 @@ impl<'a> State<'a> {
                 //     rotation: cgmath::Deg(45.),
                 // },
                 placement: BarsPlacement::Bottom,
-                format: BarsFormat::TrebleBass,
+                format: BarsFormat::TrebleBassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsFragmentCodeVariant => Bars::new(&BarsDescriptor {

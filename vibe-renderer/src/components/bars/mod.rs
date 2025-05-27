@@ -30,7 +30,7 @@ pub enum BarsPlacement {
     Left,
 }
 
-#[derive(Debug, Clone, Default)]
+#[derive(Debug, Clone, Default, PartialEq, Eq)]
 pub enum BarsFormat {
     #[default]
     BassTreble,
@@ -89,7 +89,7 @@ pub struct Bars {
     bind_group0: BindGroupManager,
     bind_group1: BindGroupManager,
 
-    pipeline: wgpu::RenderPipeline,
+    pipelines: Box<[wgpu::RenderPipeline]>,
 }
 
 impl Bars {
@@ -103,7 +103,7 @@ impl Bars {
 
         // `bottom_left_corner`: In vertex space coords
         let (bottom_left_corner, up_direction, column_direction) = {
-            let (bottom_left_corner, rotation, width_factor) = match desc.placement {
+            let (bottom_left_corner, rotation, mut width_factor) = match desc.placement {
                 BarsPlacement::Bottom => {
                     (Vector2::from([-1., -1.]), Matrix2::from_angle(Deg(0.)), 1.)
                 }
@@ -140,6 +140,11 @@ impl Bars {
                 }
             };
 
+            // if we have to render two "sections" of the bars, we need to divide the width by 2
+            if [BarsFormat::TrebleBassTreble, BarsFormat::BassTrebleBass].contains(&desc.format) {
+                width_factor /= 2.;
+            }
+
             let up_direction = (rotation * Vector2::unit_y()).normalize();
             let column_direction = {
                 let column_width = (VERTEX_SURFACE_WIDTH * width_factor)
@@ -154,6 +159,7 @@ impl Bars {
 
         let padding = column_direction * 0.2;
 
+        // == create buffers ==
         bind_group0.insert_buffer(
             Bindings0::BottomLeftCorner as u32,
             wgpu::ShaderStages::VERTEX,
@@ -215,103 +221,110 @@ impl Bars {
             }),
         );
 
-        let fragment_module = match &desc.variant {
-            BarVariant::Color(rgba) => {
-                bind_group0.insert_buffer(
-                    Bindings0::Color as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Bar: `color` buffer"),
-                        contents: bytemuck::cast_slice(rgba),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+        let pipelines: Box<[wgpu::RenderPipeline]> = {
+            let fragment_module = match &desc.variant {
+                BarVariant::Color(rgba) => {
+                    bind_group0.insert_buffer(
+                        Bindings0::Color as u32,
+                        wgpu::ShaderStages::FRAGMENT,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Bar: `color` buffer"),
+                            contents: bytemuck::cast_slice(rgba),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    );
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar: Color fragment module"),
-                    source: wgpu::ShaderSource::Wgsl(
-                        include_str!("./shaders/fragment_color.wgsl").into(),
-                    ),
-                })
-            }
-            BarVariant::PresenceGradient { high, low } => {
-                bind_group0.insert_buffer(
-                    Bindings0::GradientHighPresenceColor as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Bar: `high_prescene_color` buffer"),
-                        contents: bytemuck::cast_slice(high),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+                    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                        label: Some("Bar: Color fragment module"),
+                        source: wgpu::ShaderSource::Wgsl(
+                            include_str!("./shaders/fragment_color.wgsl").into(),
+                        ),
+                    })
+                }
+                BarVariant::PresenceGradient { high, low } => {
+                    bind_group0.insert_buffer(
+                        Bindings0::GradientHighPresenceColor as u32,
+                        wgpu::ShaderStages::FRAGMENT,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Bar: `high_prescene_color` buffer"),
+                            contents: bytemuck::cast_slice(high),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    );
 
-                bind_group0.insert_buffer(
-                    Bindings0::GradientLowPresenceColor as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Bar: `low_presence_color` buffer"),
-                        contents: bytemuck::cast_slice(low),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+                    bind_group0.insert_buffer(
+                        Bindings0::GradientLowPresenceColor as u32,
+                        wgpu::ShaderStages::FRAGMENT,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Bar: `low_presence_color` buffer"),
+                            contents: bytemuck::cast_slice(low),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    );
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar: Gradient fragment module"),
-                    source: wgpu::ShaderSource::Wgsl(
-                        include_str!("./shaders/fragment_presence_gradient.wgsl").into(),
-                    ),
-                })
-            }
-            BarVariant::FragmentCode(code) => {
-                bind_group0.insert_buffer(
-                    Bindings0::Resolution as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer(&wgpu::BufferDescriptor {
-                        label: Some("Bar: iResolution buffer"),
-                        size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                        mapped_at_creation: false,
-                    }),
-                );
+                    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                        label: Some("Bar: Gradient fragment module"),
+                        source: wgpu::ShaderSource::Wgsl(
+                            include_str!("./shaders/fragment_presence_gradient.wgsl").into(),
+                        ),
+                    })
+                }
+                BarVariant::FragmentCode(code) => {
+                    bind_group0.insert_buffer(
+                        Bindings0::Resolution as u32,
+                        wgpu::ShaderStages::FRAGMENT,
+                        device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("Bar: iResolution buffer"),
+                            size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                            mapped_at_creation: false,
+                        }),
+                    );
 
-                bind_group1.insert_buffer(
-                    Bindings1::Time as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer(&wgpu::BufferDescriptor {
-                        label: Some("Bar: iTime buffer"),
-                        size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                        usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                        mapped_at_creation: false,
-                    }),
-                );
+                    bind_group1.insert_buffer(
+                        Bindings1::Time as u32,
+                        wgpu::ShaderStages::FRAGMENT,
+                        device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("Bar: iTime buffer"),
+                            size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                            mapped_at_creation: false,
+                        }),
+                    );
 
-                let module = {
-                    let source = code.source().map_err(ShaderCodeError::from)?;
+                    let module = {
+                        let source = code.source().map_err(ShaderCodeError::from)?;
 
-                    match code.language {
-                        ShaderLanguage::Wgsl => {
-                            const PREAMBLE: &str =
-                                include_str!("./shaders/fragment_code_preamble.wgsl");
-                            super::parse_wgsl_fragment_code(PREAMBLE, &source)
-                                .map_err(ShaderCodeError::ParseError)?
+                        match code.language {
+                            ShaderLanguage::Wgsl => {
+                                const PREAMBLE: &str =
+                                    include_str!("./shaders/fragment_code_preamble.wgsl");
+                                super::parse_wgsl_fragment_code(PREAMBLE, &source)
+                                    .map_err(ShaderCodeError::ParseError)?
+                            }
+                            ShaderLanguage::Glsl => {
+                                const PREAMBLE: &str =
+                                    include_str!("./shaders/fragment_code_preamble.glsl");
+                                super::parse_glsl_fragment_code(PREAMBLE, &source)
+                                    .map_err(ShaderCodeError::ParseError)?
+                            }
                         }
-                        ShaderLanguage::Glsl => {
-                            const PREAMBLE: &str =
-                                include_str!("./shaders/fragment_code_preamble.glsl");
-                            super::parse_glsl_fragment_code(PREAMBLE, &source)
-                                .map_err(ShaderCodeError::ParseError)?
-                        }
-                    }
-                };
+                    };
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar: Fragment code module"),
-                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
-                })
-            }
-        };
+                    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                        label: Some("Bar: Fragment code module"),
+                        source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
+                    })
+                }
+            };
 
-        let pipeline = {
+            let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                label: Some("Bar vertex module"),
+                source: wgpu::ShaderSource::Wgsl(
+                    include_str!("./shaders/vertex_shader.wgsl").into(),
+                ),
+            });
+
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bar pipeline layout"),
                 bind_group_layouts: &[
@@ -321,31 +334,19 @@ impl Bars {
                 push_constant_ranges: &[],
             });
 
-            let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Bar vertex module"),
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("./shaders/vertex_shader.wgsl").into(),
-                ),
-            });
+            let fragment_targets = [Some(wgpu::ColorTargetState {
+                format: desc.texture_format,
+                blend: Some(wgpu::BlendState::ALPHA_BLENDING),
+                write_mask: wgpu::ColorWrites::all(),
+            })];
 
-            let vertex_entry_point = match desc.format {
-                BarsFormat::BassTreble => "bass_treble",
-                BarsFormat::TrebleBass => "treble_bass",
-                BarsFormat::TrebleBassTreble => {
-                    todo!()
-                }
-                BarsFormat::BassTrebleBass => {
-                    todo!()
-                }
-            };
-
-            device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
+            let bass_treble_pipeline_descriptor = crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Bar: Render pipeline",
                     layout: &pipeline_layout,
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
-                        entry_point: Some(&vertex_entry_point),
+                        entry_point: Some("bass_treble"),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         buffers: &[],
                     },
@@ -353,14 +354,37 @@ impl Bars {
                         module: &fragment_module,
                         entry_point: Some(SHADER_ENTRYPOINT),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: desc.texture_format,
-                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-                            write_mask: wgpu::ColorWrites::all(),
-                        })],
+                        targets: &fragment_targets,
                     },
                 },
-            ))
+            );
+
+            let treble_bass_pipeline_descriptor = {
+                let mut descriptor = bass_treble_pipeline_descriptor.clone();
+                descriptor.vertex.entry_point = Some("treble_bass");
+                descriptor
+            };
+
+            let bass_treble_pipeline =
+                device.create_render_pipeline(&bass_treble_pipeline_descriptor);
+            let treble_bass_pipeline =
+                device.create_render_pipeline(&treble_bass_pipeline_descriptor);
+
+            match desc.format {
+                BarsFormat::BassTreble => {
+                    vec![bass_treble_pipeline]
+                }
+                BarsFormat::TrebleBass => {
+                    vec![treble_bass_pipeline]
+                }
+                BarsFormat::TrebleBassTreble => {
+                    vec![treble_bass_pipeline, bass_treble_pipeline]
+                }
+                BarsFormat::BassTrebleBass => {
+                    vec![bass_treble_pipeline, treble_bass_pipeline]
+                }
+            }
+            .into_boxed_slice()
         };
 
         bind_group0.build_bind_group(device);
@@ -373,7 +397,7 @@ impl Bars {
             bind_group0,
             bind_group1,
 
-            pipeline,
+            pipelines,
         })
     }
 }
@@ -383,8 +407,14 @@ impl Renderable for Bars {
         pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
         pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
 
-        pass.set_pipeline(&self.pipeline);
-        pass.draw(0..4, 0..u16::from(self.amount_bars) as u32);
+        let mut instance_idx_range = 0..u16::from(self.amount_bars) as u32;
+        for pipeline in self.pipelines.iter() {
+            pass.set_pipeline(pipeline);
+            pass.draw(0..4, instance_idx_range.clone());
+
+            instance_idx_range.start = instance_idx_range.end;
+            instance_idx_range.end += u16::from(self.amount_bars) as u32;
+        }
     }
 }
 

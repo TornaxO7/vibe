@@ -40,13 +40,15 @@ struct Output {
 // 2    3
 @vertex
 fn bass_treble(in: Input) -> Output {
-    let freq = freqs[in.instance_idx];
+    let freq_idx = in.instance_idx % arrayLength(&freqs);
+    let freq = freqs[freq_idx];
     return inner(freq, in.vertex_idx, in.instance_idx);
 }
 
 @vertex
 fn treble_bass(in: Input) -> Output {
-    let freq = freqs[arrayLength(&freqs) - 1 - in.instance_idx];
+    let freq_idx = in.instance_idx % arrayLength(&freqs);
+    let freq = freqs[arrayLength(&freqs) - 1 - freq_idx];
     return inner(freq, in.vertex_idx, in.instance_idx);
 }
 
