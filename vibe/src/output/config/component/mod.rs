@@ -19,7 +19,7 @@ use vibe_renderer::{
 };
 
 pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
-pub use bars::{BarsAudioConfig, BarsPlacementConfig, BarsVariantConfig};
+pub use bars::{BarsAudioConfig, BarsFormat, BarsPlacementConfig, BarsVariantConfig};
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphPlacementConfig, GraphVariantConfig};
