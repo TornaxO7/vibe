@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 1.0.1 - 2025-06-13
 
-[b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163)...[c0d21e9](c0d21e9f8d16c492464ab42cc1719082aa189f9d)
+[b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163)...[6cf98ac](6cf98ac26f4da4e7c47bc9873b905e0f8478c5e1)
 
 ### Features
 
@@ -20,6 +20,7 @@ All notable changes to this project will be documented in this file.
 
 - Update dep and migrate to it ([35b0962](35b09629a2a5e0233ad89c2744b08ba818c70a29))
 - Update changelog ([c0d21e9](c0d21e9f8d16c492464ab42cc1719082aa189f9d))
+- Failed the release version... ([6cf98ac](6cf98ac26f4da4e7c47bc9873b905e0f8478c5e1))
 
 ### Refactor
 
