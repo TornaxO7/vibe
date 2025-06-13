@@ -2,7 +2,7 @@ use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
 use shady_audio::StandardEasing;
-use vibe_renderer::components::{BarsPlacement, ShaderCode};
+use vibe_renderer::components::{BarsFormat, BarsPlacement, ShaderCode};
 
 use super::Rgba;
 
@@ -103,5 +103,30 @@ impl From<&BarsPlacementConfig> for BarsPlacement {
                 rotation,
             },
         }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum BarsFormatConfig {
+    BassTreble,
+    TrebleBass,
+    TrebleBassTreble,
+    BassTrebleBass,
+}
+
+impl From<BarsFormatConfig> for BarsFormat {
+    fn from(config: BarsFormatConfig) -> Self {
+        match config {
+            BarsFormatConfig::BassTreble => Self::BassTreble,
+            BarsFormatConfig::TrebleBass => Self::TrebleBass,
+            BarsFormatConfig::BassTrebleBass => Self::BassTrebleBass,
+            BarsFormatConfig::TrebleBassTreble => Self::TrebleBassTreble,
+        }
+    }
+}
+
+impl From<&BarsFormatConfig> for BarsFormat {
+    fn from(config: &BarsFormatConfig) -> Self {
+        Self::from(config.clone())
     }
 }

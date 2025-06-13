@@ -7,6 +7,7 @@ enable = true
 [components.Bars]
 placement = "Bottom"
 max_height = 0.75
+format = "BassTreble"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -20,6 +21,7 @@ Color = [0, 255, 255, 255]
 [components.Bars]
 max_height = 0.75
 placement = "Top"
+format = "TrebleBass"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -34,6 +36,7 @@ low_presence = [13, 0, 82, 255]
 [components.Bars]
 max_height = 0.75
 placement = "Left"
+format = "TrebleBassTreble"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -48,6 +51,7 @@ path = "/tmp/fragment_code.wgsl"
 [components.Bars]
 max_height = 0.75
 placement = "Right"
+format = "BassTrebleBass"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -61,6 +65,7 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.Bars]
 max_height = 0.75
+format = "BassTreble"
 [components.Bars.placement.Custom]
 bottom_left_corner = [0.0, 0.0]
 width_factor = 1.0
@@ -86,6 +91,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 [components.Bars]
 max_height = 0.75
 placement = "Bottom"
+format = "TrebleBass"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"
@@ -100,6 +106,7 @@ path = "/tmp/fragment_code.glsl"
 [components.Bars]
 max_height = 0.75
 placement = "Bottom"
+format = "TrebleBassTreble"
 [components.Bars.audio_conf]
 amount_bars = 60
 easing = "OutExponential"

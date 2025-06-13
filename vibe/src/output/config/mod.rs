@@ -114,6 +114,7 @@ mod tests {
                         source: ShaderSource::Path("/dir/file2".into()),
                     }),
                     placement: component::BarsPlacementConfig::Bottom,
+                    format: component::BarsFormatConfig::BassTreble,
                 },
             ],
         };

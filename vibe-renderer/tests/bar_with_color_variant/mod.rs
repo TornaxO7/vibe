@@ -1,5 +1,5 @@
 use shady_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsPlacement};
+use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
 
 use crate::Tester;
 
@@ -18,6 +18,7 @@ fn test() {
         max_height: 1.,
         variant: BarVariant::Color(RED),
         placement: BarsPlacement::Top,
+        format: BarsFormat::BassTreble,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
