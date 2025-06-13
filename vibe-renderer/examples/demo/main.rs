@@ -375,7 +375,7 @@ impl<'a> App<'a> {
 impl<'a> ApplicationHandler for App<'a> {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let window = event_loop
-            .create_window(WindowAttributes::default())
+            .create_window(WindowAttributes::default().with_title("Vibe renderer - Demo"))
             .unwrap();
 
         self.state = Some(State::new(window, &self.sample_processor, self.variant).unwrap());
