@@ -23,8 +23,6 @@ use std::path::PathBuf;
 pub type Rgba = [f32; 4];
 pub type Rgb = [f32; 3];
 
-type ParseErrorMsg = String;
-
 pub trait Component: Renderable {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor);
 
@@ -45,7 +43,7 @@ pub enum ShaderCodeError {
     IO(#[from] std::io::Error),
 
     #[error("Couldn't parse shader code: {0}")]
-    ParseError(String),
+    ParseError(#[from] wgpu::Error),
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -75,29 +73,4 @@ impl ShaderCode {
             ShaderSource::Path(path) => std::fs::read_to_string(path),
         }
     }
-}
-
-fn parse_wgsl_fragment_code(
-    preamble: &'static str,
-    code: &str,
-) -> Result<wgpu::naga::Module, ParseErrorMsg> {
-    let mut full_code = preamble.to_string();
-    full_code.push_str(code);
-
-    wgpu::naga::front::wgsl::parse_str(&full_code).map_err(|err| err.emit_to_string(&full_code))
-}
-
-fn parse_glsl_fragment_code(
-    preamble: &'static str,
-    code: &str,
-) -> Result<wgpu::naga::Module, ParseErrorMsg> {
-    let mut full_code = preamble.to_string();
-    full_code.push_str(code);
-
-    let mut frontend = wgpu::naga::front::glsl::Frontend::default();
-    let options = wgpu::naga::front::glsl::Options::from(wgpu::naga::ShaderStage::Fragment);
-
-    frontend
-        .parse(&options, &full_code)
-        .map_err(|err| err.emit_to_string(&full_code))
 }
