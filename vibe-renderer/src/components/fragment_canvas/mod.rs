@@ -1,5 +1,6 @@
 use std::borrow::Cow;
 
+use pollster::FutureExt;
 use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
@@ -118,23 +119,34 @@ impl FragmentCanvas {
             let fragment_module = {
                 let source = desc.fragment_code.source().map_err(ShaderCodeError::from)?;
 
-                let module = match desc.fragment_code.language {
+                let shader_source = match desc.fragment_code.language {
                     super::ShaderLanguage::Wgsl => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.wgsl");
-                        super::parse_wgsl_fragment_code(PREAMBLE, &source)
-                            .map_err(ShaderCodeError::ParseError)?
+                        let full_code = format!("{}\n{}", PREAMBLE, &source);
+                        wgpu::ShaderSource::Wgsl(Cow::Owned(full_code))
                     }
                     super::ShaderLanguage::Glsl => {
                         const PREAMBLE: &str = include_str!("./fragment_preamble.glsl");
-                        super::parse_glsl_fragment_code(PREAMBLE, &source)
-                            .map_err(ShaderCodeError::ParseError)?
+                        let full_code = format!("{}\n{}", PREAMBLE, &source);
+                        wgpu::ShaderSource::Glsl {
+                            shader: Cow::Owned(full_code),
+                            stage: wgpu::naga::ShaderStage::Fragment,
+                            defines: wgpu::naga::FastHashMap::default(),
+                        }
                     }
                 };
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                device.push_error_scope(wgpu::ErrorFilter::Validation);
+                let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                     label: Some("Fragment canvas fragment module"),
-                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
-                })
+                    source: shader_source,
+                });
+
+                if let Some(err) = device.pop_error_scope().block_on() {
+                    return Err(ShaderCodeError::ParseError(err));
+                }
+
+                module
             };
 
             device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {

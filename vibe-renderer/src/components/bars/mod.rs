@@ -1,12 +1,13 @@
 use std::{borrow::Cow, num::NonZero};
 
 use cgmath::{Deg, InnerSpace, Matrix2, Vector2};
+use pollster::FutureExt;
 use shady_audio::{BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
 use crate::{bind_group_manager::BindGroupManager, Renderable};
 
-use super::{Component, Rgba, ShaderCode, ShaderCodeError, ShaderLanguage};
+use super::{Component, Rgba, ShaderCode, ShaderCodeError};
 
 const SHADER_ENTRYPOINT: &str = "main";
 
@@ -275,29 +276,42 @@ impl Bars {
                     }),
                 );
 
-                let module = {
+                let fragment_module = {
                     let source = code.source().map_err(ShaderCodeError::from)?;
 
-                    match code.language {
-                        ShaderLanguage::Wgsl => {
+                    let shader_source = match code.language {
+                        super::ShaderLanguage::Wgsl => {
                             const PREAMBLE: &str =
                                 include_str!("./shaders/fragment_code_preamble.wgsl");
-                            super::parse_wgsl_fragment_code(PREAMBLE, &source)
-                                .map_err(ShaderCodeError::ParseError)?
+                            let full_code = format!("{}\n{}", PREAMBLE, &source);
+                            wgpu::ShaderSource::Wgsl(Cow::Owned(full_code))
                         }
-                        ShaderLanguage::Glsl => {
+                        super::ShaderLanguage::Glsl => {
                             const PREAMBLE: &str =
                                 include_str!("./shaders/fragment_code_preamble.glsl");
-                            super::parse_glsl_fragment_code(PREAMBLE, &source)
-                                .map_err(ShaderCodeError::ParseError)?
+                            let full_code = format!("{}\n{}", PREAMBLE, &source);
+                            wgpu::ShaderSource::Glsl {
+                                shader: Cow::Owned(full_code),
+                                stage: wgpu::naga::ShaderStage::Fragment,
+                                defines: wgpu::naga::FastHashMap::default(),
+                            }
                         }
+                    };
+
+                    device.push_error_scope(wgpu::ErrorFilter::Validation);
+                    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                        label: Some("Fragment canvas fragment module"),
+                        source: shader_source,
+                    });
+
+                    if let Some(err) = device.pop_error_scope().block_on() {
+                        return Err(ShaderCodeError::ParseError(err));
                     }
+
+                    module
                 };
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar: Fragment code module"),
-                    source: wgpu::ShaderSource::Naga(Cow::Owned(module)),
-                })
+                fragment_module
             }
         };
 
