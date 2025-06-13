@@ -2,13 +2,39 @@
 
 All notable changes to this project will be documented in this file.
 
-## 0.0.7 - 2025-05-15
+## 1.0.0 - 2025-06-13
 
-[a39d710](a39d710e6be162ec981b44c770114561466f2c2c)...[e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92)
+[b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163)...[8a6de25](8a6de2537696cc3359f87d05c83b95d83ab15a0a)
+
+### Features
+
+- Add smoothness option ([68a1b40](68a1b40ac4e56c6c4e8a898996b0460b4c5c86fc))
+- Add full reference config with test ([65809fe](65809fe105a88b526f1c2a8b7903cb3666add39d))
+- Add placement config ([f0d265f](f0d265f19bf78f402eb3cc346d7ff34e4761e60f))
+- Add positioning ([d25ae5a](d25ae5a00161fde6b073dfcf024d858f8f781db7))
+- Add position config ([8a8af3c](8a8af3c99d35b09ace499acae54e3d2ff5fc00de))
+- Add command to list all output devices ([b41ac49](b41ac497ec670e16fcb3e7b3ce20851749c2c094))
+- Add mirroring option ([41d948b](41d948b658150343e804772b4163b55faf0ab4fb))
+
+### Miscellaneous Tasks
+
+- Update dep and migrate to it ([35b0962](35b09629a2a5e0233ad89c2744b08ba818c70a29))
+
+### Refactor
+
+- Create one single example binary instead of multiple equal ones ([9f444cd](9f444cde8c845ab911adc3060cda742e617a26ef))
+
+## ibe-v0.0.7 - 2025-05-15
+
+[a39d710](a39d710e6be162ec981b44c770114561466f2c2c)...[b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163)
 
 ### Bug Fixes
 
 - Remove missused attribute ([e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92))
+
+### Miscellaneous Tasks
+
+- Release ([b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163))
 
 ## ibe-v0.0.6 - 2025-05-15
 
