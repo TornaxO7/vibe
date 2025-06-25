@@ -53,8 +53,10 @@ jobs:
 
   tests:
     if: github.event.pull_request.draft == false
-    runs-on: ubuntu-latest
+    runs-on: self-hosted
     steps:
-      - uses: TornaxO7/rust-template@v2-ci-actions
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
       - name: Running tests
-        run: cargo test --verbose
+        run: cargo test -j 3 --verbose
