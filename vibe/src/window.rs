@@ -247,7 +247,10 @@ impl OutputRenderer<'_> {
 impl ApplicationHandler for OutputRenderer<'_> {
     fn resumed(&mut self, event_loop: &winit::event_loop::ActiveEventLoop) {
         let window = event_loop
-            .create_window(winit::window::WindowAttributes::default())
+            .create_window(
+                winit::window::WindowAttributes::default()
+                    .with_title(format!("vibe - {}", &self.output_name)),
+            )
             .expect("Create window");
 
         self.state = Some(State::new(window, &self.renderer));
