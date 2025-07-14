@@ -28,7 +28,7 @@ smithay-client-toolkit = "0.19"
 
 vibe-renderer = { path = "../vibe-renderer" }
 xdg = "3.0"
-toml = "0.8"
+toml = "0.9"
 
 winit = "0.30"
 notify = "8"
