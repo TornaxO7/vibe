@@ -20,7 +20,7 @@ You can click on the image below to see a live demo.
 
 # State
 
-It works on my machine and I've implemented basicaly everything I wanted and now I'm open for some feedback. For example in form of
+It works on my machine and I've implemented basically everything I wanted and now I'm open for some feedback. For example in form of
 
 - finding bugs
 - suggestions or more ideas
