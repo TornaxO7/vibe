@@ -48,7 +48,7 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     let next_freq_idx: u32 = u32(ceil(uv_freq_pos));
     let normalized_uv_freq_pos: f32 = smoothstep(0., 1., fract(uv_freq_pos));
 
-    // caclulate the offset to the ring
+    // calculate the offset to the ring
     var radius_offset: f32 = 0.;
     if (prev_freq_idx == 0) {
         // before the first frequency spike

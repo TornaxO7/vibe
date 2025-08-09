@@ -32,7 +32,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
-- Remove missused attribute ([e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92))
+- Remove misused attribute ([e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92))
 
 ### Miscellaneous Tasks
 

@@ -184,7 +184,7 @@ impl OutputRenderer<'_> {
         false
     }
 
-    // Retunrs `Err` if something un-saveable happened. => Signal for exiting
+    // Returns `Err` if something un-saveable happened. => Signal for exiting
     pub fn refresh_config(&mut self) -> anyhow::Result<()> {
         self.output_config = {
             let Some((path, output_config)) = crate::output::config::load(&self.output_name) else {
@@ -290,7 +290,7 @@ impl ApplicationHandler for OutputRenderer<'_> {
                 match state.render(&self.renderer) {
                     Ok(_) => {}
                     Err(wgpu::SurfaceError::Timeout) => {
-                        error!("Surface timout");
+                        error!("Surface timeout");
                     }
                     Err(wgpu::SurfaceError::OutOfMemory) => {
                         unreachable!("Dayum, you don't have any memory left for rendering....");

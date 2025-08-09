@@ -39,7 +39,7 @@ impl OutputConfig {
         Ok(())
     }
 
-    /// Returns all relevant paths which are occuring inside the config file.
+    /// Returns all relevant paths which are occurring inside the config file.
     ///
     /// Only relevant for hot reloading to know which other files have to be watched as
     /// well.
@@ -95,7 +95,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn extrenal_paths() {
+    fn external_paths() {
         let output_config = OutputConfig {
             enable: true,
             components: vec![

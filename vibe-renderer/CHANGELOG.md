@@ -37,7 +37,7 @@ All notable changes to this project will be documented in this file.
 
 ### 🚀 Features
 
-- Add optional grahics option `gpu_name`
+- Add optional graphics option `gpu_name`
 - Add option to use path instead of inline code for fragment code
 - [**breaking**] Implement hot reloading
 

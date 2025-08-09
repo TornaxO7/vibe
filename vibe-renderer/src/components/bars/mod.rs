@@ -247,7 +247,7 @@ impl Bars {
                         Bindings0::GradientHighPresenceColor as u32,
                         wgpu::ShaderStages::FRAGMENT,
                         device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Bar: `high_prescene_color` buffer"),
+                            label: Some("Bar: `high_presence_color` buffer"),
                             contents: bytemuck::cast_slice(high),
                             usage: wgpu::BufferUsages::UNIFORM,
                         }),

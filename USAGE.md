@@ -4,7 +4,7 @@
 2. (optional) set the rust toolchain `rustup default stable`
 3. Enter the `vibe` directory (`cd vibe`)
 4. Compile and run the binary with `cargo run --release`.
-5. Your microphone is very likely be catched as the audio source.
+5. Your microphone is very likely be caught as the audio source.
    To fix that:
    1. start the application `pavucontrol`.
    2. At the top: Click on `Recording`

@@ -134,7 +134,7 @@ pub fn get_surface_config(
                     "Ok, now this is getting tricky (great to hear that from a software, right?).\n",
                     "\tSimply speaking: For the time being I'm expecting that the selected gpu supports the 'PreMultiplied'-'feature'\n",
                     "\tbut the selected gpu only supports: {:?}\n",
-                    "\tPlease create an issue (or give the existing issue an upvote) that you've encountered this so I can priotize this problem."
+                    "\tPlease create an issue (or give the existing issue an upvote) that you've encountered this so I can prioritize this problem."
                 ], &surface_caps.alpha_modes);
 
         todo!("Sorry :(");
