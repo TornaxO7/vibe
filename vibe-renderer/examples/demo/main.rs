@@ -351,7 +351,7 @@ impl<'a> App<'a> {
                             concat![
                                 "Available output devices:\n\n{:#?}\n",
                                 "\nCoudn't find the default output device on your system.\n",
-                                "Please choose one from the list and add it explicitely to the cli invocation.\n"
+                                "Please choose one from the list and add it explicitly to the cli invocation.\n"
                             ],
                             shady_audio::util::get_device_names(DeviceType::Output)?,
                         )

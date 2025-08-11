@@ -26,7 +26,7 @@ fn main() -> anyhow::Result<()> {
     let args = cli::Args::parse();
     if args.show_output_devices {
         info!(
-            concat!["Availabe output devices:\n\n", "{:#?}\n"],
+            concat!["Available output devices:\n\n", "{:#?}\n"],
             shady_audio::util::get_device_names(shady_audio::util::DeviceType::Output)?
         );
         return Ok(());
