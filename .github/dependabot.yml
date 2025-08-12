@@ -11,7 +11,5 @@ updates:
       interval: "weekly"
     groups:
       rust-dependencies:
-        update-types:
-          - "major"
-          - "minor"
-          - "patch"
+        patterns:
+          - "*"
