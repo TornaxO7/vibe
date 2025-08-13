@@ -28,7 +28,6 @@ impl From<FragmentCanvasAudioConfig> for BarProcessorConfig {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range,
             sensitivity: conf.sensitivity,
-            easer: conf.easing,
             ..Default::default()
         }
     }

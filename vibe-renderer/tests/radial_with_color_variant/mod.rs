@@ -7,7 +7,7 @@ use crate::Tester;
 fn test() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let radial = Radial::new(&RadialDescriptor {
         device: tester.renderer.device(),
         processor: &sample_processor,

@@ -1,35 +1,13 @@
-use std::{num::NonZero, ops::Range};
+mod descriptor;
 
+pub use descriptor::*;
+
+use super::Component;
+use crate::{resource_manager::ResourceManager, Renderable};
 use rand::Rng;
-use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor, StandardEasing};
+use shady_audio::{BarProcessor, BarProcessorConfig};
+use std::num::NonZero;
 use wgpu::util::DeviceExt;
-
-use crate::{bind_group_manager::BindGroupManager, Renderable, Renderer};
-
-use super::{Component, Rgb};
-
-const ENTRY_POINT: &str = "main";
-
-#[repr(u32)]
-#[derive(Debug, Clone, Copy)]
-enum Bindings0 {
-    IResolution,
-    Points,
-    PointsWidth,
-    ZoomFactors,
-    RandomSeeds,
-    BaseColor,
-    ValueNoiseTexture,
-    ValueNoiseSampler,
-    MovementSpeed,
-}
-
-#[repr(u32)]
-#[derive(Debug, Clone, Copy)]
-enum Bindings1 {
-    ITime,
-    Freqs,
-}
 
 type VertexPosition = [f32; 2];
 
@@ -41,31 +19,76 @@ const VERTICES: [VertexPosition; 4] = [
     [-1.0, -1.0]  // bottom left
 ];
 
-pub struct AurodioLayerDescriptor {
-    pub freq_range: Range<NonZero<u16>>,
-    pub zoom_factor: f32,
+const ENTRY_POINT: &str = "main";
+
+mod bindings0 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const RESOLUTION: u32 = 0;
+    pub const POINTS: u32 = 1;
+    pub const POINTS_WIDTH: u32 = 2;
+    pub const ZOOM_FACTORS: u32 = 3;
+    pub const RANDOM_SEEDS: u32 = 4;
+    pub const BASE_COLOR: u32 = 5;
+    pub const VALUE_NOISE_TEXTURE: u32 = 6;
+    pub const VALUE_NOISE_SAMPLER: u32 = 7;
+    pub const MOVEMENT_SPEED: u32 = 8;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::ZoomFactors, crate::util::buffer(ZOOM_FACTORS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::RandomSeeds, crate::util::buffer(RANDOM_SEEDS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::BaseColor, crate::util::buffer(BASE_COLOR, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::MovementSpeed, crate::util::buffer(MOVEMENT_SPEED, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Points, crate::util::buffer(POINTS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::PointsWidth, crate::util::buffer(POINTS_WIDTH, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::ValueNoiseTexture, crate::util::texture(VALUE_NOISE_TEXTURE, wgpu::ShaderStages::FRAGMENT)),
+            (ResourceID::ValueNoiseSampler, crate::util::sampler(VALUE_NOISE_SAMPLER, wgpu::ShaderStages::FRAGMENT)),
+        ])
+    }
+}
+mod bindings1 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const TIME: u32 = 0;
+    pub const FREQS: u32 = 1;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+        ])
+    }
 }
 
-pub struct AurodioDescriptor<'a> {
-    pub renderer: &'a Renderer,
-    pub sample_processor: &'a SampleProcessor,
-    pub texture_format: wgpu::TextureFormat,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ResourceID {
+    Resolution,
+    Points,
+    PointsWidth,
+    ZoomFactors,
+    RandomSeeds,
+    BaseColor,
+    ValueNoiseTexture,
+    ValueNoiseSampler,
+    MovementSpeed,
 
-    pub base_color: Rgb,
-    // should be very low (recommended: 0.001)
-    pub movement_speed: f32,
-
-    // audio config
-    pub layers: &'a [AurodioLayerDescriptor],
-    pub easing: StandardEasing,
-    pub sensitivity: f32,
+    Time,
+    Freqs,
 }
 
 pub struct Aurodio {
     bar_processors: Box<[BarProcessor]>,
 
-    bind_group0: BindGroupManager,
-    bind_group1: BindGroupManager,
+    resource_manager: ResourceManager<ResourceID>,
+
+    bind_group0: wgpu::BindGroup,
+    bind_group1: wgpu::BindGroup,
 
     vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
@@ -85,7 +108,6 @@ impl Aurodio {
                         amount_bars: NonZero::new(1).unwrap(),
                         freq_range: layer.freq_range.clone(),
                         sensitivity: desc.sensitivity,
-                        easer: desc.easing,
                         ..Default::default()
                     },
                 ));
@@ -94,82 +116,104 @@ impl Aurodio {
             bar_processors.into_boxed_slice()
         };
 
-        let mut bind_group0 = BindGroupManager::new(Some("Aurodio: Bind group 0"));
-        let mut bind_group1 = BindGroupManager::new(Some("Aurodio: Bind group 1"));
+        let mut resource_manager = ResourceManager::new();
 
-        bind_group0.insert_buffer(
-            Bindings0::IResolution as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Aurodio: `iResolution` buffer"),
-                size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
+        let bind_group0_mapping = bindings0::init_mapping();
+        let bind_group1_mapping = bindings1::init_mapping();
+
+        resource_manager.extend_buffers([
+            (
+                ResourceID::Resolution,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Aurodio: `iResolution` buffer"),
+                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            {
+                let zoom_factors: Vec<f32> =
+                    desc.layers.iter().map(|layer| layer.zoom_factor).collect();
+
+                (
+                    ResourceID::ZoomFactors,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `zoom_factors` buffer"),
+                        contents: bytemuck::cast_slice(&zoom_factors),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    }),
+                )
+            },
+            {
+                let random_seeds: Vec<f32> = get_random_seeds(amount_layers);
+
+                (
+                    ResourceID::RandomSeeds,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `random_seeds` buffer"),
+                        contents: bytemuck::cast_slice(&random_seeds),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    }),
+                )
+            },
+            (
+                ResourceID::BaseColor,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Aurodio: `base_color` buffer"),
+                    contents: bytemuck::cast_slice(&desc.base_color),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::MovementSpeed,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Aurodio: `movement_speed` buffer"),
+                    contents: bytemuck::bytes_of(&desc.movement_speed),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Time,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Aurodio: `iTime` buffer"),
+                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            (
+                ResourceID::Freqs,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Aurodio: `freqs` buffer"),
+                    size: (std::mem::size_of::<f32>() * amount_layers) as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+        ]);
 
         {
             let (points, width) = get_points(amount_layers * 2);
 
-            bind_group0.insert_buffer(
-                Bindings0::Points as u32,
-                wgpu::ShaderStages::FRAGMENT,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Aurodio: `points` buffer"),
-                    contents: bytemuck::cast_slice(&points),
-                    usage: wgpu::BufferUsages::STORAGE,
-                }),
-            );
-
-            bind_group0.insert_buffer(
-                Bindings0::PointsWidth as u32,
-                wgpu::ShaderStages::FRAGMENT,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Aurodio: `points_width` buffer"),
-                    contents: bytemuck::bytes_of(&width),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            )
+            resource_manager.extend_buffers([
+                (
+                    ResourceID::Points,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `points` buffer"),
+                        contents: bytemuck::cast_slice(&points),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    }),
+                ),
+                (
+                    ResourceID::PointsWidth,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `points_width` buffer"),
+                        contents: bytemuck::bytes_of(&width),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                ),
+            ]);
         }
-
-        {
-            let zoom_factors: Vec<f32> =
-                desc.layers.iter().map(|layer| layer.zoom_factor).collect();
-
-            bind_group0.insert_buffer(
-                Bindings0::ZoomFactors as u32,
-                wgpu::ShaderStages::FRAGMENT,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Aurodio: `zoom_factors` buffer"),
-                    contents: bytemuck::cast_slice(&zoom_factors),
-                    usage: wgpu::BufferUsages::STORAGE,
-                }),
-            );
-        }
-
-        {
-            let random_seeds: Vec<f32> = get_random_seeds(amount_layers);
-
-            bind_group0.insert_buffer(
-                Bindings0::RandomSeeds as u32,
-                wgpu::ShaderStages::FRAGMENT,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Aurodio: `random_seeds` buffer"),
-                    contents: bytemuck::cast_slice(&random_seeds),
-                    usage: wgpu::BufferUsages::STORAGE,
-                }),
-            );
-        }
-
-        bind_group0.insert_buffer(
-            Bindings0::BaseColor as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Aurodio: `base_color` buffer"),
-                contents: bytemuck::cast_slice(&desc.base_color),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
 
         {
             let value_noise_texture = desc.renderer.create_value_noise_texture(256, 256, 1.);
@@ -184,56 +228,27 @@ impl Aurodio {
                 ..Default::default()
             });
 
-            bind_group0.insert_texture(
-                Bindings0::ValueNoiseTexture as u32,
-                wgpu::ShaderStages::FRAGMENT,
-                value_noise_texture,
-            );
-
-            bind_group0.insert_sampler(
-                Bindings0::ValueNoiseSampler as u32,
-                wgpu::ShaderStages::FRAGMENT,
-                sampler,
-            );
+            resource_manager.insert_texture(ResourceID::ValueNoiseTexture, value_noise_texture);
+            resource_manager.insert_sampler(ResourceID::ValueNoiseSampler, sampler);
         }
-
-        bind_group0.insert_buffer(
-            Bindings0::MovementSpeed as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Aurodio: `movement_speed` buffer"),
-                contents: bytemuck::bytes_of(&desc.movement_speed),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
-
-        bind_group1.insert_buffer(
-            Bindings1::ITime as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Aurodio: `iTime` buffer"),
-                size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
-
-        bind_group1.insert_buffer(
-            Bindings1::Freqs as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Aurodio: `freqs` buffer"),
-                size: (std::mem::size_of::<f32>() * amount_layers) as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
 
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Aurodio: Vertex buffer"),
             contents: bytemuck::cast_slice(&VERTICES),
             usage: wgpu::BufferUsages::VERTEX,
         });
+
+        let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
+            "Aurodio: Bind group 0",
+            device,
+            &bind_group0_mapping,
+        );
+
+        let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
+            "Aurodio: Bind group 1",
+            device,
+            &bind_group1_mapping,
+        );
 
         let pipeline = {
             let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
@@ -252,10 +267,7 @@ impl Aurodio {
 
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Aurodio: Pipeline layout"),
-                bind_group_layouts: &[
-                    &bind_group0.get_bind_group_layout(device),
-                    &bind_group1.get_bind_group_layout(device),
-                ],
+                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
                 push_constant_ranges: &[],
             });
 
@@ -292,11 +304,10 @@ impl Aurodio {
             ))
         };
 
-        bind_group0.build_bind_group(device);
-        bind_group1.build_bind_group(device);
-
         Self {
             bar_processors,
+
+            resource_manager,
 
             bind_group0,
             bind_group1,
@@ -313,8 +324,8 @@ impl Aurodio {
 
 impl Renderable for Aurodio {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
-        pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
+        pass.set_bind_group(0, &self.bind_group0, &[]);
+        pass.set_bind_group(1, &self.bind_group1, &[]);
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
@@ -323,33 +334,35 @@ impl Renderable for Aurodio {
 
 impl Component for Aurodio {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
-        if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
-            let mut bar_values = Vec::with_capacity(self.amount_layers());
+        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
+        let mut bar_values: Vec<f32> = Vec::with_capacity(self.amount_layers());
 
-            for bar_processor in self.bar_processors.iter_mut() {
-                bar_values.push(bar_processor.process_bars(processor)[0]);
-            }
-
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values));
+        for bar_processor in self.bar_processors.iter_mut() {
+            // we only have one bar
+            bar_values.push(bar_processor.process_bars(processor)[0][0]);
         }
+
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::ITime as u32) {
-            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
-        }
+        let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
+        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
     }
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::IResolution as u32) {
-            queue.write_buffer(
-                buffer,
-                0,
-                bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-            );
-        }
+        let buffer = self
+            .resource_manager
+            .get_buffer(ResourceID::Resolution)
+            .unwrap();
+
+        queue.write_buffer(
+            buffer,
+            0,
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+        );
     }
 }
 

@@ -9,7 +9,7 @@ const RED: [f32; 4] = [1., 0., 0., 1.];
 fn test() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let bars = Bars::new(&BarsDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,

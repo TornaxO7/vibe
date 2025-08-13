@@ -4,7 +4,7 @@ use pollster::FutureExt;
 use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
-use crate::{bind_group_manager::BindGroupManager, Renderable};
+use crate::{resource_manager::ResourceManager, Renderable};
 
 use super::{Component, ShaderCode, ShaderCodeError};
 
@@ -12,15 +12,41 @@ const ENTRYPOINT: &str = "main";
 
 type VertexPosition = [f32; 2];
 
-#[repr(u32)]
-enum Bindings0 {
-    IResolution = 0,
+mod bindings0 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const RESOLUTION: u32 = 0;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+        ])
+    }
 }
 
-#[repr(u32)]
-enum Bindings1 {
-    Freqs = 0,
-    ITime = 1,
+mod bindings1 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const FREQS: u32 = 0;
+    pub const TIME: u32 = 1;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+        ])
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ResourceID {
+    Resolution,
+    Freqs,
+    Time,
 }
 
 #[rustfmt::skip]
@@ -46,8 +72,10 @@ pub struct FragmentCanvas {
 
     vbuffer: wgpu::Buffer,
 
-    bind_group0: BindGroupManager,
-    bind_group1: BindGroupManager,
+    resource_manager: ResourceManager<ResourceID>,
+
+    bind_group0: wgpu::BindGroup,
+    bind_group1: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
 }
@@ -57,43 +85,42 @@ impl FragmentCanvas {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        let mut bind_group0 = BindGroupManager::new(Some("Fragment canvas: Bind group 0"));
-        let mut bind_group1 = BindGroupManager::new(Some("Fragment canvas: Bind group 1"));
+        let mut resource_manager = ResourceManager::new();
 
-        bind_group0.insert_buffer(
-            Bindings0::IResolution as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Fragment canvas: `iResolution` buffer"),
-                size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
+        let bind_group0_mapping = bindings0::init_mapping();
+        let bind_group1_mapping = bindings1::init_mapping();
 
-        bind_group1.insert_buffer(
-            Bindings1::Freqs as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Fragment canvas: `freqs` buffer"),
-                size: (std::mem::size_of::<f32>()
-                    * usize::from(u16::from(desc.audio_conf.amount_bars)))
-                    as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
-
-        bind_group1.insert_buffer(
-            Bindings1::ITime as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Fragment canvas: `iTime` buffer"),
-                size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
+        resource_manager.extend_buffers([
+            (
+                ResourceID::Resolution,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Fragment canvas: `iResolution` buffer"),
+                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            (
+                ResourceID::Freqs,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Fragment canvas: `freqs` buffer"),
+                    size: (std::mem::size_of::<f32>()
+                        * usize::from(u16::from(desc.audio_conf.amount_bars)))
+                        as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            (
+                ResourceID::Time,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Fragment canvas: `iTime` buffer"),
+                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+        ]);
 
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Fragment canvas vertex buffer"),
@@ -101,13 +128,22 @@ impl FragmentCanvas {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
+            "Fragment canvas: Bind group 0",
+            device,
+            &bind_group0_mapping,
+        );
+
+        let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
+            "Fragment canvas: Bind group 1",
+            device,
+            &bind_group1_mapping,
+        );
+
         let pipeline = {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas pipeline layout"),
-                bind_group_layouts: &[
-                    &bind_group0.get_bind_group_layout(device),
-                    &bind_group1.get_bind_group_layout(device),
-                ],
+                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
                 push_constant_ranges: &[],
             });
 
@@ -181,13 +217,12 @@ impl FragmentCanvas {
             ))
         };
 
-        bind_group0.build_bind_group(device);
-        bind_group1.build_bind_group(device);
-
         Ok(Self {
             bar_processor,
 
             vbuffer,
+
+            resource_manager,
 
             bind_group0,
             bind_group1,
@@ -199,8 +234,8 @@ impl FragmentCanvas {
 
 impl Renderable for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
-        pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
+        pass.set_bind_group(0, &self.bind_group0, &[]);
+        pass.set_bind_group(1, &self.bind_group1, &[]);
 
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
@@ -212,25 +247,27 @@ impl Component for FragmentCanvas {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::IResolution as u32) {
-            queue.write_buffer(
-                buffer,
-                0,
-                bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-            );
-        }
+        let buffer = self
+            .resource_manager
+            .get_buffer(ResourceID::Resolution)
+            .unwrap();
+
+        queue.write_buffer(
+            buffer,
+            0,
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+        );
     }
 
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
-        if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::Freqs as u32) {
-            let bar_values = self.bar_processor.process_bars(processor);
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(bar_values));
-        }
+        let bar_values = self.bar_processor.process_bars(processor);
+
+        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        if let Some(buffer) = self.bind_group1.get_buffer(Bindings1::ITime as u32) {
-            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
-        }
+        let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
+        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
     }
 }

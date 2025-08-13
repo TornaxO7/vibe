@@ -1,6 +1,6 @@
 use wgpu::util::DeviceExt;
 
-use crate::{bind_group_manager::BindGroupManager, Renderable};
+use crate::{resource_manager::ResourceManager, Renderable};
 
 use super::Component;
 
@@ -16,8 +16,28 @@ const VERTICES: [VertexPosition; 4] = [
     [-1.0, -1.0]  // bottom left
 ];
 
-#[repr(u32)]
-enum Bindings0 {
+mod bindings0 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const OCTAVES: u32 = 0;
+    pub const SEED: u32 = 1;
+    pub const BRIGHTNESS: u32 = 2;
+    pub const CANVASSIZE: u32 = 3;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Octaves, crate::util::buffer(OCTAVES, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Seed, crate::util::buffer(SEED, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Brightness, crate::util::buffer(BRIGHTNESS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::CanvasSize, crate::util::buffer(CANVASSIZE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+        ])
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ResourceID {
     Octaves,
     Seed,
     Brightness,
@@ -35,7 +55,10 @@ pub struct ValueNoiseDescriptor<'a> {
 }
 
 pub struct ValueNoise {
-    bind_group0: BindGroupManager,
+    resource_manager: ResourceManager<ResourceID>,
+
+    bind_group0: wgpu::BindGroup,
+
     pipeline: wgpu::RenderPipeline,
     vbuffer: wgpu::Buffer,
 }
@@ -44,47 +67,43 @@ impl ValueNoise {
     pub fn new(desc: &ValueNoiseDescriptor) -> Self {
         let device = desc.device;
 
-        let mut bind_group0 = BindGroupManager::new(Some("Value noise bind group 0"));
+        let mut resource_manager = ResourceManager::new();
+        let bind_group0_mapping = bindings0::init_mapping();
 
-        bind_group0.insert_buffer(
-            Bindings0::Octaves as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Value noise: `octaves` buffer"),
-                contents: bytemuck::bytes_of(&desc.octaves),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
-
-        bind_group0.insert_buffer(
-            Bindings0::Seed as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Value noise: `seed` buffer"),
-                contents: bytemuck::bytes_of(&rand::random_range(15.0f32..35.0)),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
-
-        bind_group0.insert_buffer(
-            Bindings0::Brightness as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Value noise: `brightness` buffer"),
-                contents: bytemuck::bytes_of(&desc.brightness.clamp(0., 1.)),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
-
-        bind_group0.insert_buffer(
-            Bindings0::CanvasSize as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Value noise: `canvas_size` buffer"),
-                contents: bytemuck::cast_slice(&[desc.width as f32, desc.height as f32]),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            }),
-        );
+        resource_manager.extend_buffers([
+            (
+                ResourceID::Octaves,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Value noise: `octaves` buffer"),
+                    contents: bytemuck::bytes_of(&desc.octaves),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Seed,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Value noise: `seed` buffer"),
+                    contents: bytemuck::bytes_of(&rand::random_range(15.0f32..35.0)),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Brightness,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Value noise: `brightness` buffer"),
+                    contents: bytemuck::bytes_of(&desc.brightness.clamp(0., 1.)),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::CanvasSize,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Value noise: `canvas_size` buffer"),
+                    contents: bytemuck::cast_slice(&[desc.width as f32, desc.height as f32]),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                }),
+            ),
+        ]);
 
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Value noise: vertex buffer"),
@@ -92,10 +111,16 @@ impl ValueNoise {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
+        let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
+            "Value noise: Bind group 0",
+            device,
+            &bind_group0_mapping,
+        );
+
         let pipeline = {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Value noise: `pipeline layout`"),
-                bind_group_layouts: &[&bind_group0.get_bind_group_layout(device)],
+                bind_group_layouts: &[&bind_group0_layout],
                 push_constant_ranges: &[],
             });
 
@@ -146,10 +171,11 @@ impl ValueNoise {
             ))
         };
 
-        bind_group0.build_bind_group(device);
-
         Self {
             bind_group0,
+
+            resource_manager,
+
             pipeline,
             vbuffer,
         }
@@ -158,7 +184,7 @@ impl ValueNoise {
 
 impl Renderable for ValueNoise {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
-        pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
+        pass.set_bind_group(0, &self.bind_group0, &[]);
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
@@ -173,12 +199,15 @@ impl Component for ValueNoise {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        if let Some(buffer) = self.bind_group0.get_buffer(Bindings0::CanvasSize as u32) {
-            queue.write_buffer(
-                buffer,
-                0,
-                bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-            );
-        }
+        let buffer = self
+            .resource_manager
+            .get_buffer(ResourceID::CanvasSize)
+            .unwrap();
+
+        queue.write_buffer(
+            buffer,
+            0,
+            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
+        );
     }
 }

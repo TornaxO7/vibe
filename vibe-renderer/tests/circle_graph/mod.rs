@@ -9,7 +9,7 @@ const WHITE: [f32; 4] = [1.; 4];
 fn test() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let circle = Circle::new(&CircleDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,

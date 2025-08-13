@@ -93,7 +93,6 @@ impl<'a> State<'a> {
                 ],
                 base_color: [0., 0.5, 0.5],
                 movement_speed: 0.005,
-                easing: shady_audio::StandardEasing::OutCubic,
                 sensitivity: 0.2,
             })) as Box<dyn Component>),
             ComponentName::BarsColorVariant => Bars::new(&BarsDescriptor {
@@ -361,6 +360,7 @@ impl<'a> App<'a> {
 
             let system_audio_fetcher = SystemAudioFetcher::new(&SystemAudioFetcherDescriptor {
                 device,
+                amount_channels: Some(2),
                 ..Default::default()
             })?;
 

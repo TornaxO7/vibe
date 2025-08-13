@@ -1,4 +1,4 @@
-mod bind_group_manager;
+mod resource_manager;
 pub mod components;
 pub(crate) mod util;
 

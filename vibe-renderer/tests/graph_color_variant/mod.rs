@@ -7,7 +7,7 @@ use crate::{Tester, RED};
 fn test() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let graph = Graph::new(&GraphDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,

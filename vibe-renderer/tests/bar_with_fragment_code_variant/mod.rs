@@ -9,7 +9,7 @@ use crate::Tester;
 fn wgsl_passes() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut bars = Bars::new(&BarsDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,
@@ -39,7 +39,7 @@ fn wgsl_passes() {
 fn glsl_passes() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut bars = Bars::new(&BarsDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,
