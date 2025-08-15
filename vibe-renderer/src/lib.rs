@@ -1,5 +1,5 @@
-mod resource_manager;
 pub mod components;
+mod resource_manager;
 pub(crate) mod util;
 
 use std::ops::Deref;
