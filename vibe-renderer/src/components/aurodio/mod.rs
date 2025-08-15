@@ -5,8 +5,11 @@ pub use descriptor::*;
 use super::Component;
 use crate::{resource_manager::ResourceManager, Renderable};
 use rand::Rng;
-use shady_audio::{BarProcessor, BarProcessorConfig};
 use std::num::NonZero;
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    BarProcessor, BarProcessorConfig,
+};
 use wgpu::util::DeviceExt;
 
 type VertexPosition = [f32; 2];
@@ -95,7 +98,7 @@ pub struct Aurodio {
 }
 
 impl Aurodio {
-    pub fn new(desc: &AurodioDescriptor) -> Self {
+    pub fn new<F: Fetcher>(desc: &AurodioDescriptor<F>) -> Self {
         let amount_layers = desc.layers.len();
         let device = desc.renderer.device();
         let bar_processors = {
@@ -333,7 +336,11 @@ impl Renderable for Aurodio {
 }
 
 impl Component for Aurodio {
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
+    ) {
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
         let mut bar_values: Vec<f32> = Vec::with_capacity(self.amount_layers());
 

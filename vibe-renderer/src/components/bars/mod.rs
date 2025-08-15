@@ -6,8 +6,11 @@ use super::{Component, ShaderCodeError};
 use crate::{resource_manager::ResourceManager, Renderable};
 use cgmath::{Deg, InnerSpace, Matrix2, Vector2};
 use pollster::FutureExt;
-use shady_audio::{BarProcessor, SampleProcessor};
 use std::{borrow::Cow, num::NonZero};
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    BarProcessor, SampleProcessor,
+};
 use wgpu::util::DeviceExt;
 
 const FRAGMENT_ENTRYPOINT: &str = "main";
@@ -89,7 +92,7 @@ pub struct Bars {
 }
 
 impl Bars {
-    pub fn new(desc: &BarsDescriptor) -> Result<Self, ShaderCodeError> {
+    pub fn new<F: Fetcher>(desc: &BarsDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
@@ -431,7 +434,11 @@ impl Renderable for Bars {
 }
 
 impl Component for Bars {
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &SampleProcessor<SystemAudioFetcher>,
+    ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self

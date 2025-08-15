@@ -1,7 +1,6 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use shady_audio::StandardEasing;
 use vibe_renderer::components::{GraphPlacement, GraphVariant};
 
 use super::Rgba;
@@ -10,21 +9,20 @@ use super::Rgba;
 pub struct GraphAudioConfig {
     pub freq_range: Range<NonZero<u16>>,
     pub sensitivity: f32,
-    pub easing: StandardEasing,
 }
 
-impl From<GraphAudioConfig> for shady_audio::BarProcessorConfig {
+impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
         Self {
             freq_range: conf.freq_range,
             sensitivity: conf.sensitivity,
-            easer: conf.easing,
+
             ..Default::default()
         }
     }
 }
 
-impl From<&GraphAudioConfig> for shady_audio::BarProcessorConfig {
+impl From<&GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: &GraphAudioConfig) -> Self {
         Self::from(conf.clone())
     }

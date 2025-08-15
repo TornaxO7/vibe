@@ -1,4 +1,4 @@
-use shady_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
+use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
 
 use crate::Tester;

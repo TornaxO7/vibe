@@ -1,6 +1,7 @@
 mod descriptor;
 
 pub use descriptor::*;
+use vibe_audio::fetcher::{Fetcher, SystemAudioFetcher};
 
 use super::Component;
 use crate::{resource_manager::ResourceManager, util::SimpleRenderPipelineDescriptor, Renderable};
@@ -70,7 +71,7 @@ enum ResourceID {
 }
 
 pub struct Circle {
-    bar_processor: shady_audio::BarProcessor,
+    bar_processor: vibe_audio::BarProcessor,
 
     resource_manager: ResourceManager<ResourceID>,
     bind_group0: wgpu::BindGroup,
@@ -81,10 +82,10 @@ pub struct Circle {
 }
 
 impl Circle {
-    pub fn new(desc: &CircleDescriptor) -> Self {
+    pub fn new<F: Fetcher>(desc: &CircleDescriptor<F>) -> Self {
         let device = desc.device;
         let bar_processor =
-            shady_audio::BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+            vibe_audio::BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
         let mut resource_manager = ResourceManager::new();
 
@@ -285,7 +286,11 @@ impl Renderable for Circle {
 }
 
 impl Component for Circle {
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
+    ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();

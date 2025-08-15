@@ -1,7 +1,10 @@
 use std::borrow::Cow;
 
 use pollster::FutureExt;
-use shady_audio::{BarProcessor, BarProcessorConfig, SampleProcessor};
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    BarProcessor, BarProcessorConfig, SampleProcessor,
+};
 use wgpu::util::DeviceExt;
 
 use crate::{resource_manager::ResourceManager, Renderable};
@@ -57,8 +60,8 @@ const VERTICES: [VertexPosition; 4] = [
     [-1.0, -1.0]  // bottom left
 ];
 
-pub struct FragmentCanvasDescriptor<'a> {
-    pub sample_processor: &'a SampleProcessor,
+pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
+    pub sample_processor: &'a SampleProcessor<F>,
     pub audio_conf: BarProcessorConfig,
     pub device: &'a wgpu::Device,
     pub format: wgpu::TextureFormat,
@@ -81,7 +84,7 @@ pub struct FragmentCanvas {
 }
 
 impl FragmentCanvas {
-    pub fn new(desc: &FragmentCanvasDescriptor) -> Result<Self, ShaderCodeError> {
+    pub fn new<F: Fetcher>(desc: &FragmentCanvasDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
@@ -259,7 +262,11 @@ impl Component for FragmentCanvas {
         );
     }
 
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &SampleProcessor<SystemAudioFetcher>,
+    ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();

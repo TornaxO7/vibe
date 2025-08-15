@@ -6,7 +6,10 @@ use super::Component;
 use crate::{
     resource_manager::ResourceManager, util::SimpleRenderPipelineDescriptor, Renderable, Renderer,
 };
-use shady_audio::BarProcessor;
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    BarProcessor,
+};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 type VertexPosition = [f32; 2];
@@ -73,7 +76,7 @@ enum ResourceID {
 
 pub struct Graph {
     placement: GraphPlacement,
-    bar_processor: shady_audio::BarProcessor,
+    bar_processor: vibe_audio::BarProcessor,
 
     resource_manager: ResourceManager<ResourceID>,
 
@@ -85,7 +88,7 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn new(desc: &GraphDescriptor) -> Self {
+    pub fn new<F: Fetcher>(desc: &GraphDescriptor<F>) -> Self {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
@@ -324,7 +327,11 @@ impl Renderable for Graph {
 }
 
 impl Component for Graph {
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
+    ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();

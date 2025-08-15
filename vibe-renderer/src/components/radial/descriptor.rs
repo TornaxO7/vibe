@@ -1,12 +1,12 @@
 use cgmath::Deg;
-use shady_audio::SampleProcessor;
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 use crate::components::Rgba;
 
-pub struct RadialDescriptor<'a> {
+pub struct RadialDescriptor<'a, F: Fetcher> {
     pub device: &'a wgpu::Device,
-    pub processor: &'a SampleProcessor,
-    pub audio_conf: shady_audio::BarProcessorConfig,
+    pub processor: &'a SampleProcessor<F>,
+    pub audio_conf: vibe_audio::BarProcessorConfig,
     pub output_texture_format: wgpu::TextureFormat,
     pub variant: RadialVariant,
 

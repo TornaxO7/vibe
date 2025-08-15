@@ -27,7 +27,7 @@ fn main() -> anyhow::Result<()> {
     if args.show_output_devices {
         info!(
             concat!["Available output devices:\n\n", "{:#?}\n"],
-            shady_audio::util::get_device_names(shady_audio::util::DeviceType::Output)?
+            vibe_audio::util::get_device_names(vibe_audio::util::DeviceType::Output)?
         );
         return Ok(());
     }

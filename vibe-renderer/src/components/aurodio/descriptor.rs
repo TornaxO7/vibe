@@ -1,6 +1,6 @@
 use std::{num::NonZero, ops::Range};
 
-use shady_audio::SampleProcessor;
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 use crate::{components::Rgb, Renderer};
 
@@ -9,9 +9,9 @@ pub struct AurodioLayerDescriptor {
     pub zoom_factor: f32,
 }
 
-pub struct AurodioDescriptor<'a> {
+pub struct AurodioDescriptor<'a, F: Fetcher> {
     pub renderer: &'a Renderer,
-    pub sample_processor: &'a SampleProcessor,
+    pub sample_processor: &'a SampleProcessor<F>,
     pub texture_format: wgpu::TextureFormat,
 
     pub base_color: Rgb,

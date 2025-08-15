@@ -1,3 +1,4 @@
+use vibe_audio::fetcher::SystemAudioFetcher;
 use wgpu::util::DeviceExt;
 
 use crate::{resource_manager::ResourceManager, Renderable};
@@ -192,7 +193,12 @@ impl Renderable for ValueNoise {
 }
 
 impl Component for ValueNoise {
-    fn update_audio(&mut self, _queue: &wgpu::Queue, _processor: &shady_audio::SampleProcessor) {}
+    fn update_audio(
+        &mut self,
+        _queue: &wgpu::Queue,
+        _processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
+    ) {
+    }
 
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 

@@ -1,14 +1,13 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use shady_audio::{BarProcessorConfig, StandardEasing};
+use vibe_audio::BarProcessorConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FragmentCanvasAudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: Range<NonZero<u16>>,
     pub sensitivity: f32,
-    pub easing: StandardEasing,
 }
 
 impl Default for FragmentCanvasAudioConfig {
@@ -17,7 +16,6 @@ impl Default for FragmentCanvasAudioConfig {
             amount_bars: NonZero::new(60).unwrap(),
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
             sensitivity: 0.2,
-            easing: StandardEasing::OutCubic,
         }
     }
 }

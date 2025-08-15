@@ -1,11 +1,12 @@
 use cgmath::Deg;
+use vibe_audio::fetcher::Fetcher;
 
 use crate::components::Rgba;
 
-pub struct CircleDescriptor<'a> {
+pub struct CircleDescriptor<'a, F: Fetcher> {
     pub device: &'a wgpu::Device,
-    pub sample_processor: &'a shady_audio::SampleProcessor,
-    pub audio_conf: shady_audio::BarProcessorConfig,
+    pub sample_processor: &'a vibe_audio::SampleProcessor<F>,
+    pub audio_conf: vibe_audio::BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
     pub variant: CircleVariant,
 

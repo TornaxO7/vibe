@@ -1,7 +1,7 @@
 use std::io;
 
 use serde::{Deserialize, Serialize};
-use shady_audio::{
+use vibe_audio::{
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
     SampleProcessor,
@@ -61,7 +61,7 @@ impl Config {
         std::fs::write(crate::get_config_path(), toml::to_string(self).unwrap())
     }
 
-    pub fn sample_processor(&self) -> anyhow::Result<SampleProcessor> {
+    pub fn sample_processor(&self) -> anyhow::Result<SampleProcessor<SystemAudioFetcher>> {
         let device = match self
             .audio_config
             .clone()
@@ -69,7 +69,7 @@ impl Config {
             .output_device_name
         {
             Some(device_name) => {
-                match shady_audio::util::get_device(&device_name, DeviceType::Output)? {
+                match vibe_audio::util::get_device(&device_name, DeviceType::Output)? {
                     Some(device) => device,
                     None => {
                         anyhow::bail!(
@@ -78,14 +78,14 @@ impl Config {
                                 "\nThere's no output device called \"{}\" as you've set in \"{}\"\n",
                                 "Please choose one from the list and add it to your config."
                             ],
-                            shady_audio::util::get_device_names(DeviceType::Output)?,
+                            vibe_audio::util::get_device_names(DeviceType::Output)?,
                             &device_name,
                             crate::get_config_path().to_string_lossy()
                         );
                     }
                 }
             }
-            None => match shady_audio::util::get_default_device(DeviceType::Output) {
+            None => match vibe_audio::util::get_default_device(DeviceType::Output) {
                 Some(device) => device,
                 None => {
                     anyhow::bail!(
@@ -94,7 +94,7 @@ impl Config {
                             "\nCouldn't find the default output device on your system.\n",
                             "Please choose one from the list and add it to your config in \"{}\"."
                         ],
-                        shady_audio::util::get_device_names(DeviceType::Output)?,
+                        vibe_audio::util::get_device_names(DeviceType::Output)?,
                         crate::get_config_path().to_string_lossy()
                     );
                 }

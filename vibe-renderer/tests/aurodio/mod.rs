@@ -1,6 +1,6 @@
 use std::num::NonZero;
 
-use shady_audio::{fetcher::DummyFetcher, SampleProcessor};
+use vibe_audio::{fetcher::DummyFetcher, SampleProcessor};
 use vibe_renderer::components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor, Component};
 
 use crate::Tester;

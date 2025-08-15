@@ -3,7 +3,7 @@ use std::{num::NonZero, sync::Arc, time::Instant};
 use anyhow::bail;
 use clap::Parser;
 use cli::ComponentName;
-use shady_audio::{
+use vibe_audio::{
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
     BarProcessorConfig, SampleProcessor,
@@ -43,7 +43,7 @@ struct State<'a> {
 impl<'a> State<'a> {
     pub fn new<'b>(
         window: Window,
-        processor: &'b SampleProcessor,
+        processor: &'b SampleProcessor<SystemAudioFetcher>,
         component_name: ComponentName,
     ) -> anyhow::Result<Self> {
         let window = Arc::new(window);
@@ -99,11 +99,12 @@ impl<'a> State<'a> {
                 device: renderer.device(),
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
-                    amount_bars: std::num::NonZero::new(30).unwrap(),
+                    amount_bars: std::num::NonZero::new(60).unwrap(),
+                    sensitivity: 4.,
                     ..Default::default()
                 },
                 texture_format: surface_config.format,
-                max_height: 1.,
+                max_height: 0.5,
                 variant: BarVariant::Color([0., 0., 1., 1.]),
                 // placement: BarsPlacement::Custom {
                 //     bottom_left_corner: (0.5, 0.5),
@@ -111,7 +112,7 @@ impl<'a> State<'a> {
                 //     rotation: cgmath::Deg(45.),
                 // },
                 placement: BarsPlacement::Bottom,
-                format: BarsFormat::TrebleBassTreble,
+                format: BarsFormat::BassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsFragmentCodeVariant => Bars::new(&BarsDescriptor {
@@ -144,14 +145,18 @@ impl<'a> State<'a> {
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
                 device: renderer.device(),
                 sample_processor: &processor,
-                audio_conf: BarProcessorConfig::default(),
+                audio_conf: BarProcessorConfig {
+                    sensitivity: 2.,
+                    amount_bars: NonZero::new(60).unwrap(),
+                    ..Default::default()
+                },
                 texture_format: surface_config.format,
                 max_height: 0.5,
                 variant: BarVariant::PresenceGradient {
                     high: TURQUOISE,
                     low: DARK_BLUE,
                 },
-                placement: BarsPlacement::Right,
+                placement: BarsPlacement::Bottom,
                 format: BarsFormat::BassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
@@ -166,7 +171,7 @@ impl<'a> State<'a> {
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {
                 device: renderer.device(),
                 sample_processor: processor,
-                audio_conf: shady_audio::BarProcessorConfig {
+                audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: std::num::NonZero::new(30).unwrap(),
                     ..Default::default()
                 },
@@ -198,7 +203,7 @@ impl<'a> State<'a> {
 
                 FragmentCanvas::new(&FragmentCanvasDescriptor {
                     sample_processor: &processor,
-                    audio_conf: shady_audio::BarProcessorConfig::default(),
+                    audio_conf: vibe_audio::BarProcessorConfig::default(),
                     device: renderer.device(),
                     format: surface_config.format,
                     fragment_code: fragment_source,
@@ -258,7 +263,7 @@ impl<'a> State<'a> {
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {
                 device: renderer.device(),
                 processor,
-                audio_conf: shady_audio::BarProcessorConfig {
+                audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: NonZero::new(30).unwrap(),
                     ..Default::default()
                 },
@@ -296,7 +301,10 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn render(&mut self, processor: &SampleProcessor) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(
+        &mut self,
+        processor: &SampleProcessor<SystemAudioFetcher>,
+    ) -> Result<(), wgpu::SurfaceError> {
         self.component
             .update_audio(self.renderer.queue(), processor);
         self.component
@@ -315,7 +323,7 @@ impl<'a> State<'a> {
 }
 
 struct App<'a> {
-    sample_processor: SampleProcessor,
+    sample_processor: SampleProcessor<SystemAudioFetcher>,
     state: Option<State<'a>>,
     variant: ComponentName,
 }
@@ -328,7 +336,7 @@ impl<'a> App<'a> {
         let sample_processor = {
             let device = match output_device_name {
                 Some(device_name) => {
-                    match shady_audio::util::get_device(device_name.as_ref(), DeviceType::Output)? {
+                    match vibe_audio::util::get_device(device_name.as_ref(), DeviceType::Output)? {
                         Some(device) => device,
                         None => {
                             bail!(
@@ -337,13 +345,13 @@ impl<'a> App<'a> {
                                     "\nThere's no output device called \"{}\".\n",
                                     "Please choose one from the list.\n",
                                 ],
-                                shady_audio::util::get_device_names(DeviceType::Output)?,
+                                vibe_audio::util::get_device_names(DeviceType::Output)?,
                                 device_name.as_ref()
                             )
                         }
                     }
                 }
-                None => match shady_audio::util::get_default_device(DeviceType::Output) {
+                None => match vibe_audio::util::get_default_device(DeviceType::Output) {
                     Some(device) => device,
                     None => {
                         bail!(
@@ -352,7 +360,7 @@ impl<'a> App<'a> {
                                 "\nCoudn't find the default output device on your system.\n",
                                 "Please choose one from the list and add it explicitly to the cli invocation.\n"
                             ],
-                            shady_audio::util::get_device_names(DeviceType::Output)?,
+                            vibe_audio::util::get_device_names(DeviceType::Output)?,
                         )
                     }
                 },
@@ -417,7 +425,7 @@ fn main() -> anyhow::Result<()> {
     if cli.show_output_devices {
         println!(
             "\nAvailable output devices:\n\n{:#?}\n",
-            shady_audio::util::get_device_names(shady_audio::util::DeviceType::Output)?
+            vibe_audio::util::get_device_names(vibe_audio::util::DeviceType::Output)?
         );
         return Ok(());
     }

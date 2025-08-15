@@ -4,7 +4,10 @@ pub use descriptor::*;
 use std::num::NonZero;
 
 use cgmath::{Matrix2, Rad, SquareMatrix, Vector2};
-use shady_audio::{BarProcessor, SampleProcessor};
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    BarProcessor, SampleProcessor,
+};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{resource_manager::ResourceManager, Renderable};
@@ -83,7 +86,7 @@ pub struct Radial {
 }
 
 impl Radial {
-    pub fn new(desc: &RadialDescriptor) -> Self {
+    pub fn new<F: Fetcher>(desc: &RadialDescriptor<F>) -> Self {
         let device = desc.device;
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.processor, desc.audio_conf.clone());
@@ -325,7 +328,11 @@ impl Renderable for Radial {
 }
 
 impl Component for Radial {
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor) {
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &SampleProcessor<SystemAudioFetcher>,
+    ) {
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
         let bar_values = self.bar_processor.process_bars(processor);
 
