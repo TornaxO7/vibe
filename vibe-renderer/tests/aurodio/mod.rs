@@ -1,6 +1,6 @@
 use std::num::NonZero;
 
-use shady_audio::{fetcher::DummyFetcher, SampleProcessor, StandardEasing};
+use vibe_audio::{fetcher::DummyFetcher, SampleProcessor};
 use vibe_renderer::components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor, Component};
 
 use crate::Tester;
@@ -11,7 +11,7 @@ const BLUE: [f32; 3] = [0., 0., 1.];
 fn test() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut aurodio = Aurodio::new(&AurodioDescriptor {
         renderer: &tester.renderer,
         sample_processor: &sample_processor,
@@ -22,7 +22,6 @@ fn test() {
             freq_range: NonZero::new(50).unwrap()..NonZero::new(200).unwrap(),
             zoom_factor: 5.,
         }],
-        easing: StandardEasing::InOutSine,
         sensitivity: 0.2,
     });
 

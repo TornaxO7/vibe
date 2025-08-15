@@ -11,7 +11,7 @@ publish = false
 [dependencies]
 anyhow.workspace = true
 serde.workspace = true
-shady-audio.workspace = true
+vibe-audio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true

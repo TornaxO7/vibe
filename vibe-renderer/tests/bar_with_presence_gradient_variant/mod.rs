@@ -1,4 +1,4 @@
-use shady_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
+use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsFormat};
 
 use crate::Tester;
@@ -10,7 +10,7 @@ const BLUE: [f32; 4] = [0., 0., 1., 1.];
 fn test() {
     let mut tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new());
+    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let bars = Bars::new(&BarsDescriptor {
         device: tester.renderer.device(),
         sample_processor: &sample_processor,

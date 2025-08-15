@@ -10,8 +10,7 @@ max_height = 0.75
 format = "BassTreble"
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 4.0
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant]
 Color = [0, 255, 255, 255]
@@ -24,8 +23,7 @@ placement = "Top"
 format = "TrebleBass"
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 2.0
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant.PresenceGradient]
 high_presence = [0, 255, 255, 255]
@@ -39,8 +37,7 @@ placement = "Left"
 format = "TrebleBassTreble"
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 2.0
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant.FragmentCode]
 language = "Wgsl"
@@ -54,8 +51,7 @@ placement = "Right"
 format = "BassTrebleBass"
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 3.0
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant.FragmentCode]
 language = "Wgsl"
@@ -72,8 +68,7 @@ width_factor = 1.0
 rotation = 0.0
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 2.5
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant.FragmentCode]
 language = "Wgsl"
@@ -94,8 +89,7 @@ placement = "Bottom"
 format = "TrebleBass"
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 0.5
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant.FragmentCode]
 language = "Glsl"
@@ -109,8 +103,7 @@ placement = "Bottom"
 format = "TrebleBassTreble"
 [components.Bars.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 3.0
 freq_range = { start = 50, end = 10000 }
 [components.Bars.variant.FragmentCode]
 language = "Glsl"
@@ -128,8 +121,7 @@ void main() {
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 4.5
 freq_range = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
@@ -139,8 +131,7 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 10.0
 freq_range = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
@@ -157,8 +148,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 1.0
 freq_range = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
@@ -168,8 +158,7 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 10.5
 freq_range = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
@@ -188,8 +177,7 @@ base_color = [0, 122, 122]
 movement_speed = 0.009999999776482582
 
 [components.Aurodio.audio_conf]
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 10.0
 [[components.Aurodio.layers]]
 freq_range = { start = 50, end = 500 }
 zoom_factor = 5.0
@@ -206,7 +194,6 @@ max_height = 0.5
 smoothness = 0.01
 placement = "Top"
 [components.Graph.audio_conf]
-easing = "OutExponential"
 sensitivity = 0.1
 freq_range = { start = 50, end = 5000 }
 [components.Graph.variant]
@@ -219,8 +206,7 @@ max_height = 0.5
 smoothness = 0.01
 placement = "Bottom"
 [components.Graph.audio_conf]
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 3.0
 freq_range = { start = 50, end = 5000 }
 [components.Graph.variant.HorizontalGradient]
 left = [255, 0, 0, 255]
@@ -233,8 +219,7 @@ max_height = 0.5
 smoothness = 0.01
 placement = "Right"
 [components.Graph.audio_conf]
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 8.0
 freq_range = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
 top = [3, 185, 191, 255]
@@ -250,8 +235,7 @@ rotation = 90.0
 position = [0.5, 0.5]
 [components.Circle.audio_conf]
 amount_bars = 30
-easing = "OutExponential"
-sensitivity = 0.15
+sensitivity = 10.5
 freq_range = { start = 50, end = 10000 }
 [components.Circle.variant.Graph]
 spike_sensitivity = 0.2
@@ -269,8 +253,7 @@ bar_width = 0.01
 position = [0.5, 0.5]
 [components.Radial.audio_conf]
 amount_bars = 60
-easing = "OutExponential"
-sensitivity = 0.1
+sensitivity = 5.0
 freq_range = { start = 50, end = 10000 }
 [components.Radial.variant]
 Color = [0, 255, 0, 255]

@@ -1,6 +1,5 @@
 pub mod config;
 
-use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
     output::OutputInfo,
     shell::{
@@ -8,6 +7,7 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
+use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 
 use tracing::error;
 use vibe_renderer::{components::Component, Renderer};
@@ -34,7 +34,7 @@ impl OutputCtx {
         surface: Surface<'static>,
         layer_surface: LayerSurface,
         renderer: &Renderer,
-        sample_processor: &SampleProcessor,
+        sample_processor: &SampleProcessor<SystemAudioFetcher>,
         config: OutputConfig,
     ) -> Self {
         let size = Size::from(&info);

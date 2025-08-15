@@ -1,7 +1,6 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use shady_audio::StandardEasing;
 use vibe_renderer::components::{BarsFormat, BarsPlacement, ShaderCode};
 
 use super::Rgba;
@@ -11,7 +10,6 @@ pub struct BarsAudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: Range<NonZero<u16>>,
     pub sensitivity: f32,
-    pub easing: StandardEasing,
 }
 
 impl Default for BarsAudioConfig {
@@ -20,24 +18,23 @@ impl Default for BarsAudioConfig {
             amount_bars: NonZero::new(60).unwrap(),
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
             sensitivity: 0.2,
-            easing: StandardEasing::OutCubic,
         }
     }
 }
 
-impl From<BarsAudioConfig> for shady_audio::BarProcessorConfig {
+impl From<BarsAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: BarsAudioConfig) -> Self {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range,
             sensitivity: conf.sensitivity,
-            easer: conf.easing,
+
             ..Default::default()
         }
     }
 }
 
-impl From<&BarsAudioConfig> for shady_audio::BarProcessorConfig {
+impl From<&BarsAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(value: &BarsAudioConfig) -> Self {
         Self::from(value.clone())
     }

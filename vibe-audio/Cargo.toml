@@ -1,0 +1,18 @@
+[package]
+name = "vibe-audio"
+version = "0.0.1"
+edition = "2021"
+authors = ["TornaxO7 <tornax@pm.me>"]
+description = "An audio library for visualizers"
+license = "GPL-3.0-or-later"
+homepage = "https://github.com/TornaxO7/vibe/vibe-audio"
+repository = "https://github.com/TornaxO7/vibe/tree/main/vibe-audio"
+
+[dependencies]
+tracing.workspace = true
+thiserror.workspace = true
+
+apodize = "1"
+cpal = "0.16"
+nalgebra = "0.33"
+realfft = "3.5"
