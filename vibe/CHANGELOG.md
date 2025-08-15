@@ -2,9 +2,27 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.0.1 - 2025-06-13
+## 2.0.0 - 2025-08-15
 
-[b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163)...[6cf98ac](6cf98ac26f4da4e7c47bc9873b905e0f8478c5e1)
+[2722da3](2722da3f1311862bd23ee9f86efea1a99d942df8)...[b2e0974](b2e0974a54fd1ebc53b751c77e4e314d66b02770)
+
+### Bug Fixes
+
+- Typos ([b4a58cf](b4a58cfd3cff443494c6884da23e7d008cb2c7dd)), fix:rollback easier -> easer
+
+### Features
+
+- Let window title include output name ([cdaeca7](cdaeca77cc746d73e0e14f627cd1ab48bcd12b7f))
+
+### Build
+
+- Bump toml from 0.8.23 to 0.9.2 ([2451dac](2451dac0c9127b17c01cca109d9f8c0f38d9b25c)), Signed-off-by:dependabot[bot] <support@github.com>
+- Bump the rust-dependencies group with 8 updates ([12d6d54](12d6d5434f10e13b7ef0c5a04714ba3bc38648f7)), Signed-off-by:dependabot[bot] <support@github.com>
+- Bump the rust-dependencies group with 10 updates ([b2e0974](b2e0974a54fd1ebc53b751c77e4e314d66b02770)), Signed-off-by:dependabot[bot] <support@github.com>
+
+## ibe-v1.0.1 - 2025-06-13
+
+[b677c27](b677c27e43b6bab131abfb7fe5a7425a9a758163)...[2722da3](2722da3f1311862bd23ee9f86efea1a99d942df8)
 
 ### Features
 
@@ -21,6 +39,7 @@ All notable changes to this project will be documented in this file.
 - Update dep and migrate to it ([35b0962](35b09629a2a5e0233ad89c2744b08ba818c70a29))
 - Update changelog ([c0d21e9](c0d21e9f8d16c492464ab42cc1719082aa189f9d))
 - Failed the release version... ([6cf98ac](6cf98ac26f4da4e7c47bc9873b905e0f8478c5e1))
+- Release ([2722da3](2722da3f1311862bd23ee9f86efea1a99d942df8))
 
 ### Refactor
 
@@ -32,7 +51,7 @@ All notable changes to this project will be documented in this file.
 
 ### Bug Fixes
 
-- Remove misused attribute ([e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92))
+- Remove missused attribute ([e16e86c](e16e86c9120a3e399e19e16516d63b14d5d6eb92))
 
 ### Miscellaneous Tasks
 
