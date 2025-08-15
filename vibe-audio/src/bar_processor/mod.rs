@@ -166,7 +166,7 @@ impl InterpolatorCtx {
                     / amount_bins;
 
                 // reduce the bass change (low x value) and increase the change of the treble (high x value)
-                let correction = normalized_x.powf(2.) + 0.1;
+                let correction = normalized_x.powf(2.) + 0.05;
 
                 raw_bar_val * self.normalize_factor * correction
             };

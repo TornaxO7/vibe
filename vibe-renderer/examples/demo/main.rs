@@ -146,8 +146,8 @@ impl<'a> State<'a> {
                 device: renderer.device(),
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
-                    sensitivity: 2.,
-                    amount_bars: NonZero::new(60).unwrap(),
+                    sensitivity: 4.,
+                    amount_bars: NonZero::new(30).unwrap(),
                     ..Default::default()
                 },
                 texture_format: surface_config.format,
@@ -157,7 +157,7 @@ impl<'a> State<'a> {
                     low: DARK_BLUE,
                 },
                 placement: BarsPlacement::Bottom,
-                format: BarsFormat::BassTreble,
+                format: BarsFormat::TrebleBassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::ValueNoise => Ok(Box::new(ValueNoise::new(&ValueNoiseDescriptor {
