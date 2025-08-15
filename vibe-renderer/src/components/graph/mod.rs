@@ -1,12 +1,16 @@
-use shady_audio::BarProcessor;
-use wgpu::{include_wgsl, util::DeviceExt};
+mod descriptor;
 
+pub use descriptor::*;
+
+use super::Component;
 use crate::{
-    bind_group_manager::BindGroupManager, util::SimpleRenderPipelineDescriptor, Renderable,
-    Renderer,
+    resource_manager::ResourceManager, util::SimpleRenderPipelineDescriptor, Renderable, Renderer,
 };
-
-use super::{Component, Rgba};
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    BarProcessor,
+};
+use wgpu::{include_wgsl, util::DeviceExt};
 
 type VertexPosition = [f32; 2];
 const POSITIONS: [VertexPosition; 3] = [
@@ -15,71 +19,82 @@ const POSITIONS: [VertexPosition; 3] = [
     [-3., 1.], // top left corner
 ];
 
-#[derive(Debug, Clone, Copy)]
-pub enum GraphPlacement {
-    Bottom,
-    Top,
-    Right,
-    Left,
+mod bindings0 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const RESOLUTION: u32 = 0;
+    pub const MAX_HEIGHT: u32 = 1;
+    pub const COLOR: u32 = 2;
+    pub const HORIZONTAL_GRADIENT_LEFT: u32 = 3;
+    pub const HORIZONTAL_GRADIENT_RIGHT: u32 = 4;
+
+    pub const VERTICAL_GRADIENT_TOP: u32 = 5;
+    pub const VERTICAL_GRADIENT_BOTTOM: u32 = 6;
+    pub const SMOOTHNESS: u32 = 7;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::MaxHeight, crate::util::buffer(MAX_HEIGHT, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Smoothness, crate::util::buffer(SMOOTHNESS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+        ])
+    }
 }
 
-#[derive(Debug, Clone)]
-pub enum GraphVariant {
-    Color(Rgba),
-    HorizontalGradient { left: Rgba, right: Rgba },
-    VerticalGradient { top: Rgba, bottom: Rgba },
+mod bindings1 {
+    use super::ResourceID;
+    use std::collections::HashMap;
+
+    pub const FREQS: u32 = 0;
+
+    #[rustfmt::skip]
+    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
+        HashMap::from([
+            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+        ])
+    }
 }
 
-#[repr(u32)]
-#[derive(Debug, Clone, Copy)]
-enum Binding0 {
-    Resolution = 0,
-    MaxHeight = 1,
-    Color = 2,
-    HorizontalGradientLeft = 3,
-    HorizontalGradientRight = 4,
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum ResourceID {
+    Resolution,
+    MaxHeight,
+    Color,
 
-    VerticalGradientTop = 5,
-    VerticalGradientBottom = 6,
-    Smoothness = 7,
-}
+    HorizontalGradientLeft,
+    HorizontalGradientRight,
 
-#[repr(u32)]
-#[derive(Debug, Clone, Copy)]
-enum Binding1 {
-    Freqs = 0,
-}
+    VerticalGradientTop,
+    VerticalGradientBottom,
 
-pub struct GraphDescriptor<'a> {
-    pub device: &'a wgpu::Device,
-    pub sample_processor: &'a shady_audio::SampleProcessor,
-    pub audio_conf: shady_audio::BarProcessorConfig,
-    pub output_texture_format: wgpu::TextureFormat,
+    Smoothness,
 
-    pub variant: GraphVariant,
-    pub max_height: f32,
-    pub smoothness: f32,
-    pub placement: GraphPlacement,
+    Freqs,
 }
 
 pub struct Graph {
     placement: GraphPlacement,
-    bar_processor: shady_audio::BarProcessor,
+    bar_processor: vibe_audio::BarProcessor,
 
-    bind_group0: BindGroupManager,
-    bind_group1: BindGroupManager,
+    resource_manager: ResourceManager<ResourceID>,
+
+    bind_group0: wgpu::BindGroup,
+    bind_group1: wgpu::BindGroup,
 
     vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
 }
 
 impl Graph {
-    pub fn new(desc: &GraphDescriptor) -> Self {
+    pub fn new<F: Fetcher>(desc: &GraphDescriptor<F>) -> Self {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        let mut bind_group0 = BindGroupManager::new(Some("Graph: Bind group 0"));
-        let mut bind_group1 = BindGroupManager::new(Some("Graph: Bind group 1"));
+        let mut resource_manager = ResourceManager::new();
+        let mut bind_group0_mapping = bindings0::init_mapping();
+        let bind_group1_mapping = bindings1::init_mapping();
 
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Graph: Vertex buffer => positions"),
@@ -87,48 +102,44 @@ impl Graph {
             usage: wgpu::BufferUsages::VERTEX,
         });
 
-        bind_group0.insert_buffer(
-            Binding0::Resolution as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Graph: `iResolution` buffer"),
-                size: (std::mem::size_of::<f32>() * 2) as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
-
-        bind_group0.insert_buffer(
-            Binding0::MaxHeight as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Graph: `max_height` buffer"),
-                contents: bytemuck::bytes_of(&desc.max_height),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
-
-        bind_group0.insert_buffer(
-            Binding0::Smoothness as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Graph: `smoothness` buffer"),
-                contents: bytemuck::bytes_of(&desc.smoothness),
-                usage: wgpu::BufferUsages::UNIFORM,
-            }),
-        );
-
-        bind_group1.insert_buffer(
-            Binding1::Freqs as u32,
-            wgpu::ShaderStages::FRAGMENT,
-            device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Graph: `freqs` buffer"),
-                size: (std::mem::size_of::<f32>() * u16::from(desc.audio_conf.amount_bars) as usize)
-                    as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        );
+        resource_manager.extend_buffers([
+            (
+                ResourceID::Resolution,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Graph: `iResolution` buffer"),
+                    size: (std::mem::size_of::<f32>() * 2) as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            (
+                ResourceID::MaxHeight,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Graph: `max_height` buffer"),
+                    contents: bytemuck::bytes_of(&desc.max_height),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Smoothness,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Graph: `smoothness` buffer"),
+                    contents: bytemuck::bytes_of(&desc.smoothness),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Freqs,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Graph: `freqs` buffer"),
+                    size: (std::mem::size_of::<f32>()
+                        * u16::from(desc.audio_conf.amount_bars) as usize)
+                        as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+        ]);
 
         let fragment_entrypoint = match desc.placement {
             GraphPlacement::Bottom => "bottom",
@@ -139,9 +150,8 @@ impl Graph {
 
         let fragment_shader = match &desc.variant {
             GraphVariant::Color(rgba) => {
-                bind_group0.insert_buffer(
-                    Binding0::Color as u32,
-                    wgpu::ShaderStages::FRAGMENT,
+                resource_manager.insert_buffer(
+                    ResourceID::Color,
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                         label: Some("Graph: `color` buffer"),
                         contents: bytemuck::cast_slice(rgba),
@@ -149,63 +159,111 @@ impl Graph {
                     }),
                 );
 
+                bind_group0_mapping.insert(
+                    ResourceID::Color,
+                    crate::util::buffer(
+                        bindings0::COLOR,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    ),
+                );
+
                 device.create_shader_module(include_wgsl!("./fragment_color.wgsl"))
             }
             GraphVariant::HorizontalGradient { left, right } => {
-                bind_group0.insert_buffer(
-                    Binding0::HorizontalGradientLeft as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Graph: `color_left` buffer"),
-                        contents: bytemuck::cast_slice(left),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+                resource_manager.extend_buffers([
+                    (
+                        ResourceID::HorizontalGradientLeft,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Graph: `color_left` buffer"),
+                            contents: bytemuck::cast_slice(left),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    ),
+                    (
+                        ResourceID::HorizontalGradientRight,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Graph: `color_right` buffer"),
+                            contents: bytemuck::cast_slice(right),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    ),
+                ]);
 
-                bind_group0.insert_buffer(
-                    Binding0::HorizontalGradientRight as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Graph: `color_right` buffer"),
-                        contents: bytemuck::cast_slice(right),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+                bind_group0_mapping.extend([
+                    (
+                        ResourceID::HorizontalGradientLeft,
+                        crate::util::buffer(
+                            bindings0::HORIZONTAL_GRADIENT_LEFT,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ),
+                    (
+                        ResourceID::HorizontalGradientRight,
+                        crate::util::buffer(
+                            bindings0::HORIZONTAL_GRADIENT_RIGHT,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ),
+                ]);
 
                 device.create_shader_module(include_wgsl!("./fragment_horizontal_gradient.wgsl"))
             }
             GraphVariant::VerticalGradient { top, bottom } => {
-                bind_group0.insert_buffer(
-                    Binding0::VerticalGradientTop as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Graph: `color_top` buffer"),
-                        contents: bytemuck::cast_slice(top),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+                resource_manager.extend_buffers([
+                    (
+                        ResourceID::VerticalGradientTop,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Graph: `color_top` buffer"),
+                            contents: bytemuck::cast_slice(top),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    ),
+                    (
+                        ResourceID::VerticalGradientBottom,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Graph: `color_bottom` buffer"),
+                            contents: bytemuck::cast_slice(bottom),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    ),
+                ]);
 
-                bind_group0.insert_buffer(
-                    Binding0::VerticalGradientBottom as u32,
-                    wgpu::ShaderStages::FRAGMENT,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Graph: `color_bottom` buffer"),
-                        contents: bytemuck::cast_slice(bottom),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+                bind_group0_mapping.extend([
+                    (
+                        ResourceID::VerticalGradientTop,
+                        crate::util::buffer(
+                            bindings0::VERTICAL_GRADIENT_TOP,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ),
+                    (
+                        ResourceID::VerticalGradientBottom,
+                        crate::util::buffer(
+                            bindings0::VERTICAL_GRADIENT_BOTTOM,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ),
+                ]);
 
                 device.create_shader_module(include_wgsl!("./fragment_vertical_gradient.wgsl"))
             }
         };
 
+        let (bind_group0, bind_group0_layout) =
+            resource_manager.build_bind_group("Graph: Bind group 0", device, &bind_group0_mapping);
+
+        let (bind_group1, bind_group1_layout) =
+            resource_manager.build_bind_group("Graph: Bind group 1", device, &bind_group1_mapping);
+
         let pipeline = {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Graph: Pipeline layout"),
-                bind_group_layouts: &[
-                    &bind_group0.get_bind_group_layout(device),
-                    &bind_group1.get_bind_group_layout(device),
-                ],
+                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
                 push_constant_ranges: &[],
             });
 
@@ -244,14 +302,13 @@ impl Graph {
             ))
         };
 
-        bind_group0.build_bind_group(device);
-        bind_group1.build_bind_group(device);
-
         Self {
             placement: desc.placement,
             bar_processor,
             vbuffer,
             pipeline,
+
+            resource_manager,
 
             bind_group0,
             bind_group1,
@@ -263,18 +320,22 @@ impl Renderable for Graph {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_pipeline(&self.pipeline);
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
-        pass.set_bind_group(0, self.bind_group0.get_bind_group(), &[]);
-        pass.set_bind_group(1, self.bind_group1.get_bind_group(), &[]);
+        pass.set_bind_group(0, &self.bind_group0, &[]);
+        pass.set_bind_group(1, &self.bind_group1, &[]);
         pass.draw(0..3, 0..1);
     }
 }
 
 impl Component for Graph {
-    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &shady_audio::SampleProcessor) {
-        if let Some(buffer) = self.bind_group1.get_buffer(Binding1::Freqs as u32) {
-            let bar_values = self.bar_processor.process_bars(processor);
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(bar_values));
-        }
+    fn update_audio(
+        &mut self,
+        queue: &wgpu::Queue,
+        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
+    ) {
+        let bar_values = self.bar_processor.process_bars(processor);
+
+        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
@@ -285,8 +346,8 @@ impl Component for Graph {
 
         {
             let buffer = self
-                .bind_group0
-                .get_buffer(Binding0::Resolution as u32)
+                .resource_manager
+                .get_buffer(ResourceID::Resolution)
                 .unwrap();
 
             queue.write_buffer(
@@ -305,8 +366,8 @@ impl Component for Graph {
             self.bar_processor
                 .set_amount_bars(std::num::NonZero::new(amount_bars as u16).unwrap());
 
-            self.bind_group1.replace_buffer(
-                Binding1::Freqs as u32,
+            self.resource_manager.replace_buffer(
+                ResourceID::Freqs,
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Graph: `freqs` buffer"),
                     size: (std::mem::size_of::<f32>() * amount_bars) as wgpu::BufferAddress,
@@ -314,8 +375,6 @@ impl Component for Graph {
                     mapped_at_creation: false,
                 }),
             );
-
-            self.bind_group1.build_bind_group(device);
         }
     }
 }

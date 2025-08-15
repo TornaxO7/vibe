@@ -6,8 +6,8 @@ use std::{
 
 use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
-use shady_audio::SampleProcessor;
 use tracing::{error, warn};
+use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{Component, ShaderCodeError},
     Renderer, RendererDescriptor,
@@ -52,7 +52,7 @@ impl State<'_> {
     pub fn refresh_components(
         &mut self,
         renderer: &Renderer,
-        processor: &SampleProcessor,
+        processor: &SampleProcessor<SystemAudioFetcher>,
         comp_configs: &[ComponentConfig],
     ) -> Result<(), ShaderCodeError> {
         let mut new_components = Vec::with_capacity(comp_configs.len());
@@ -100,7 +100,7 @@ impl State<'_> {
 }
 
 struct OutputRenderer<'a> {
-    processor: SampleProcessor,
+    processor: SampleProcessor<SystemAudioFetcher>,
     renderer: Renderer,
     state: Option<State<'a>>,
 

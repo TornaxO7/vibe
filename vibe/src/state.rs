@@ -3,7 +3,6 @@ use raw_window_handle::{
 };
 
 use anyhow::Context;
-use shady_audio::SampleProcessor;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState, Region},
     delegate_compositor, delegate_layer, delegate_output, delegate_registry,
@@ -17,6 +16,7 @@ use smithay_client_toolkit::{
 };
 use std::{collections::HashMap, ptr::NonNull, time::Instant};
 use tracing::{debug, error, info, warn};
+use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::Renderer;
 use wayland_client::{
     globals::GlobalList,
@@ -39,7 +39,7 @@ pub struct State {
     compositor_state: CompositorState,
 
     renderer: Renderer,
-    sample_processor: SampleProcessor,
+    sample_processor: SampleProcessor<SystemAudioFetcher>,
 
     time: Instant,
 

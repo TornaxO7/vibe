@@ -1,11 +1,9 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use shady_audio::StandardEasing;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AurodioAudioConfig {
-    pub easing: StandardEasing,
     pub sensitivity: f32,
 }
 

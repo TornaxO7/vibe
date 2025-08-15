@@ -6,8 +6,8 @@ mod graph;
 mod radial;
 
 use serde::{Deserialize, Serialize};
-use shady_audio::{SampleProcessor, StandardEasing};
 use std::num::NonZero;
+use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
@@ -79,7 +79,6 @@ impl Default for ComponentConfig {
                 amount_bars: NonZero::new(60).unwrap(),
                 freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
                 sensitivity: 0.2,
-                easing: StandardEasing::OutCubic,
             },
             max_height: 0.75,
             variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
@@ -93,7 +92,7 @@ impl ComponentConfig {
     pub fn to_component(
         &self,
         renderer: &Renderer,
-        processor: &SampleProcessor,
+        processor: &SampleProcessor<SystemAudioFetcher>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn Component>, ShaderCodeError> {
         match self {
@@ -119,7 +118,7 @@ impl ComponentConfig {
                 Bars::new(&vibe_renderer::components::BarsDescriptor {
                     device: renderer.device(),
                     sample_processor: processor,
-                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
                     texture_format,
                     max_height: *max_height,
                     variant,
@@ -133,7 +132,7 @@ impl ComponentConfig {
                 fragment_code,
             } => FragmentCanvas::new(&FragmentCanvasDescriptor {
                 sample_processor: processor,
-                audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
                 device: renderer.device(),
                 format: texture_format,
                 fragment_code: fragment_code.clone(),
@@ -159,7 +158,6 @@ impl ComponentConfig {
                     texture_format,
                     base_color: base_color.as_f32(),
                     movement_speed: *movement_speed,
-                    easing: audio_conf.easing,
                     sensitivity: audio_conf.sensitivity,
                     layers: &layers,
                 })) as Box<dyn Component>)
@@ -177,7 +175,7 @@ impl ComponentConfig {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
                     device: renderer.device(),
                     sample_processor: processor,
-                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
                     output_texture_format: texture_format,
                     variant,
                     max_height: *max_height,
@@ -205,7 +203,7 @@ impl ComponentConfig {
                 Ok(Box::new(Circle::new(&CircleDescriptor {
                     device: renderer.device(),
                     sample_processor: processor,
-                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
                     texture_format,
                     variant,
                     radius: *radius,
@@ -229,7 +227,7 @@ impl ComponentConfig {
                 Ok(Box::new(Radial::new(&RadialDescriptor {
                     device: renderer.device(),
                     processor,
-                    audio_conf: shady_audio::BarProcessorConfig::from(audio_conf),
+                    audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
                     output_texture_format: texture_format,
                     variant,
                     init_rotation: *init_rotation,

@@ -10,11 +10,11 @@ publish = false
 
 [dependencies]
 serde.workspace = true
-shady-audio.workspace = true
 thiserror.workspace = true
 tracing.workspace = true
 wgpu.workspace = true
 cgmath.workspace = true
+vibe-audio.workspace = true
 
 pollster = "0.4"
 bytemuck = "1.23"
