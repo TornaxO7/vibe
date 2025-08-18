@@ -299,14 +299,6 @@ impl CompositorHandler for State {
             .map(|(out, _ctx)| out.clone())
             .unwrap();
 
-        // update the shader resources first before rendering
-        {
-            let output = self.outputs.get_mut(&key).unwrap();
-            for component in output.components.iter_mut() {
-                component.update_audio(self.renderer.queue(), &self.sample_processor);
-            }
-        }
-
         self.render(key, qh);
     }
 
