@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## vibe-v2.0.1 - 2025-08-22
+
+- Remove unused audio fetching
+
 ## vibe-v2.0.0 - 2025-08-15
 
 [2722da3](2722da3f1311862bd23ee9f86efea1a99d942df8)...[d6a0732](d6a0732ccbe9ede24a725dd2ca4257fb2f7b03c6)
