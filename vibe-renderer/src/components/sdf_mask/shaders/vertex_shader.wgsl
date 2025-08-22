@@ -1,0 +1,4 @@
+@vertex
+fn main(@location(0) pos: vec2<f32>) -> @builtin(position) vec4<f32> {
+    return vec4f(pos, 0., 1.);
+}

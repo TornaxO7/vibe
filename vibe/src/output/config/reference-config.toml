@@ -257,3 +257,38 @@ sensitivity = 5.0
 freq_range = { start = 50, end = 10000 }
 [components.Radial.variant]
 Color = [0, 255, 0, 255]
+
+# Chessy
+
+## Chessy - Box
+[[components]]
+[components.Chessy]
+movement_speed = 0.1
+pattern = "Box"
+zoom_factor = 5.0
+[components.Chessy.audio_conf]
+amount_bars = 10
+sensitivity = 5.0
+freq_range = { start = 50, end = 10000 }
+
+## Chessy - Circle
+[[components]]
+[components.Chessy]
+movement_speed = 0.1
+pattern = "Circle"
+zoom_factor = 5.0
+[components.Chessy.audio_conf]
+amount_bars = 10
+sensitivity = 5.0
+freq_range = { start = 50, end = 10000 }
+
+## Chessy - Heart
+[[components]]
+[components.Chessy]
+movement_speed = 0.1
+pattern = "Heart"
+zoom_factor = 5.0
+[components.Chessy.audio_conf]
+amount_bars = 10
+sensitivity = 5.0
+freq_range = { start = 50, end = 10000 }

@@ -9,6 +9,8 @@ use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
+use crate::components::{SdfMask, SdfMaskDescriptor, SdfPattern};
+
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
@@ -199,5 +201,49 @@ impl Renderer {
         self.render(&view, &[&renderable]);
 
         texture
+    }
+
+    pub fn create_sdf_mask(&self, texture_size: u32, pattern: SdfPattern) -> wgpu::Texture {
+        let device = self.device();
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("Grid texture"),
+            size: wgpu::Extent3d {
+                width: texture_size,
+                height: texture_size,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R16Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let renderable = SdfMask::new(&SdfMaskDescriptor {
+            device,
+            format: texture.format(),
+            pattern,
+
+            texture_size,
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.render(&view, &[&renderable]);
+
+        texture
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn create_sdf_mask() {
+        let renderer = Renderer::new(&RendererDescriptor::default());
+
+        renderer.create_sdf_mask(10, SdfPattern::Box);
     }
 }

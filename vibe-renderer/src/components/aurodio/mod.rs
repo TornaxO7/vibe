@@ -1,5 +1,4 @@
 mod descriptor;
-
 pub use descriptor::*;
 
 use super::Component;

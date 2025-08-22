@@ -11,9 +11,10 @@ use vibe_audio::{
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
-        BarsFormat, BarsPlacement, Circle, CircleDescriptor, CircleVariant, Component,
-        FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphVariant, Radial,
-        RadialDescriptor, RadialVariant, ShaderCode, ValueNoise, ValueNoiseDescriptor,
+        BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
+        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        GraphVariant, Radial, RadialDescriptor, RadialVariant, SdfPattern, ShaderCode, ValueNoise,
+        ValueNoiseDescriptor,
     },
     Renderer,
 };
@@ -276,6 +277,18 @@ impl<'a> State<'a> {
                 bar_height_sensitivity: 0.5,
                 bar_width: 0.015,
                 position: (0.5, 0.5),
+            })) as Box<dyn Component>),
+            ComponentName::ChessyBoxVariant => Ok(Box::new(Chessy::new(&ChessyDescriptor {
+                renderer: &renderer,
+                sample_processor: processor,
+                audio_config: BarProcessorConfig {
+                    amount_bars: NonZero::new(10).unwrap(),
+                    ..Default::default()
+                },
+                texture_format: surface_config.format,
+                movement_speed: 0.1,
+                pattern: SdfPattern::Box,
+                zoom_factor: 4.,
             })) as Box<dyn Component>),
         }?;
 
