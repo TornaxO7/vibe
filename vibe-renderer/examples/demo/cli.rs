@@ -18,6 +18,8 @@ pub enum ComponentName {
 
     RadialColorVariant,
 
+    ChessyBoxVariant,
+
     ValueNoise,
 }
 

@@ -1,17 +1,21 @@
 mod aurodio;
 mod bars;
+mod chessy;
 mod circle;
 mod fragment_canvas;
 mod graph;
 mod radial;
+mod sdf_mask;
 mod value_noise;
 
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
+pub use chessy::{Chessy, ChessyDescriptor};
 pub use circle::{Circle, CircleDescriptor, CircleVariant};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 pub use graph::{Graph, GraphDescriptor, GraphPlacement, GraphVariant};
 pub use radial::{Radial, RadialDescriptor, RadialVariant};
+pub use sdf_mask::{SdfMask, SdfMaskDescriptor, SdfPattern};
 pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
 
 use crate::{Renderable, Renderer};

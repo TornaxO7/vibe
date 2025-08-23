@@ -72,6 +72,23 @@ where
         }
     }
 
+    pub fn replace_texture(&mut self, id: ResourceID, new_texture: wgpu::Texture) {
+        let new_view = new_texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+        let resource = self
+            .resources
+            .get_mut(&id)
+            .unwrap_or_else(|| panic!("There's no resource with id `{:?}`", id));
+
+        match resource {
+            Resource::Texture { _texture, view } => {
+                *_texture = new_texture;
+                *view = new_view;
+            }
+            _ => panic!("There's no texture with id `{:?}`", id),
+        }
+    }
+
     pub fn insert_sampler(&mut self, id: ResourceID, sampler: wgpu::Sampler) {
         if self
             .resources

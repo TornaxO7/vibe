@@ -1,5 +1,6 @@
 mod aurodio;
 mod bars;
+mod chessy;
 mod circle;
 mod fragment_canvas;
 mod graph;
@@ -11,15 +12,17 @@ use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
-        BarsPlacement, Circle, CircleDescriptor, CircleVariant, Component, FragmentCanvas,
-        FragmentCanvasDescriptor, Graph, GraphDescriptor, GraphPlacement, GraphVariant, Radial,
-        RadialDescriptor, RadialVariant, ShaderCode, ShaderCodeError,
+        BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor, CircleVariant,
+        Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialVariant, SdfPattern,
+        ShaderCode, ShaderCodeError,
     },
     Renderer,
 };
 
 pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
 pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVariantConfig};
+pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphPlacementConfig, GraphVariantConfig};
@@ -69,6 +72,12 @@ pub enum ComponentConfig {
         bar_height_sensitivity: f32,
         bar_width: f32,
         position: (f32, f32),
+    },
+    Chessy {
+        movement_speed: f32,
+        pattern: SdfPattern,
+        zoom_factor: f32,
+        audio_conf: ChessyAudioConfig,
     },
 }
 
@@ -237,6 +246,20 @@ impl ComponentConfig {
                     position: *position,
                 })))
             }
+            ComponentConfig::Chessy {
+                movement_speed,
+                pattern,
+                zoom_factor,
+                audio_conf,
+            } => Ok(Box::new(Chessy::new(&ChessyDescriptor {
+                renderer,
+                sample_processor: processor,
+                audio_config: vibe_audio::BarProcessorConfig::from(audio_conf),
+                texture_format,
+                movement_speed: *movement_speed,
+                pattern: *pattern,
+                zoom_factor: *zoom_factor,
+            }))),
         }
     }
 }

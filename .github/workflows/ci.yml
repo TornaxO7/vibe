@@ -59,4 +59,4 @@ jobs:
         with:
           ref: ${{ github.head_ref }}
       - name: Running tests
-        run: cargo test -j 2 --verbose
+        run: cargo test -j 1 --verbose

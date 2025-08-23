@@ -1,5 +1,7 @@
 mod descriptor;
 
+use std::collections::HashMap;
+
 pub use descriptor::*;
 
 use super::Component;
@@ -82,6 +84,8 @@ pub struct Graph {
 
     bind_group0: wgpu::BindGroup,
     bind_group1: wgpu::BindGroup,
+
+    bind_group1_mapping: HashMap<ResourceID, wgpu::BindGroupLayoutEntry>,
 
     vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
@@ -312,6 +316,8 @@ impl Graph {
 
             bind_group0,
             bind_group1,
+
+            bind_group1_mapping,
         }
     }
 }
@@ -375,6 +381,14 @@ impl Component for Graph {
                     mapped_at_creation: false,
                 }),
             );
+
+            let (bind_group, _layout) = self.resource_manager.build_bind_group(
+                "Graph: Bind group 1",
+                device,
+                &self.bind_group1_mapping,
+            );
+
+            self.bind_group1 = bind_group;
         }
     }
 }
