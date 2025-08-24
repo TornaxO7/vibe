@@ -16,7 +16,7 @@ fn dot2(v: vec2f) -> f32 {
 // https://iquilezles.org/articles/distfunctions2d/
 fn sdfCircle(uv: vec2f) -> f32
 {
-    const RADIUS: f32 = .5;
+    const RADIUS: f32 = .4;
     return length(uv) - RADIUS;
 }
 
