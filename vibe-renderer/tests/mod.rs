@@ -18,6 +18,8 @@ mod circle_graph;
 mod radial_color_variant;
 mod radial_height_gradient_variant;
 
+mod chessy;
+
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
 
 // some colors
