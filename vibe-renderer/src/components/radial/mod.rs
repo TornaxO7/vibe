@@ -33,7 +33,7 @@ mod bindings0 {
         HashMap::from([
             (ResourceID::BarRotation, crate::util::buffer(BAR_ROTATION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
             (ResourceID::InverseBarRotation, crate::util::buffer(INVERSE_BAR_ROTATION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
-            (ResourceID::BarWidth, crate::util::buffer(BAR_WIDTH, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::BarWidth, crate::util::buffer(BAR_WIDTH, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::CircleRadius, crate::util::buffer(CIRCLE_RADIUS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
             (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
             (ResourceID::BarHeightSensitivity, crate::util::buffer(BAR_HEIGHT_SENSITIVITY, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
@@ -176,7 +176,7 @@ impl Radial {
                 ResourceID::Resolution,
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Radial: `iResolution` buffer"),
-                    size: (std::mem::size_of::<f32>() * 2) as wgpu::BufferAddress,
+                    size: (std::mem::size_of::<[f32; 3]>()) as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
@@ -344,15 +344,19 @@ impl Component for Radial {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::Resolution)
-            .unwrap();
+        {
+            let buffer = self
+                .resource_manager
+                .get_buffer(ResourceID::Resolution)
+                .unwrap();
 
-        queue.write_buffer(
-            buffer,
-            0,
-            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-        );
+            let width = new_resolution[0] as f32;
+            let height = new_resolution[1] as f32;
+            queue.write_buffer(
+                buffer,
+                0,
+                bytemuck::cast_slice(&[width, height, width / height]),
+            );
+        }
     }
 }
