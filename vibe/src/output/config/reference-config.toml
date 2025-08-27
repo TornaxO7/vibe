@@ -258,6 +258,22 @@ freq_range = { start = 50, end = 10000 }
 [components.Radial.variant]
 Color = [0, 255, 0, 255]
 
+## Radial - HeightGradientVariant
+[[components]]
+[components.Radial]
+init_rotation = 90.0
+circle_radius = 0.2
+bar_height_sensitivity = 1.0
+bar_width = 0.01
+position = [0.5, 0.5]
+[components.Radial.audio_conf]
+amount_bars = 60
+sensitivity = 5.0
+freq_range = { start = 50, end = 10000 }
+[components.Radial.variant.HeightGradient]
+inner = [255, 0, 0, 255]
+outer = [255, 255, 255, 255]
+
 # Chessy
 
 ## Chessy - Box

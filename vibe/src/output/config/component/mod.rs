@@ -231,6 +231,12 @@ impl ComponentConfig {
             } => {
                 let variant = match variant {
                     RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()),
+                    RadialVariantConfig::HeightGradient { inner, outer } => {
+                        RadialVariant::HeightGradient {
+                            inner: inner.as_f32(),
+                            outer: outer.as_f32(),
+                        }
+                    }
                 };
 
                 Ok(Box::new(Radial::new(&RadialDescriptor {

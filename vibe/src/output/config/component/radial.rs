@@ -32,4 +32,5 @@ impl From<&RadialAudioConfig> for vibe_audio::BarProcessorConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum RadialVariantConfig {
     Color(Rgba),
+    HeightGradient { inner: Rgba, outer: Rgba },
 }

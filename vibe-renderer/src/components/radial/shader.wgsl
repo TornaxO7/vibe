@@ -32,8 +32,7 @@ struct Input {
 
 struct Output {
     @builtin(position) vpos: vec4f,
-    @location(0) x: f32,
-    @location(1) y: f32,
+    @location(0) rect_pos: vec2f,
 };
 
 @vertex
@@ -83,19 +82,36 @@ fn _inner_vertex_main(in: Input, bar_rotation: mat2x2f) -> Output {
 
     var out: Output;
     out.vpos = vec4f(final_pos, 0., 1.);
-    out.x = rect_pos.x - circle_radius;
-    out.y = rect_pos.y;
+    out.rect_pos = vec2f(rect_pos.x - circle_radius, rect_pos.y);
     return out;
 }
 
+
 @fragment
-fn fragment_main(in: Output) -> @location(0) vec4f {
+fn color_entrypoint(in: Output) -> @location(0) vec4f {
+    return _fragment_smoothing(color, in.rect_pos);
+}
+
+@group(0) @binding(8)
+var<uniform> height_gradient_inner: vec4f;
+
+@group(0) @binding(9)
+var<uniform> height_gradient_outer: vec4f;
+
+@fragment
+fn height_gradient_entrypoint(in: Output) -> @location(0) vec4f {
+    let col = mix(height_gradient_inner, height_gradient_outer, smoothstep(0., .5, in.rect_pos.x / bar_height_sensitivity));
+    return _fragment_smoothing(col, in.rect_pos);
+}
+
+fn _fragment_smoothing(col: vec4f, rect_pos: vec2f) -> vec4f {
+    
     let max_width = bar_width / 2.;
-    let rel_y = abs(in.y) / max_width;
+    let rel_y = abs(rect_pos.y) / max_width;
 
     let width_smoothing = smoothstep(1., 0., rel_y);
 
     // smooth out the line at the edge of the inner circle
-    let bottom_smoothing = smoothstep(.0, .01, in.x);
-    return color * width_smoothing * bottom_smoothing;
+    let bottom_smoothing = smoothstep(.0, .01, rect_pos.x);
+    return col * width_smoothing * bottom_smoothing;
 }
