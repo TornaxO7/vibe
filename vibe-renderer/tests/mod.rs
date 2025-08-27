@@ -3,9 +3,9 @@ use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
 
 mod aurodio;
 
-mod bar_with_color_variant;
-mod bar_with_fragment_code_variant;
-mod bar_with_presence_gradient_variant;
+mod bar_color_variant;
+mod bar_fragment_code_variant;
+mod bar_presence_gradient_variant;
 
 mod fragment_canvas;
 
@@ -15,8 +15,8 @@ mod graph_vertical_gradient_variant;
 
 mod circle_graph;
 
-mod radial_with_color_variant;
-mod radial_with_height_gradient_variant;
+mod radial_color_variant;
+mod radial_height_gradient_variant;
 
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
 
