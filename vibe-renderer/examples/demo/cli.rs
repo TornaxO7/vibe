@@ -17,6 +17,7 @@ pub enum ComponentName {
     GraphVerticalGradientVariant,
 
     RadialColorVariant,
+    RadialHeightGradientVariant,
 
     ChessyBoxVariant,
 

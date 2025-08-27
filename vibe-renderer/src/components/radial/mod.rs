@@ -28,6 +28,9 @@ mod bindings0 {
     pub const COLOR: u32 = 6;
     pub const POSITION_OFFSET: u32 = 7;
 
+    pub const HEIGHT_GRADIENT_INNER: u32 = 8;
+    pub const HEIGHT_GRADIENT_OUTER: u32 = 9;
+
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
@@ -36,7 +39,7 @@ mod bindings0 {
             (ResourceID::BarWidth, crate::util::buffer(BAR_WIDTH, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::CircleRadius, crate::util::buffer(CIRCLE_RADIUS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
             (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::BarHeightSensitivity, crate::util::buffer(BAR_HEIGHT_SENSITIVITY, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::BarHeightSensitivity, crate::util::buffer(BAR_HEIGHT_SENSITIVITY, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::PositionOffset, crate::util::buffer(POSITION_OFFSET, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
         ])
     }
@@ -67,6 +70,8 @@ enum ResourceID {
 
     Color,
     PositionOffset,
+    HeightGradientInner,
+    HeightGradientOuter,
 
     Freqs,
 }
@@ -218,7 +223,7 @@ impl Radial {
             );
         }
 
-        match desc.variant {
+        let fragment_entrypoint = match desc.variant {
             RadialVariant::Color(rgba) => {
                 resource_manager.insert_buffer(
                     ResourceID::Color,
@@ -237,6 +242,49 @@ impl Radial {
                         wgpu::BufferBindingType::Uniform,
                     ),
                 );
+
+                "color_entrypoint"
+            }
+            RadialVariant::HeightGradient { inner, outer } => {
+                resource_manager.extend_buffers([
+                    (
+                        ResourceID::HeightGradientInner,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Radial: `inner` buffer"),
+                            contents: bytemuck::cast_slice(&inner),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    ),
+                    (
+                        ResourceID::HeightGradientOuter,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Radial: `outer` buffer"),
+                            contents: bytemuck::cast_slice(&outer),
+                            usage: wgpu::BufferUsages::UNIFORM,
+                        }),
+                    ),
+                ]);
+
+                bind_group0_mapping.extend([
+                    (
+                        ResourceID::HeightGradientInner,
+                        crate::util::buffer(
+                            bindings0::HEIGHT_GRADIENT_INNER,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ),
+                    (
+                        ResourceID::HeightGradientOuter,
+                        crate::util::buffer(
+                            bindings0::HEIGHT_GRADIENT_OUTER,
+                            wgpu::ShaderStages::FRAGMENT,
+                            wgpu::BufferBindingType::Uniform,
+                        ),
+                    ),
+                ]);
+
+                "height_gradient_entrypoint"
             }
         };
 
@@ -272,7 +320,7 @@ impl Radial {
                     },
                     fragment: wgpu::FragmentState {
                         module: &shader,
-                        entry_point: None,
+                        entry_point: Some(fragment_entrypoint),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         targets: &fragment_targets,
                     },

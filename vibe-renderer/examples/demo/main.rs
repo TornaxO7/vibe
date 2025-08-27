@@ -278,6 +278,30 @@ impl<'a> State<'a> {
                 bar_width: 0.015,
                 position: (0.5, 0.5),
             })) as Box<dyn Component>),
+
+            ComponentName::RadialHeightGradientVariant => {
+                Ok(Box::new(Radial::new(&RadialDescriptor {
+                    device: renderer.device(),
+                    processor,
+                    audio_conf: vibe_audio::BarProcessorConfig {
+                        amount_bars: NonZero::new(60).unwrap(),
+                        sensitivity: 4.0,
+                        ..Default::default()
+                    },
+                    output_texture_format: surface_config.format,
+
+                    variant: RadialVariant::HeightGradient {
+                        inner: [1., 0., 0., 1.],
+                        outer: [1., 1., 1., 1.],
+                    },
+
+                    init_rotation: cgmath::Deg(90.),
+                    circle_radius: 0.3,
+                    bar_height_sensitivity: 1.,
+                    bar_width: 0.02,
+                    position: (0.5, 0.5),
+                })) as Box<dyn Component>)
+            }
             ComponentName::ChessyBoxVariant => Ok(Box::new(Chessy::new(&ChessyDescriptor {
                 renderer: &renderer,
                 sample_processor: processor,

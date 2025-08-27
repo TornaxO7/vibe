@@ -21,4 +21,5 @@ pub struct RadialDescriptor<'a, F: Fetcher> {
 
 pub enum RadialVariant {
     Color(Rgba),
+    HeightGradient { inner: Rgba, outer: Rgba },
 }
