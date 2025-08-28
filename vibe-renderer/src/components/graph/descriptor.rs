@@ -1,3 +1,6 @@
+use std::num::NonZero;
+
+use cgmath::Deg;
 use vibe_audio::fetcher::Fetcher;
 
 use crate::components::Rgba;
@@ -10,7 +13,6 @@ pub struct GraphDescriptor<'a, F: Fetcher> {
 
     pub variant: GraphVariant,
     pub max_height: f32,
-    pub smoothness: f32,
     pub placement: GraphPlacement,
 }
 
@@ -20,6 +22,15 @@ pub enum GraphPlacement {
     Top,
     Right,
     Left,
+    Custom {
+        // Convention:
+        //   (0, 0) => top left corner
+        //   (1., 1.) => bottom right corner
+        offset: [f32; 2],
+        rotation: Deg<f32>,
+        // aka: width. This will override the amount bars of the given `audio_conf.amount_bars` of the descriptor
+        amount_bars: NonZero<u16>,
+    },
 }
 
 #[derive(Debug, Clone)]

@@ -15,7 +15,6 @@ fn test() {
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: GraphVariant::Color(RED),
-        smoothness: 0.01,
         placement: vibe_renderer::components::GraphPlacement::Bottom,
     });
 

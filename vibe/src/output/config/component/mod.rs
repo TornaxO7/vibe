@@ -53,7 +53,6 @@ pub enum ComponentConfig {
         audio_conf: GraphAudioConfig,
         max_height: f32,
         variant: GraphVariantConfig,
-        smoothness: f32,
         placement: GraphPlacementConfig,
     },
     Circle {
@@ -175,7 +174,6 @@ impl ComponentConfig {
                 audio_conf,
                 max_height,
                 variant,
-                smoothness,
                 placement,
             } => {
                 let variant = GraphVariant::from(variant);
@@ -188,7 +186,6 @@ impl ComponentConfig {
                     output_texture_format: texture_format,
                     variant,
                     max_height: *max_height,
-                    smoothness: *smoothness,
                     placement,
                 })) as Box<dyn Component>)
             }

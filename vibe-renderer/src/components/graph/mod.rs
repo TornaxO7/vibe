@@ -1,7 +1,8 @@
 mod descriptor;
 
-use std::collections::HashMap;
+use std::{collections::HashMap, num::NonZero};
 
+use cgmath::{Deg, Matrix, Matrix2};
 pub use descriptor::*;
 
 use super::Component;
@@ -10,7 +11,7 @@ use crate::{
 };
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor,
+    BarProcessor, BarProcessorConfig,
 };
 use wgpu::{include_wgsl, util::DeviceExt};
 
@@ -21,26 +22,30 @@ const POSITIONS: [VertexPosition; 3] = [
     [-3., 1.], // top left corner
 ];
 
+/// This value is only used for the placements `TOP`, `BOTTOM`, `RIGHT` and `LEFT` since
+/// the amount of bars needs to adjust to the screen height/width anyhow.
+const DEFAULT_AMOUNT_BARS: NonZero<u16> = NonZero::new(128).unwrap();
+
 mod bindings0 {
     use super::ResourceID;
     use std::collections::HashMap;
 
     pub const RESOLUTION: u32 = 0;
-    pub const MAX_HEIGHT: u32 = 1;
-    pub const COLOR: u32 = 2;
-    pub const HORIZONTAL_GRADIENT_LEFT: u32 = 3;
-    pub const HORIZONTAL_GRADIENT_RIGHT: u32 = 4;
-
-    pub const VERTICAL_GRADIENT_TOP: u32 = 5;
-    pub const VERTICAL_GRADIENT_BOTTOM: u32 = 6;
-    pub const SMOOTHNESS: u32 = 7;
+    pub const OFFSET: u32 = 1;
+    pub const ROTATION: u32 = 2;
+    pub const MAX_HEIGHT: u32 = 3;
+    pub const COLOR1: u32 = 4;
+    pub const COLOR2: u32 = 5;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
             (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Offset, crate::util::buffer(OFFSET, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Rotation, crate::util::buffer(ROTATION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::MaxHeight, crate::util::buffer(MAX_HEIGHT, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Smoothness, crate::util::buffer(SMOOTHNESS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Color1, crate::util::buffer(COLOR1, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Color2, crate::util::buffer(COLOR2, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -62,16 +67,11 @@ mod bindings1 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ResourceID {
     Resolution,
+    Offset,
+    Rotation,
     MaxHeight,
-    Color,
-
-    HorizontalGradientLeft,
-    HorizontalGradientRight,
-
-    VerticalGradientTop,
-    VerticalGradientBottom,
-
-    Smoothness,
+    Color1,
+    Color2,
 
     Freqs,
 }
@@ -87,6 +87,8 @@ pub struct Graph {
 
     bind_group1_mapping: HashMap<ResourceID, wgpu::BindGroupLayoutEntry>,
 
+    amount_bars: NonZero<u16>,
+
     vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
 }
@@ -94,28 +96,80 @@ pub struct Graph {
 impl Graph {
     pub fn new<F: Fetcher>(desc: &GraphDescriptor<F>) -> Self {
         let device = desc.device;
-        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
         let mut resource_manager = ResourceManager::new();
-        let mut bind_group0_mapping = bindings0::init_mapping();
+        let bind_group0_mapping = bindings0::init_mapping();
         let bind_group1_mapping = bindings1::init_mapping();
 
+        let (offset, rotation, amount_bars) = {
+            let (offset, deg, amount_bars) = match desc.placement {
+                GraphPlacement::Top => ([0., 0.], Deg(0.), DEFAULT_AMOUNT_BARS),
+                GraphPlacement::Left => ([0., 1.], Deg(90.), DEFAULT_AMOUNT_BARS),
+                GraphPlacement::Bottom => ([1., 1.], Deg(180.), DEFAULT_AMOUNT_BARS),
+                GraphPlacement::Right => ([1., 0.], Deg(270.), DEFAULT_AMOUNT_BARS),
+                GraphPlacement::Custom {
+                    offset,
+                    rotation,
+                    amount_bars,
+                } => (offset, rotation, amount_bars),
+            };
+
+            (offset, Matrix2::from_angle(-deg), amount_bars)
+        };
+        let bar_processor = {
+            let audio_conf = BarProcessorConfig {
+                amount_bars,
+                ..desc.audio_conf.clone()
+            };
+            BarProcessor::new(desc.sample_processor, audio_conf)
+        };
+
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Graph: Vertex buffer => positions"),
+            label: Some("Graph: vertex buffer"),
             contents: bytemuck::cast_slice(&POSITIONS),
             usage: wgpu::BufferUsages::VERTEX,
         });
+
+        let (fragment_entrypoint, color1, color2) = match desc.variant {
+            GraphVariant::Color(color) => ("color", color.clone(), color.clone()),
+            GraphVariant::HorizontalGradient { left, right } => {
+                ("horizontal_gradient", left, right)
+            }
+            GraphVariant::VerticalGradient { top, bottom } => ("vertical_gradient", top, bottom),
+        };
 
         resource_manager.extend_buffers([
             (
                 ResourceID::Resolution,
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Graph: `iResolution` buffer"),
-                    size: (std::mem::size_of::<f32>() * 2) as wgpu::BufferAddress,
+                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
             ),
+            (
+                ResourceID::Offset,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Graph: `offset` buffer"),
+                    contents: bytemuck::cast_slice(&offset),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            {
+                // we need to transpose, because otherwise `.as_ref()` would return columns first
+                let t = rotation.transpose();
+                let array: &[f32; 4] = t.as_ref();
+
+                (
+                    ResourceID::Rotation,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Graph: `rotation` buffer"),
+                        contents: bytemuck::cast_slice(array),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                )
+            },
             (
                 ResourceID::MaxHeight,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -125,10 +179,18 @@ impl Graph {
                 }),
             ),
             (
-                ResourceID::Smoothness,
+                ResourceID::Color1,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `smoothness` buffer"),
-                    contents: bytemuck::bytes_of(&desc.smoothness),
+                    label: Some("Graph: `color1` buffer"),
+                    contents: bytemuck::cast_slice(&color1),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Color2,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Graph: `color2` buffer"),
+                    contents: bytemuck::cast_slice(&color2),
                     usage: wgpu::BufferUsages::UNIFORM,
                 }),
             ),
@@ -136,8 +198,7 @@ impl Graph {
                 ResourceID::Freqs,
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Graph: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>()
-                        * u16::from(desc.audio_conf.amount_bars) as usize)
+                    size: (std::mem::size_of::<f32>() * desc.audio_conf.amount_bars.get() as usize)
                         as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
@@ -145,118 +206,10 @@ impl Graph {
             ),
         ]);
 
-        let fragment_entrypoint = match desc.placement {
-            GraphPlacement::Bottom => "bottom",
-            GraphPlacement::Top => "top",
-            GraphPlacement::Right => "right",
-            GraphPlacement::Left => "left",
-        };
-
-        let fragment_shader = match &desc.variant {
-            GraphVariant::Color(rgba) => {
-                resource_manager.insert_buffer(
-                    ResourceID::Color,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Graph: `color` buffer"),
-                        contents: bytemuck::cast_slice(rgba),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
-
-                bind_group0_mapping.insert(
-                    ResourceID::Color,
-                    crate::util::buffer(
-                        bindings0::COLOR,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    ),
-                );
-
-                device.create_shader_module(include_wgsl!("./fragment_color.wgsl"))
-            }
-            GraphVariant::HorizontalGradient { left, right } => {
-                resource_manager.extend_buffers([
-                    (
-                        ResourceID::HorizontalGradientLeft,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Graph: `color_left` buffer"),
-                            contents: bytemuck::cast_slice(left),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                    (
-                        ResourceID::HorizontalGradientRight,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Graph: `color_right` buffer"),
-                            contents: bytemuck::cast_slice(right),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                ]);
-
-                bind_group0_mapping.extend([
-                    (
-                        ResourceID::HorizontalGradientLeft,
-                        crate::util::buffer(
-                            bindings0::HORIZONTAL_GRADIENT_LEFT,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                    (
-                        ResourceID::HorizontalGradientRight,
-                        crate::util::buffer(
-                            bindings0::HORIZONTAL_GRADIENT_RIGHT,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                ]);
-
-                device.create_shader_module(include_wgsl!("./fragment_horizontal_gradient.wgsl"))
-            }
-            GraphVariant::VerticalGradient { top, bottom } => {
-                resource_manager.extend_buffers([
-                    (
-                        ResourceID::VerticalGradientTop,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Graph: `color_top` buffer"),
-                            contents: bytemuck::cast_slice(top),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                    (
-                        ResourceID::VerticalGradientBottom,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Graph: `color_bottom` buffer"),
-                            contents: bytemuck::cast_slice(bottom),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                ]);
-
-                bind_group0_mapping.extend([
-                    (
-                        ResourceID::VerticalGradientTop,
-                        crate::util::buffer(
-                            bindings0::VERTICAL_GRADIENT_TOP,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                    (
-                        ResourceID::VerticalGradientBottom,
-                        crate::util::buffer(
-                            bindings0::VERTICAL_GRADIENT_BOTTOM,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                ]);
-
-                device.create_shader_module(include_wgsl!("./fragment_vertical_gradient.wgsl"))
-            }
-        };
+        let fragment_shader = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Graph: fragment shader"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("./fragment.wgsl").into()),
+        });
 
         let (bind_group0, bind_group0_layout) =
             resource_manager.build_bind_group("Graph: Bind group 0", device, &bind_group0_mapping);
@@ -318,6 +271,8 @@ impl Graph {
             bind_group1,
 
             bind_group1_mapping,
+
+            amount_bars,
         }
     }
 }
@@ -364,19 +319,24 @@ impl Component for Graph {
         }
 
         {
-            let amount_bars = match self.placement {
-                GraphPlacement::Bottom | GraphPlacement::Top => new_resolution[0] as usize,
-                GraphPlacement::Left | GraphPlacement::Right => new_resolution[1] as usize,
+            self.amount_bars = {
+                let amount_bars = match self.placement {
+                    GraphPlacement::Bottom | GraphPlacement::Top => new_resolution[0],
+                    GraphPlacement::Left | GraphPlacement::Right => new_resolution[1],
+                    GraphPlacement::Custom { .. } => self.amount_bars.get() as u32,
+                };
+
+                NonZero::new(amount_bars as u16).unwrap()
             };
 
-            self.bar_processor
-                .set_amount_bars(std::num::NonZero::new(amount_bars as u16).unwrap());
+            self.bar_processor.set_amount_bars(self.amount_bars);
 
             self.resource_manager.replace_buffer(
                 ResourceID::Freqs,
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Graph: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars) as wgpu::BufferAddress,
+                    size: (std::mem::size_of::<f32>() * self.amount_bars.get() as usize)
+                        as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),

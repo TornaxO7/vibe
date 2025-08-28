@@ -1,6 +1,7 @@
 use std::{num::NonZero, sync::Arc, time::Instant};
 
 use anyhow::bail;
+use cgmath::Deg;
 use clap::Parser;
 use cli::ComponentName;
 use vibe_audio::{
@@ -215,14 +216,18 @@ impl<'a> State<'a> {
                 device: renderer.device(),
                 sample_processor: processor,
                 audio_conf: BarProcessorConfig {
-                    amount_bars: NonZero::new(size.width as u16).unwrap(),
+                    amount_bars: NonZero::new(500).unwrap(),
                     ..Default::default()
                 },
                 output_texture_format: surface_config.format,
                 variant: GraphVariant::Color([0., 0., 1., 1.]),
                 max_height: 0.5,
-                smoothness: 0.01,
-                placement: vibe_renderer::components::GraphPlacement::Left,
+                // placement: vibe_renderer::components::GraphPlacement::Bottom,
+                placement: vibe_renderer::components::GraphPlacement::Custom {
+                    offset: [0.25, 0.75],
+                    rotation: Deg(45.),
+                    amount_bars: NonZero::new(512).unwrap(),
+                },
             })) as Box<dyn Component>),
             ComponentName::GraphHorizontalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
@@ -230,6 +235,7 @@ impl<'a> State<'a> {
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
                         amount_bars: NonZero::new(size.width as u16).unwrap(),
+                        sensitivity: 4.0,
                         ..Default::default()
                     },
                     output_texture_format: surface_config.format,
@@ -238,8 +244,7 @@ impl<'a> State<'a> {
                         right: [0., 0., 1., 1.],
                     },
                     max_height: 0.5,
-                    smoothness: 0.01,
-                    placement: vibe_renderer::components::GraphPlacement::Left,
+                    placement: vibe_renderer::components::GraphPlacement::Bottom,
                 })) as Box<dyn Component>)
             }
             ComponentName::GraphVerticalGradientVariant => {
@@ -247,18 +252,22 @@ impl<'a> State<'a> {
                     device: renderer.device(),
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
-                        amount_bars: NonZero::new(size.width as u16).unwrap(),
-                        sensitivity: 0.2,
+                        amount_bars: NonZero::new(256).unwrap(),
+                        sensitivity: 4.0,
                         ..Default::default()
                     },
                     output_texture_format: surface_config.format,
                     variant: GraphVariant::VerticalGradient {
-                        top: [0.012, 0.725, 0.749, 1.],
-                        bottom: [0.008, 0.435, 0.447, 1.],
+                        top: [1., 0., 0., 1.],
+                        bottom: [0., 0., 1., 1.],
                     },
                     max_height: 0.5,
-                    smoothness: 0.01,
-                    placement: vibe_renderer::components::GraphPlacement::Top,
+                    // placement: vibe_renderer::components::GraphPlacement::Top,
+                    placement: vibe_renderer::components::GraphPlacement::Custom {
+                        offset: [0.5, 0.2],
+                        rotation: Deg(-45.),
+                        amount_bars: NonZero::new(512).unwrap(),
+                    },
                 })) as Box<dyn Component>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {

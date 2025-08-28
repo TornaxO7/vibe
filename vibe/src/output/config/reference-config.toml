@@ -191,7 +191,6 @@ zoom_factor = 10.0
 [[components]]
 [components.Graph]
 max_height = 0.5
-smoothness = 0.01
 placement = "Top"
 [components.Graph.audio_conf]
 sensitivity = 0.1
@@ -203,7 +202,6 @@ Color = [0, 0, 255, 255]
 [[components]]
 [components.Graph]
 max_height = 0.5
-smoothness = 0.01
 placement = "Bottom"
 [components.Graph.audio_conf]
 sensitivity = 3.0
@@ -216,8 +214,22 @@ right = [0, 0, 255, 255]
 [[components]]
 [components.Graph]
 max_height = 0.5
-smoothness = 0.01
 placement = "Right"
+[components.Graph.audio_conf]
+sensitivity = 8.0
+freq_range = { start = 50, end = 5000 }
+[components.Graph.variant.VerticalGradient]
+top = [3, 185, 191, 255]
+bottom = [2, 111, 114, 255]
+
+## Graph - Vertical Gradient - Custom placement
+[[components]]
+[components.Graph]
+max_height = 0.5
+[components.Graph.placement.Custom]
+offset = [0.5, 0.5]
+rotation = 90.0
+width = 128
 [components.Graph.audio_conf]
 sensitivity = 8.0
 freq_range = { start = 50, end = 5000 }
