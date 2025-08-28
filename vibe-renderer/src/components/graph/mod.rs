@@ -131,7 +131,7 @@ impl Graph {
         });
 
         let (fragment_entrypoint, color1, color2) = match desc.variant {
-            GraphVariant::Color(color) => ("color", color.clone(), color.clone()),
+            GraphVariant::Color(color) => ("color", color, color),
             GraphVariant::HorizontalGradient { left, right } => {
                 ("horizontal_gradient", left, right)
             }
