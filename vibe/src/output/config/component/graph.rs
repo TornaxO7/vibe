@@ -1,5 +1,6 @@
 use std::{num::NonZero, ops::Range};
 
+use cgmath::Deg;
 use serde::{Deserialize, Serialize};
 use vibe_renderer::components::{GraphPlacement, GraphVariant};
 
@@ -67,6 +68,12 @@ pub enum GraphPlacementConfig {
     Top,
     Right,
     Left,
+    Custom {
+        offset: [f32; 2],
+        rotation: Deg<f32>,
+        // aka: Amount bars
+        width: NonZero<u16>,
+    },
 }
 
 impl From<GraphPlacementConfig> for GraphPlacement {
@@ -76,6 +83,15 @@ impl From<GraphPlacementConfig> for GraphPlacement {
             GraphPlacementConfig::Top => Self::Top,
             GraphPlacementConfig::Right => Self::Right,
             GraphPlacementConfig::Left => Self::Left,
+            GraphPlacementConfig::Custom {
+                offset,
+                rotation,
+                width,
+            } => Self::Custom {
+                offset,
+                rotation,
+                amount_bars: width,
+            },
         }
     }
 }

@@ -3,9 +3,6 @@ use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
 
 use crate::Tester;
 
-const RED: [f32; 4] = [1., 0., 0., 1.];
-const BLUE: [f32; 4] = [0., 0., 1., 1.];
-
 #[test]
 fn test() {
     let mut tester = Tester::default();
@@ -18,10 +15,9 @@ fn test() {
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: GraphVariant::VerticalGradient {
-            top: BLUE,
-            bottom: RED,
+            top: super::BLUE,
+            bottom: super::RED,
         },
-        smoothness: 0.01,
         placement: vibe_renderer::components::GraphPlacement::Top,
     });
 

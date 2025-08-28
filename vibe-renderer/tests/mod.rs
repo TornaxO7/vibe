@@ -23,6 +23,7 @@ mod chessy;
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
 
 // some colors
+const BLUE: [f32; 4] = [0., 0., 1., 1.];
 const RED: [f32; 4] = [1., 0., 0., 1.];
 const WHITE: [f32; 4] = [1f32; 4];
 
