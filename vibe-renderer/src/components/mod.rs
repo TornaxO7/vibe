@@ -14,7 +14,7 @@ pub use chessy::{Chessy, ChessyDescriptor};
 pub use circle::{Circle, CircleDescriptor, CircleVariant};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 pub use graph::{Graph, GraphDescriptor, GraphPlacement, GraphVariant};
-pub use radial::{Radial, RadialDescriptor, RadialVariant};
+pub use radial::{Radial, RadialDescriptor, RadialFormat, RadialVariant};
 pub use sdf_mask::{SdfMask, SdfMaskDescriptor, SdfPattern};
 pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
 

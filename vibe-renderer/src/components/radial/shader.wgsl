@@ -1,29 +1,23 @@
 @group(0) @binding(0)
-var<storage, read> bar_rotation: array<mat2x2f>;
-
-@group(0) @binding(1)
-var<storage, read> inverse_bar_rotation: array<mat2x2f>;
-
-@group(0) @binding(2)
 var<uniform> bar_width: f32;
 
-@group(0) @binding(3)
+@group(0) @binding(1)
 var<uniform> circle_radius: f32;
 
-@group(0) @binding(4)
-var<uniform> iResolution: vec3f;
+@group(0) @binding(2)
+var<uniform> aspect_ratio: f32;
 
-@group(0) @binding(5)
+@group(0) @binding(3)
 var<uniform> bar_height_sensitivity: f32;
 
-@group(0) @binding(6)
-var<uniform> color: vec4f;
-
-@group(0) @binding(7)
+@group(0) @binding(4)
 var<uniform> position_offset: vec2f;
 
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
+
+@group(1) @binding(1)
+var<storage, read> rotations: array<mat2x2f>;
 
 struct Input {
     @builtin(instance_index) instance_idx: u32,
@@ -36,13 +30,15 @@ struct Output {
 };
 
 @vertex
-fn vertex_main(in: Input) -> Output {
-    return _inner_vertex_main(in, bar_rotation[in.instance_idx]);
+fn bass_treble(in: Input) -> Output {
+    let freq = freqs[in.instance_idx];
+    return vertex_main(freq, in.vertex_idx, in.instance_idx);
 }
 
 @vertex
-fn vertex_main_inverted(in: Input) -> Output {
-    return _inner_vertex_main(in, inverse_bar_rotation[in.instance_idx]);
+fn treble_bass(in: Input) -> Output {
+    let freq = freqs[arrayLength(&freqs) - 1 - in.instance_idx];
+    return vertex_main(freq, in.vertex_idx, in.instance_idx);
 }
 
 // Convention: We construct the bar where the tip of the bar is pointing to the right.
@@ -59,25 +55,25 @@ fn vertex_main_inverted(in: Input) -> Output {
 //   |
 //   |-----|
 //   height
-// 
-fn _inner_vertex_main(in: Input, bar_rotation: mat2x2f) -> Output {
+//
+fn vertex_main(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
     let width: f32 = bar_width / 2.;
-    let height: f32 = bar_height_sensitivity * freqs[in.instance_idx] + circle_radius;
+    let height: f32 = bar_height_sensitivity * freq + circle_radius;
     var rect_pos: vec2f;
 
-    if (in.vertex_idx == 0) {
+    if (vertex_idx == 0) {
         rect_pos = vec2f(circle_radius, width);
-    } else if (in.vertex_idx == 1) {
+    } else if (vertex_idx == 1) {
         rect_pos = vec2f(circle_radius, -width);
-    } else if (in.vertex_idx == 2) {
+    } else if (vertex_idx == 2) {
         rect_pos = vec2f(height, width);
     } else { // in.vertex_idx == 3
         rect_pos = vec2f(height, -width);
     }
 
     var final_pos: vec2f;
-    final_pos = bar_rotation * rect_pos;
-    final_pos.x /= iResolution.z;
+    final_pos = rotations[instance_idx] * rect_pos;
+    final_pos.x /= aspect_ratio;
     final_pos += position_offset;
 
     var out: Output;
@@ -86,26 +82,25 @@ fn _inner_vertex_main(in: Input, bar_rotation: mat2x2f) -> Output {
     return out;
 }
 
+// == fragment stuff ==
+@group(0) @binding(5)
+var<uniform> color1: vec4f;
+
+@group(0) @binding(6)
+var<uniform> color2: vec4f;
 
 @fragment
 fn color_entrypoint(in: Output) -> @location(0) vec4f {
-    return _fragment_smoothing(color, in.rect_pos);
+    return _fragment_smoothing(color1, in.rect_pos);
 }
-
-@group(0) @binding(8)
-var<uniform> height_gradient_inner: vec4f;
-
-@group(0) @binding(9)
-var<uniform> height_gradient_outer: vec4f;
 
 @fragment
 fn height_gradient_entrypoint(in: Output) -> @location(0) vec4f {
-    let col = mix(height_gradient_inner, height_gradient_outer, smoothstep(0., .5, in.rect_pos.x / bar_height_sensitivity));
+    let col = mix(color1, color2, smoothstep(0., .5, in.rect_pos.x / bar_height_sensitivity));
     return _fragment_smoothing(col, in.rect_pos);
 }
 
 fn _fragment_smoothing(col: vec4f, rect_pos: vec2f) -> vec4f {
-    
     let max_width = bar_width / 2.;
     let rel_y = abs(rect_pos.y) / max_width;
 

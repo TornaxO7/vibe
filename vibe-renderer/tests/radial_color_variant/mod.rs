@@ -20,6 +20,7 @@ fn test() {
         bar_height_sensitivity: 0.3,
         bar_width: 0.1,
         position: (0.5, 0.5),
+        format: vibe_renderer::components::RadialFormat::BassTreble,
     });
 
     let _img = tester.render(radial);
