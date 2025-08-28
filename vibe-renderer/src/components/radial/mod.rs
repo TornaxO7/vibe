@@ -18,29 +18,26 @@ mod bindings0 {
     use super::ResourceID;
     use std::collections::HashMap;
 
-    pub const BAR_ROTATION: u32 = 0;
-    pub const INVERSE_BAR_ROTATION: u32 = 1;
-    pub const BAR_WIDTH: u32 = 2;
-    pub const CIRCLE_RADIUS: u32 = 3;
-    pub const RESOLUTION: u32 = 4;
-    pub const BAR_HEIGHT_SENSITIVITY: u32 = 5;
+    pub const BAR_WIDTH: u32 = 0;
+    pub const CIRCLE_RADIUS: u32 = 1;
+    pub const ASPECT_RATIO: u32 = 2;
+    pub const BAR_HEIGHT_SENSITIVITY: u32 = 3;
+    pub const POSITION_OFFSET: u32 = 4;
 
-    pub const COLOR: u32 = 6;
-    pub const POSITION_OFFSET: u32 = 7;
-
-    pub const HEIGHT_GRADIENT_INNER: u32 = 8;
-    pub const HEIGHT_GRADIENT_OUTER: u32 = 9;
+    pub const COLOR1: u32 = 5;
+    pub const COLOR2: u32 = 6;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
-            (ResourceID::BarRotation, crate::util::buffer(BAR_ROTATION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
-            (ResourceID::InverseBarRotation, crate::util::buffer(INVERSE_BAR_ROTATION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
             (ResourceID::BarWidth, crate::util::buffer(BAR_WIDTH, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::CircleRadius, crate::util::buffer(CIRCLE_RADIUS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::AspectRatio, crate::util::buffer(ASPECT_RATIO, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
             (ResourceID::BarHeightSensitivity, crate::util::buffer(BAR_HEIGHT_SENSITIVITY, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::PositionOffset, crate::util::buffer(POSITION_OFFSET, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+
+            (ResourceID::Color1, crate::util::buffer(COLOR1, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Color2, crate::util::buffer(COLOR2, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -50,30 +47,31 @@ mod bindings1 {
     use std::collections::HashMap;
 
     pub const FREQS: u32 = 0;
+    pub const ROTATIONS: u32 = 1;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
-            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
         ])
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ResourceID {
-    BarRotation,
-    InverseBarRotation,
+    Rotations,
+    InverseRotations,
+
     BarWidth,
     CircleRadius,
-    Resolution,
+    AspectRatio,
     BarHeightSensitivity,
-
-    Color,
     PositionOffset,
-    HeightGradientInner,
-    HeightGradientOuter,
 
-    Freqs,
+    Freqs1,
+    Freqs2,
+
+    Color1,
+    Color2,
 }
 
 pub struct Radial {
@@ -142,17 +140,17 @@ impl Radial {
 
             resource_manager.extend_buffers([
                 (
-                    ResourceID::BarRotation,
+                    ResourceID::Rotations,
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Radial: `bar_rotation` buffer"),
+                        label: Some("Radial: `rotations` buffer"),
                         contents: bytemuck::cast_slice(&bar_rotations_as_arrays),
                         usage: wgpu::BufferUsages::STORAGE,
                     }),
                 ),
                 (
-                    ResourceID::InverseBarRotation,
+                    ResourceID::InverseRotations,
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Radial: `inverse_bar_rotation` buffer"),
+                        label: Some("Radial: inverse `rotations` buffer"),
                         contents: bytemuck::cast_slice(&inverse_bar_rotations_as_arrays),
                         usage: wgpu::BufferUsages::STORAGE,
                     }),
@@ -178,10 +176,10 @@ impl Radial {
                 }),
             ),
             (
-                ResourceID::Resolution,
+                ResourceID::AspectRatio,
                 device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Radial: `iResolution` buffer"),
-                    size: (std::mem::size_of::<[f32; 3]>()) as wgpu::BufferAddress,
+                    label: Some("Radial: `aspect_ratio` buffer"),
+                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
