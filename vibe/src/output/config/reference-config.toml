@@ -263,6 +263,7 @@ circle_radius = 0.2
 bar_height_sensitivity = 1.0
 bar_width = 0.01
 position = [0.5, 0.5]
+format = "TrebleBassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
 sensitivity = 5.0
@@ -278,6 +279,7 @@ circle_radius = 0.2
 bar_height_sensitivity = 1.0
 bar_width = 0.01
 position = [0.5, 0.5]
+format = "BassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
 sensitivity = 5.0

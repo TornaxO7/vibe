@@ -1,6 +1,7 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
+use vibe_renderer::components::RadialFormat;
 
 use super::Rgba;
 
@@ -33,4 +34,29 @@ impl From<&RadialAudioConfig> for vibe_audio::BarProcessorConfig {
 pub enum RadialVariantConfig {
     Color(Rgba),
     HeightGradient { inner: Rgba, outer: Rgba },
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum RadialFormatConfig {
+    BassTreble,
+    TrebleBass,
+    BassTrebleBass,
+    TrebleBassTreble,
+}
+
+impl From<RadialFormatConfig> for RadialFormat {
+    fn from(conf: RadialFormatConfig) -> Self {
+        match conf {
+            RadialFormatConfig::BassTreble => Self::BassTreble,
+            RadialFormatConfig::TrebleBass => Self::TrebleBass,
+            RadialFormatConfig::BassTrebleBass => Self::BassTrebleBass,
+            RadialFormatConfig::TrebleBassTreble => Self::TrebleBassTreble,
+        }
+    }
+}
+
+impl From<&RadialFormatConfig> for RadialFormat {
+    fn from(conf: &RadialFormatConfig) -> Self {
+        Self::from(conf.clone())
+    }
 }

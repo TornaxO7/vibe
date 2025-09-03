@@ -14,8 +14,8 @@ use vibe_renderer::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
         CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
-        GraphVariant, Radial, RadialDescriptor, RadialVariant, SdfPattern, ShaderCode, ValueNoise,
-        ValueNoiseDescriptor,
+        GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant, SdfPattern,
+        ShaderCode, ValueNoise, ValueNoiseDescriptor,
     },
     Renderer,
 };
@@ -274,7 +274,8 @@ impl<'a> State<'a> {
                 device: renderer.device(),
                 processor,
                 audio_conf: vibe_audio::BarProcessorConfig {
-                    amount_bars: NonZero::new(30).unwrap(),
+                    amount_bars: NonZero::new(60).unwrap(),
+                    sensitivity: 4.0,
                     ..Default::default()
                 },
                 output_texture_format: surface_config.format,
@@ -286,6 +287,7 @@ impl<'a> State<'a> {
                 bar_height_sensitivity: 0.5,
                 bar_width: 0.015,
                 position: (0.5, 0.5),
+                format: RadialFormat::TrebleBass,
             })) as Box<dyn Component>),
 
             ComponentName::RadialHeightGradientVariant => {
@@ -309,6 +311,7 @@ impl<'a> State<'a> {
                     bar_height_sensitivity: 1.,
                     bar_width: 0.02,
                     position: (0.5, 0.5),
+                    format: RadialFormat::TrebleBass,
                 })) as Box<dyn Component>)
             }
             ComponentName::ChessyBoxVariant => Ok(Box::new(Chessy::new(&ChessyDescriptor {

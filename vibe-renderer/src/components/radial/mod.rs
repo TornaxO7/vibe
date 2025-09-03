@@ -1,9 +1,9 @@
 mod descriptor;
 
 pub use descriptor::*;
-use std::num::NonZero;
+use std::{collections::HashMap, num::NonZero};
 
-use cgmath::{Matrix2, Rad, SquareMatrix, Vector2};
+use cgmath::{Deg, Matrix2, Rad, Vector2};
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, SampleProcessor,
@@ -18,29 +18,26 @@ mod bindings0 {
     use super::ResourceID;
     use std::collections::HashMap;
 
-    pub const BAR_ROTATION: u32 = 0;
-    pub const INVERSE_BAR_ROTATION: u32 = 1;
-    pub const BAR_WIDTH: u32 = 2;
-    pub const CIRCLE_RADIUS: u32 = 3;
-    pub const RESOLUTION: u32 = 4;
-    pub const BAR_HEIGHT_SENSITIVITY: u32 = 5;
+    pub const BAR_WIDTH: u32 = 0;
+    pub const CIRCLE_RADIUS: u32 = 1;
+    pub const ASPECT_RATIO: u32 = 2;
+    pub const BAR_HEIGHT_SENSITIVITY: u32 = 3;
+    pub const POSITION_OFFSET: u32 = 4;
 
-    pub const COLOR: u32 = 6;
-    pub const POSITION_OFFSET: u32 = 7;
-
-    pub const HEIGHT_GRADIENT_INNER: u32 = 8;
-    pub const HEIGHT_GRADIENT_OUTER: u32 = 9;
+    pub const COLOR1: u32 = 5;
+    pub const COLOR2: u32 = 6;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
-            (ResourceID::BarRotation, crate::util::buffer(BAR_ROTATION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
-            (ResourceID::InverseBarRotation, crate::util::buffer(INVERSE_BAR_ROTATION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
             (ResourceID::BarWidth, crate::util::buffer(BAR_WIDTH, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::CircleRadius, crate::util::buffer(CIRCLE_RADIUS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::AspectRatio, crate::util::buffer(ASPECT_RATIO, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
             (ResourceID::BarHeightSensitivity, crate::util::buffer(BAR_HEIGHT_SENSITIVITY, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::PositionOffset, crate::util::buffer(POSITION_OFFSET, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+
+            (ResourceID::Color1, crate::util::buffer(COLOR1, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Color2, crate::util::buffer(COLOR2, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -50,30 +47,67 @@ mod bindings1 {
     use std::collections::HashMap;
 
     pub const FREQS: u32 = 0;
+    pub const ROTATIONS: u32 = 1;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
-            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::LeftFreqs, crate::util::buffer( FREQS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::LeftRotations, crate::util::buffer( ROTATIONS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
         ])
     }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ResourceID {
-    BarRotation,
-    InverseBarRotation,
     BarWidth,
     CircleRadius,
-    Resolution,
+    AspectRatio,
     BarHeightSensitivity,
-
-    Color,
     PositionOffset,
-    HeightGradientInner,
-    HeightGradientOuter,
 
-    Freqs,
+    RightRotations,
+    RightFreqs,
+
+    LeftRotations,
+    LeftFreqs,
+
+    Color1,
+    Color2,
+}
+
+/// Entrypoints for the vertex shader
+enum VertexEntrypoint {
+    BassTreble,
+    TrebleBass,
+}
+
+impl VertexEntrypoint {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::BassTreble => "bass_treble",
+            Self::TrebleBass => "treble_bass",
+        }
+    }
+}
+
+enum CirclePart {
+    Half,
+    Full,
+}
+
+impl CirclePart {
+    pub fn radians(&self) -> f32 {
+        match self {
+            Self::Half => std::f32::consts::PI,
+            Self::Full => std::f32::consts::PI * 2f32,
+        }
+    }
+}
+
+struct PipelineCtx {
+    bind_group1: wgpu::BindGroup,
+    pipeline: wgpu::RenderPipeline,
 }
 
 pub struct Radial {
@@ -82,10 +116,9 @@ pub struct Radial {
     resource_manager: ResourceManager<ResourceID>,
 
     bind_group0: wgpu::BindGroup,
-    bind_group1: wgpu::BindGroup,
 
-    pipeline: wgpu::RenderPipeline,
-    pipeline_inverted: wgpu::RenderPipeline,
+    left: PipelineCtx,
+    right: Option<PipelineCtx>,
 
     amount_bars: NonZero<u16>,
 }
@@ -98,67 +131,14 @@ impl Radial {
 
         let mut resource_manager = ResourceManager::new();
 
-        let mut bind_group0_mapping = bindings0::init_mapping();
-        let bind_group1_mapping = bindings1::init_mapping();
+        let bind_group0_mapping = bindings0::init_mapping();
 
-        // bar rotation
-        {
-            let amount_bars = usize::from(u16::from(amount_bars));
-
-            let bar_rotation_radians = Rad(std::f32::consts::PI / amount_bars as f32);
-            let center_bars_radians = bar_rotation_radians / 2.;
-
-            let bar_rotation = Matrix2::from_angle(bar_rotation_radians);
-            let inverse_bar_rotation = bar_rotation.invert().unwrap();
-
-            let init_rotation =
-                Matrix2::from_angle(center_bars_radians) * Matrix2::from_angle(desc.init_rotation);
-
-            let mut rotation = init_rotation;
-            let mut inverse_rotation = inverse_bar_rotation * init_rotation;
-
-            let mut bar_rotations = Vec::with_capacity(amount_bars);
-            let mut inverse_bar_rotations = Vec::with_capacity(amount_bars);
-
-            for _offset in 0..amount_bars {
-                bar_rotations.push(rotation);
-                inverse_bar_rotations.push(inverse_rotation);
-
-                rotation = bar_rotation * rotation;
-                inverse_rotation = inverse_bar_rotation * inverse_rotation;
+        let (fragment_entrypoint, color1, color2) = match desc.variant {
+            RadialVariant::Color(rgba) => ("color_entrypoint", rgba, rgba),
+            RadialVariant::HeightGradient { inner, outer } => {
+                ("height_gradient_entrypoint", inner, outer)
             }
-
-            let bar_rotations_as_arrays = bar_rotations
-                .iter()
-                .cloned()
-                .map(|matrix| matrix.into())
-                .collect::<Vec<[[f32; 2]; 2]>>();
-
-            let inverse_bar_rotations_as_arrays = inverse_bar_rotations
-                .iter()
-                .cloned()
-                .map(|matrix| matrix.into())
-                .collect::<Vec<[[f32; 2]; 2]>>();
-
-            resource_manager.extend_buffers([
-                (
-                    ResourceID::BarRotation,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Radial: `bar_rotation` buffer"),
-                        contents: bytemuck::cast_slice(&bar_rotations_as_arrays),
-                        usage: wgpu::BufferUsages::STORAGE,
-                    }),
-                ),
-                (
-                    ResourceID::InverseBarRotation,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Radial: `inverse_bar_rotation` buffer"),
-                        contents: bytemuck::cast_slice(&inverse_bar_rotations_as_arrays),
-                        usage: wgpu::BufferUsages::STORAGE,
-                    }),
-                ),
-            ]);
-        }
+        };
 
         resource_manager.extend_buffers([
             (
@@ -178,10 +158,10 @@ impl Radial {
                 }),
             ),
             (
-                ResourceID::Resolution,
+                ResourceID::AspectRatio,
                 device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Radial: `iResolution` buffer"),
-                    size: (std::mem::size_of::<[f32; 3]>()) as wgpu::BufferAddress,
+                    label: Some("Radial: `aspect_ratio` buffer"),
+                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
@@ -194,166 +174,232 @@ impl Radial {
                     usage: wgpu::BufferUsages::UNIFORM,
                 }),
             ),
+            (ResourceID::PositionOffset, {
+                let x_factor = desc.position.0.clamp(0., 1.);
+                let y_factor = desc.position.1.clamp(0., 1.);
+
+                let coord_system_origin: Vector2<f32> = Vector2::from((-1., 1.)); // top left in vertex space
+                let pos_offset =
+                    coord_system_origin + Vector2::from((2. * x_factor, 2. * -y_factor));
+
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Radial: `position_offset` buffer"),
+                    contents: bytemuck::cast_slice(&[pos_offset.x, pos_offset.y]),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                })
+            }),
             (
-                ResourceID::Freqs,
+                ResourceID::Color1,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Radial: `color1` buffer"),
+                    contents: bytemuck::cast_slice(&color1),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+            (
+                ResourceID::Color2,
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Radial: `color2` buffer"),
+                    contents: bytemuck::cast_slice(&color2),
+                    usage: wgpu::BufferUsages::UNIFORM,
+                }),
+            ),
+        ]);
+
+        let shader = device.create_shader_module(include_wgsl!("./shader.wgsl"));
+
+        let fragment_targets = [Some(wgpu::ColorTargetState {
+            format: desc.output_texture_format,
+            blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+            write_mask: wgpu::ColorWrites::all(),
+        })];
+
+        let (bind_group0, bind_group0_layout) =
+            resource_manager.build_bind_group("Radial: Bind group 0", device, &bind_group0_mapping);
+
+        // left side of radial
+        let (left_entry_point, left_circle_part) = match desc.format {
+            RadialFormat::BassTreble => (VertexEntrypoint::BassTreble, CirclePart::Full),
+            RadialFormat::TrebleBass => (VertexEntrypoint::TrebleBass, CirclePart::Full),
+            // So, in the middle of the circle should be the treble.
+            // Regarding the left rotations: The first left rotation should is in the middle of the circle,
+            // so we need to start with `Treble` and keep rotating to the left (counter clock wise)
+            // which adds the bass bars.
+            RadialFormat::BassTrebleBass => (VertexEntrypoint::TrebleBass, CirclePart::Half),
+            // same as `RadialFormat::BassTrebleBass`
+            RadialFormat::TrebleBassTreble => (VertexEntrypoint::BassTreble, CirclePart::Half),
+        };
+
+        resource_manager.extend_buffers([
+            (
+                ResourceID::LeftFreqs,
                 device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Radial: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>() * usize::from(u16::from(amount_bars)))
+                    label: Some("Radial: `left freqs` buffer"),
+                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
                         as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
             ),
+            {
+                let rotations = compute_rotations(
+                    left_circle_part,
+                    amount_bars,
+                    desc.init_rotation,
+                    Direction::Ccw,
+                );
+
+                (
+                    ResourceID::LeftRotations,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Radial: `left rotations` buffer"),
+                        contents: bytemuck::cast_slice(&rotations),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    }),
+                )
+            },
         ]);
 
-        {
-            let x_factor = desc.position.0.clamp(0., 1.);
-            let y_factor = desc.position.1.clamp(0., 1.);
+        let left_bind_group_mapping = bindings1::init_mapping();
 
-            let coord_system_origin: Vector2<f32> = Vector2::from((-1., 1.));
-            let pos_offset = coord_system_origin + Vector2::from((2. * x_factor, 2. * -y_factor));
+        let (left_bind_group1, left_bind_group1_layout) = resource_manager.build_bind_group(
+            "Radial: `left` bind group 1",
+            device,
+            &left_bind_group_mapping,
+        );
 
-            resource_manager.insert_buffer(
-                ResourceID::PositionOffset,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `position_offset` buffer"),
-                    contents: bytemuck::cast_slice(&[pos_offset.x, pos_offset.y]),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            );
-        }
+        let left_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("Radial: `left` pipeline layout"),
+            bind_group_layouts: &[&bind_group0_layout, &left_bind_group1_layout],
+            push_constant_ranges: &[],
+        });
 
-        let fragment_entrypoint = match desc.variant {
-            RadialVariant::Color(rgba) => {
-                resource_manager.insert_buffer(
-                    ResourceID::Color,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Radial: `color` buffer"),
-                        contents: bytemuck::bytes_of(&rgba),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+        let left_pipeline_descriptor =
+            crate::util::simple_pipeline_descriptor(crate::util::SimpleRenderPipelineDescriptor {
+                label: "Radial: `left` render pipeline",
 
-                bind_group0_mapping.insert(
-                    ResourceID::Color,
-                    crate::util::buffer(
-                        bindings0::COLOR,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    ),
-                );
-
-                "color_entrypoint"
-            }
-            RadialVariant::HeightGradient { inner, outer } => {
-                resource_manager.extend_buffers([
-                    (
-                        ResourceID::HeightGradientInner,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Radial: `inner` buffer"),
-                            contents: bytemuck::cast_slice(&inner),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                    (
-                        ResourceID::HeightGradientOuter,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Radial: `outer` buffer"),
-                            contents: bytemuck::cast_slice(&outer),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                ]);
-
-                bind_group0_mapping.extend([
-                    (
-                        ResourceID::HeightGradientInner,
-                        crate::util::buffer(
-                            bindings0::HEIGHT_GRADIENT_INNER,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                    (
-                        ResourceID::HeightGradientOuter,
-                        crate::util::buffer(
-                            bindings0::HEIGHT_GRADIENT_OUTER,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                ]);
-
-                "height_gradient_entrypoint"
-            }
-        };
-
-        let (bind_group0, bind_group0_layout) =
-            resource_manager.build_bind_group("Radial: Bind group 0", device, &bind_group0_mapping);
-
-        let (bind_group1, bind_group1_layout) =
-            resource_manager.build_bind_group("Radial: Bind group 1", device, &bind_group1_mapping);
-
-        let (pipeline, pipeline_inverted) = {
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Radial: Pipelinelayout"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                push_constant_ranges: &[],
-            });
-
-            let shader = device.create_shader_module(include_wgsl!("./shader.wgsl"));
-            let fragment_targets = [Some(wgpu::ColorTargetState {
-                format: desc.output_texture_format,
-                blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
-                write_mask: wgpu::ColorWrites::all(),
-            })];
-
-            let descriptor = crate::util::simple_pipeline_descriptor(
-                crate::util::SimpleRenderPipelineDescriptor {
-                    label: "Radial: Renderpipeline",
-                    layout: &pipeline_layout,
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some("vertex_main"),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[],
-                    },
-                    fragment: wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some(fragment_entrypoint),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        targets: &fragment_targets,
-                    },
-                },
-            );
-
-            let inverse_descriptor = wgpu::RenderPipelineDescriptor {
-                label: Some("Radial: Pipeline for other half of circle"),
+                // Note:
+                // Because of this you can't move the whole logic which is relevant for the left side of the radial circle
+                // into a block because this layout needs to live until the right layout has been created (if needed)
+                layout: &left_pipeline_layout,
                 vertex: wgpu::VertexState {
                     module: &shader,
-                    entry_point: Some("vertex_main_inverted"),
+                    entry_point: Some(left_entry_point.as_str()),
                     compilation_options: wgpu::PipelineCompilationOptions::default(),
                     buffers: &[],
                 },
-                ..descriptor.clone()
+                fragment: wgpu::FragmentState {
+                    module: &shader,
+                    entry_point: Some(fragment_entrypoint),
+                    compilation_options: wgpu::PipelineCompilationOptions::default(),
+                    targets: &fragment_targets,
+                },
+            });
+
+        let (left, left_pipeline_descriptor) = (
+            PipelineCtx {
+                bind_group1: left_bind_group1,
+                pipeline: device.create_render_pipeline(&left_pipeline_descriptor),
+            },
+            left_pipeline_descriptor,
+        );
+
+        // right half of radial
+        let right = {
+            let entry_point = match desc.format {
+                RadialFormat::BassTrebleBass => Some(VertexEntrypoint::TrebleBass),
+                RadialFormat::TrebleBassTreble => Some(VertexEntrypoint::BassTreble),
+                RadialFormat::BassTreble | RadialFormat::TrebleBass => None,
             };
 
-            let pipeline = device.create_render_pipeline(&descriptor);
-            let pipeline_inverted = device.create_render_pipeline(&inverse_descriptor);
+            entry_point.map(|entry_point| {
+                let rotations = compute_rotations(
+                    CirclePart::Half,
+                    amount_bars,
+                    desc.init_rotation,
+                    Direction::Cw,
+                );
 
-            (pipeline, pipeline_inverted)
+                resource_manager.extend_buffers([
+                    (
+                        ResourceID::RightFreqs,
+                        device.create_buffer(&wgpu::BufferDescriptor {
+                            label: Some("Radial: `right freqs` buffer"),
+                            size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                                as wgpu::BufferAddress,
+                            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                            mapped_at_creation: false,
+                        }),
+                    ),
+                    (
+                        ResourceID::RightRotations,
+                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                            label: Some("Radial `right rotations` buffer"),
+                            contents: bytemuck::cast_slice(&rotations),
+                            usage: wgpu::BufferUsages::STORAGE,
+                        }),
+                    ),
+                ]);
+
+                let bind_group_mapping = HashMap::from([
+                    (
+                        ResourceID::RightFreqs,
+                        crate::util::buffer(
+                            bindings1::FREQS,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Storage { read_only: true },
+                        ),
+                    ),
+                    (
+                        ResourceID::RightRotations,
+                        crate::util::buffer(
+                            bindings1::ROTATIONS,
+                            wgpu::ShaderStages::VERTEX,
+                            wgpu::BufferBindingType::Storage { read_only: true },
+                        ),
+                    ),
+                ]);
+
+                let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
+                    "Radial: `right` bind group 1",
+                    device,
+                    &bind_group_mapping,
+                );
+
+                let pipeline_layout =
+                    device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                        label: Some("Radial: `right` pipeline layout"),
+                        bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
+                        push_constant_ranges: &[],
+                    });
+
+                let pipeline_descriptor = wgpu::RenderPipelineDescriptor {
+                    label: Some("Radial: `right` render pipeline"),
+                    layout: Some(&pipeline_layout),
+                    vertex: wgpu::VertexState {
+                        entry_point: Some(entry_point.as_str()),
+                        ..left_pipeline_descriptor.vertex.clone()
+                    },
+                    ..left_pipeline_descriptor.clone()
+                };
+
+                let pipeline = device.create_render_pipeline(&pipeline_descriptor);
+
+                PipelineCtx {
+                    pipeline,
+                    bind_group1,
+                }
+            })
         };
 
         Self {
             bar_processor,
-
             resource_manager,
 
             bind_group0,
-            bind_group1,
 
-            pipeline,
-            pipeline_inverted,
+            left,
+            right,
 
             amount_bars,
         }
@@ -363,15 +409,18 @@ impl Radial {
 impl Renderable for Radial {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        pass.set_bind_group(1, &self.bind_group1, &[]);
 
-        // render the bars of the first half of the circle
-        pass.set_pipeline(&self.pipeline);
+        // render the left half of the circle
+        pass.set_bind_group(1, &self.left.bind_group1, &[]);
+        pass.set_pipeline(&self.left.pipeline);
         pass.draw(0..4, 0..u32::from(self.amount_bars.get()));
 
-        // render the bars of the other half of the circle
-        pass.set_pipeline(&self.pipeline_inverted);
-        pass.draw(0..4, 0..u32::from(self.amount_bars.get()));
+        // render the right half of the circle
+        if let Some(right) = &self.right {
+            pass.set_bind_group(1, &right.bind_group1, &[]);
+            pass.set_pipeline(&right.pipeline);
+            pass.draw(0..4, 0..u32::from(self.amount_bars.get()));
+        }
     }
 }
 
@@ -381,10 +430,20 @@ impl Component for Radial {
         queue: &wgpu::Queue,
         processor: &SampleProcessor<SystemAudioFetcher>,
     ) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
         let bar_values = self.bar_processor.process_bars(processor);
 
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        {
+            let buffer = self
+                .resource_manager
+                .get_buffer(ResourceID::LeftFreqs)
+                .unwrap();
+
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        }
+
+        if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::RightFreqs) {
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[1]));
+        }
     }
 
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
@@ -395,16 +454,53 @@ impl Component for Radial {
         {
             let buffer = self
                 .resource_manager
-                .get_buffer(ResourceID::Resolution)
+                .get_buffer(ResourceID::AspectRatio)
                 .unwrap();
 
-            let width = new_resolution[0] as f32;
-            let height = new_resolution[1] as f32;
-            queue.write_buffer(
-                buffer,
-                0,
-                bytemuck::cast_slice(&[width, height, width / height]),
-            );
+            let aspect_ratio = new_resolution[0] as f32 / new_resolution[1] as f32;
+            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&aspect_ratio));
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum Direction {
+    // Clock wise (for left side)
+    Cw,
+    // Counter-clock wise (for right side)
+    Ccw,
+}
+
+fn compute_rotations(
+    circle_part: CirclePart,
+    amount_bars: NonZero<u16>,
+    init_rotation_deg: Deg<f32>,
+    dir: Direction,
+) -> Box<[[f32; 4]]> {
+    let bar_rotation_radians = {
+        let sign = match dir {
+            Direction::Cw => -1f32,
+            Direction::Ccw => 1f32,
+        };
+        Rad(sign * circle_part.radians() / amount_bars.get() as f32)
+    };
+
+    // example: Assuming `amount_bars` is `1`, we don't want to let the bar be at radiant `PI`, it should be at `PI/2` instead
+    let center_bars_radians = bar_rotation_radians / 2.;
+
+    let bar_rotation = Matrix2::from_angle(bar_rotation_radians);
+
+    let init_rotation =
+        Matrix2::from_angle(center_bars_radians) * Matrix2::from_angle(init_rotation_deg);
+
+    let mut rotation = init_rotation;
+    let mut rotations = Vec::with_capacity(amount_bars.get() as usize);
+
+    for _offset in 0..amount_bars.get() {
+        let rotation_as_array = *<Matrix2<f32> as AsRef<[f32; 4]>>::as_ref(&rotation);
+        rotations.push(rotation_as_array);
+        rotation = bar_rotation * rotation;
+    }
+
+    rotations.into_boxed_slice()
 }

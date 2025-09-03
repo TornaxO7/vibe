@@ -17,9 +17,17 @@ pub struct RadialDescriptor<'a, F: Fetcher> {
     // [0, 0]: top left corner
     // [1, 1]: bottom right corner
     pub position: (f32, f32),
+    pub format: RadialFormat,
 }
 
 pub enum RadialVariant {
     Color(Rgba),
     HeightGradient { inner: Rgba, outer: Rgba },
+}
+
+pub enum RadialFormat {
+    BassTreble,
+    TrebleBass,
+    BassTrebleBass,
+    TrebleBassTreble,
 }

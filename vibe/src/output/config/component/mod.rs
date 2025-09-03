@@ -14,8 +14,8 @@ use vibe_renderer::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
         BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor, CircleVariant,
         Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
-        GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialVariant, SdfPattern,
-        ShaderCode, ShaderCodeError,
+        GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
+        SdfPattern, ShaderCode, ShaderCodeError,
     },
     Renderer,
 };
@@ -26,7 +26,7 @@ pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphPlacementConfig, GraphVariantConfig};
-pub use radial::{RadialAudioConfig, RadialVariantConfig};
+pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
 const GAMMA: f32 = 2.2;
 
@@ -65,6 +65,7 @@ pub enum ComponentConfig {
     Radial {
         audio_conf: RadialAudioConfig,
         variant: RadialVariantConfig,
+        format: RadialFormatConfig,
 
         init_rotation: cgmath::Deg<f32>,
         circle_radius: f32,
@@ -225,6 +226,7 @@ impl ComponentConfig {
                 bar_height_sensitivity,
                 bar_width,
                 position,
+                format,
             } => {
                 let variant = match variant {
                     RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()),
@@ -247,6 +249,7 @@ impl ComponentConfig {
                     bar_height_sensitivity: *bar_height_sensitivity,
                     bar_width: *bar_width,
                     position: *position,
+                    format: RadialFormat::from(format),
                 })))
             }
             ComponentConfig::Chessy {
