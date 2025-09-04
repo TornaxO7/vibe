@@ -63,9 +63,13 @@ impl InterpolatorCtx {
         sample_len: usize,
     ) -> (Box<dyn Interpolater>, Box<[Range<usize>]>) {
         // == preparations
-        let weights = (0..config.amount_bars.get())
-            .map(|index| exp_fun((index + 1) as f32 / (config.amount_bars.get() + 1) as f32))
-            .collect::<Vec<f32>>();
+        let weights = {
+            let amount_bars = config.amount_bars.get() as u32;
+
+            (0..amount_bars)
+                .map(|index| exp_fun((index + 1) as f32 / (amount_bars + 1) as f32))
+                .collect::<Vec<f32>>()
+        };
         debug!("Weights: {:?}", weights);
 
         let amount_bins = {
@@ -352,4 +356,46 @@ fn inv_mel(x: f32) -> f32 {
     debug_assert!(x <= max_mel_value);
 
     700. * (10f32.powf(x / 2595.) - 1.)
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::fetcher::DummyFetcher;
+
+    use super::*;
+
+    #[test]
+    fn one_channel_u16_max_bars() {
+        let processor = SampleProcessor::new(DummyFetcher::new(1));
+        let mut bar_processor = BarProcessor::new(
+            &processor,
+            BarProcessorConfig {
+                amount_bars: NonZero::new(u16::MAX).unwrap(),
+                ..Default::default()
+            },
+        );
+
+        let bars = bar_processor.process_bars(&processor);
+        assert_eq!(bars.len(), 1);
+        assert_eq!(bars[0].len(), u16::MAX as usize);
+    }
+
+    #[test]
+    fn two_channels_u16_max_bars() {
+        let processor = SampleProcessor::new(DummyFetcher::new(2));
+        let mut bar_processor = BarProcessor::new(
+            &processor,
+            BarProcessorConfig {
+                amount_bars: NonZero::new(u16::MAX).unwrap(),
+                ..Default::default()
+            },
+        );
+
+        let bars = bar_processor.process_bars(&processor);
+        assert_eq!(bars.len(), 2);
+
+        for channel in bars {
+            assert_eq!(channel.len(), u16::MAX as usize);
+        }
+    }
 }
