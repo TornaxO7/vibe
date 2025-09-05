@@ -212,10 +212,16 @@ impl OutputHandler for State {
         let layer_surface = {
             let region = Region::new(&self.compositor_state).unwrap();
             let wl_surface = self.compositor_state.create_surface(qh);
+            let layer_background = if is_running_kde() {
+                // https://github.com/TornaxO7/vibe/issues/28
+                Layer::Bottom
+            } else {
+                Layer::Background
+            };
             let layer_surface = self.layer_shell.create_layer_surface(
                 qh,
                 wl_surface,
-                Layer::Background,
+                layer_background,
                 Some(format!("{} background", crate::APP_NAME)),
                 Some(&output),
             );
@@ -361,4 +367,23 @@ impl ProvidesRegistryState for State {
     }
 
     registry_handlers![OutputState];
+}
+
+fn is_running_kde() -> bool {
+    const XDG_CURRENT_DESKTOP_ENV: &str = "XDG_CURRENT_DESKTOP";
+
+    match std::env::var(XDG_CURRENT_DESKTOP_ENV) {
+        Ok(de_name) => {
+            debug!("env[{XDG_CURRENT_DESKTOP_ENV}]: {de_name}");
+            de_name.eq_ignore_ascii_case("kde")
+        }
+        Err(err) => {
+            error!(
+                "Couldn't find out which desktop environment is used:\n{}",
+                err
+            );
+
+            panic!("Please create an issue.");
+        }
+    }
 }
