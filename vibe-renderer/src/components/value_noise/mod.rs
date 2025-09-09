@@ -10,11 +10,10 @@ const ENTRYPOINT: &str = "main";
 type VertexPosition = [f32; 2];
 
 #[rustfmt::skip]
-const VERTICES: [VertexPosition; 4] = [
-    [1.0, 1.0],   // top right
-    [-1.0, 1.0],  // top left
-    [1.0, -1.0],  // bottom right
-    [-1.0, -1.0]  // bottom left
+const VERTICES: [VertexPosition; 3] = [
+    [-3., -1.], // bottom left
+    [1., -1.], // bottom right
+    [1., 3.] // top right
 ];
 
 mod bindings0 {
@@ -187,7 +186,7 @@ impl Renderable for ValueNoise {
         pass.set_bind_group(0, &self.bind_group0, &[]);
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
-        pass.draw(0..4, 0..1);
+        pass.draw(0..VERTICES.len() as u32, 0..1);
     }
 }
 
