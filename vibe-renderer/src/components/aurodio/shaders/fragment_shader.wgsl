@@ -71,25 +71,24 @@ fn cellular_noise(uv: vec2<f32>, layer_idx: u32, time: f32) -> f32 {
 }
 
 fn dust_layer(uv: vec2<f32>, color: vec3<f32>) -> vec4<f32> {
-    return vec4<f32>(color * textureSample(value_noise_texture, value_noise_sampler, uv).rgb, 1.);
+    let dust_presence = textureSample(value_noise_texture, value_noise_sampler, uv).r;
+    return vec4<f32>(color * dust_presence, 1.);
 }
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
+    let time = iTime;
     var col: vec4<f32>;
-    var uv: vec2<f32> = pos.xy / iResolution.xy;
-    uv.x *= iResolution.x / iResolution.y;
+    var uv: vec2<f32> = (2. * pos.xy - iResolution.xy) / iResolution.y;
 
-    uv.x += 10. * cos(iTime * movement_speed) + 20.;
-    uv.y += 10. * sin(iTime * movement_speed) + 20.;
+    let phase = time * movement_speed;
+    uv += 10. * vec2f(cos(phase), sin(phase)) + 20.;
 
     var base_color2: vec3<f32>;
-    base_color2.r = cos(iTime + uv.x + base_color.r);
-    base_color2.g = sin(iTime + uv.y + base_color.g);
-    base_color2.b = sin(iTime * .5 + uv.x + uv.y + base_color.b);
+    base_color2.r = cos(time + uv.x + base_color.r);
+    base_color2.g = sin(time + uv.y + base_color.g);
+    base_color2.b = sin(time * .5 + uv.x + uv.y + base_color.b);
     base_color2 = base_color2 * .1 + .5;
-
-    let time = iTime;
 
     let amount_layers = arrayLength(&zoom_factors);
     for (var layer_idx: u32 = 0; layer_idx < amount_layers; layer_idx++) {
@@ -105,6 +104,7 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
     }
 
     col += dust_layer(uv, base_color2);
+    // don't flash the user, lol
     col = clamp(col, vec4<f32>(0.), vec4<f32>(1.));
     return col;
 }

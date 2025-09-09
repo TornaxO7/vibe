@@ -3,7 +3,7 @@ mod descriptor;
 pub use descriptor::*;
 use wgpu::util::DeviceExt;
 
-use crate::{components::Component, resource_manager::ResourceManager, Renderable};
+use crate::{resource_manager::ResourceManager, Renderable};
 
 type VertexPosition = [f32; 2];
 
@@ -131,17 +131,4 @@ impl Renderable for WhiteNoise {
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..3, 0..1);
     }
-}
-
-impl Component for WhiteNoise {
-    fn update_audio(
-        &mut self,
-        _queue: &wgpu::Queue,
-        _processor: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
-    }
-
-    fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
-
-    fn update_resolution(&mut self, _renderer: &crate::Renderer, _new_resolution: [u32; 2]) {}
 }

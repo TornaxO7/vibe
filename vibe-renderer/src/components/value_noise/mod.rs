@@ -47,8 +47,7 @@ enum ResourceID {
 
 pub struct ValueNoiseDescriptor<'a> {
     pub device: &'a wgpu::Device,
-    pub width: u32,
-    pub height: u32,
+    pub texture_size: u32,
     pub format: wgpu::TextureFormat,
     pub octaves: u32,
     // should be within the range [0, 1]
@@ -100,7 +99,7 @@ impl ValueNoise {
                 ResourceID::CanvasSize,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Value noise: `canvas_size` buffer"),
-                    contents: bytemuck::cast_slice(&[desc.width as f32, desc.height as f32]),
+                    contents: bytemuck::bytes_of(&(desc.texture_size as f32)),
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                 }),
             ),

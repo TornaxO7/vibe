@@ -218,7 +218,7 @@ impl Aurodio {
         }
 
         {
-            let value_noise_texture = desc.renderer.create_value_noise_texture(256, 256, 1.);
+            let value_noise_texture = desc.renderer.create_value_noise_texture(256, 1., 7);
             let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("Aurodio: Value noise sampler"),
                 address_mode_u: wgpu::AddressMode::MirrorRepeat,
