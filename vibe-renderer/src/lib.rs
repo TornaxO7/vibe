@@ -9,7 +9,7 @@ use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::components::{SdfMask, SdfMaskDescriptor, SdfPattern};
+use crate::components::{SdfMask, SdfMaskDescriptor, SdfPattern, WhiteNoise, WhiteNoiseDescriptor};
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
@@ -216,7 +216,7 @@ impl Renderer {
             mip_level_count: 1,
             sample_count: 1,
             dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R16Float,
+            format: wgpu::TextureFormat::R32Float,
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         });
@@ -227,6 +227,36 @@ impl Renderer {
             pattern,
 
             texture_size,
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.render(&view, &[&renderable]);
+
+        texture
+    }
+
+    pub fn create_white_noise(&self, texture_size: u32) -> wgpu::Texture {
+        let device = self.device();
+
+        let texture = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("White noise texture"),
+            size: wgpu::Extent3d {
+                width: texture_size,
+                height: texture_size,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R32Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        });
+
+        let renderable = WhiteNoise::new(&WhiteNoiseDescriptor {
+            device,
+            format: texture.format(),
+            seed: std::time::UNIX_EPOCH.elapsed().unwrap().as_secs_f32(),
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
