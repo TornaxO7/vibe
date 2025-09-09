@@ -170,21 +170,18 @@ impl Renderer {
 
 impl Renderer {
     // `brightness`: should be within the range `0` and `1`
-    pub fn create_value_noise_texture(
-        &self,
-        texture_size: u32,
-        brightness: f32,
-        octaves: u32,
-    ) -> wgpu::Texture {
+    pub fn create_value_noise_texture(&self, texture_size: u32, octaves: u32) -> wgpu::Texture {
         let device = self.device();
         let texture = self.create_texture("Value noise texture", texture_size);
+
+        let white_noise_texture = self.create_white_noise(texture_size);
 
         let renderable = ValueNoise::new(&ValueNoiseDescriptor {
             device,
             texture_size,
             format: texture.format(),
             octaves,
-            brightness,
+            white_noise_texture,
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());

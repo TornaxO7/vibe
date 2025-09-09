@@ -7,6 +7,7 @@ fn main_vs(@location(0) pos: vec2f) -> @builtin(position) vec4f {
 @group(0) @binding(0)
 var<uniform> seed: f32;
 
+// https://www.shadertoy.com/view/4djSRW
 fn hash12(p: vec2f) -> f32
 {
     var p3  = fract(vec3f(p.xyx) * .1031);

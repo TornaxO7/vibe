@@ -2,19 +2,16 @@
 var<uniform> octaves: u32;
 
 @group(0) @binding(1)
-var<uniform> seed: f32;
+var white_noise_texture: texture_2d<f32>;
 
 @group(0) @binding(2)
-var<uniform> brightness: f32;
+var white_noise_sampler: sampler;
 
 @group(0) @binding(3)
 var<uniform> canvas_size: f32;
 
-// https://www.shadertoy.com/view/4djSRW
-fn hash12(p: vec2<f32>) -> f32 {
-	var p3 = fract(vec3<f32>(p.xyx) * .1031);
-    p3 += dot(p3, p3.yzx+33.33+seed);
-    return fract((p3.x + p3.y) * p3.z) * brightness;
+fn hash(id: vec2f) -> f32 {
+    return textureSample(white_noise_texture, white_noise_sampler, id).r;
 }
 
 fn value_noise(uv: vec2<f32>) -> f32 {
@@ -22,10 +19,10 @@ fn value_noise(uv: vec2<f32>) -> f32 {
     let id: vec2<f32> = split.whole;
     let gv: vec2<f32> = split.fract;
 
-    let tl: f32 = hash12(id + vec2f(0., 0.));
-    let tr: f32 = hash12(id + vec2f(1., 0.));
-    let bl: f32 = hash12(id + vec2f(0., 1.));
-    let br: f32 = hash12(id + vec2f(1., 1.));
+    let tl: f32 = hash(id + vec2f(0., 0.) + gv);
+    let tr: f32 = hash(id + vec2f(1., 0.) + gv);
+    let bl: f32 = hash(id + vec2f(0., 1.) + gv);
+    let br: f32 = hash(id + vec2f(1., 1.) + gv);
 
     let sx = smoothstep(0., 1., gv.x);
     let sy = smoothstep(0., 1., gv.y);

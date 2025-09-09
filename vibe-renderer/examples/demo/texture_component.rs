@@ -70,13 +70,7 @@ impl TextureComponent {
             ResourceID::Sampler,
             device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("Texture component: Sampler"),
-                address_mode_u: wgpu::AddressMode::MirrorRepeat,
-                address_mode_v: wgpu::AddressMode::MirrorRepeat,
-                address_mode_w: wgpu::AddressMode::MirrorRepeat,
-                mipmap_filter: wgpu::FilterMode::Linear,
-                min_filter: wgpu::FilterMode::Linear,
-                mag_filter: wgpu::FilterMode::Linear,
-                ..Default::default()
+                ..vibe_renderer::util::DEFAULT_SAMPLER_DESCRIPTOR
             }),
         );
 

@@ -21,16 +21,16 @@ mod bindings0 {
     use std::collections::HashMap;
 
     pub const OCTAVES: u32 = 0;
-    pub const SEED: u32 = 1;
-    pub const BRIGHTNESS: u32 = 2;
+    pub const WHITE_NOISE_TEXTURE: u32 = 1;
+    pub const WHITE_NOISE_SAMPER: u32 = 2;
     pub const CANVASSIZE: u32 = 3;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
             (ResourceID::Octaves, crate::util::buffer(OCTAVES, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Seed, crate::util::buffer(SEED, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Brightness, crate::util::buffer(BRIGHTNESS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::WhiteNoiseTexture, crate::util::texture(WHITE_NOISE_TEXTURE, wgpu::ShaderStages::FRAGMENT)),
+            (ResourceID::WhiteNoiseSampler, crate::util::sampler(WHITE_NOISE_SAMPER, wgpu::ShaderStages::FRAGMENT)),
             (ResourceID::CanvasSize, crate::util::buffer(CANVASSIZE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
@@ -39,8 +39,8 @@ mod bindings0 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ResourceID {
     Octaves,
-    Seed,
-    Brightness,
+    WhiteNoiseTexture,
+    WhiteNoiseSampler,
     CanvasSize,
 }
 
@@ -50,7 +50,7 @@ pub struct ValueNoiseDescriptor<'a> {
     pub format: wgpu::TextureFormat,
     pub octaves: u32,
     // should be within the range [0, 1]
-    pub brightness: f32,
+    pub white_noise_texture: wgpu::Texture,
 }
 
 pub struct ValueNoise {
@@ -79,22 +79,6 @@ impl ValueNoise {
                 }),
             ),
             (
-                ResourceID::Seed,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Value noise: `seed` buffer"),
-                    contents: bytemuck::bytes_of(&rand::random_range(15.0f32..35.0)),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::Brightness,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Value noise: `brightness` buffer"),
-                    contents: bytemuck::bytes_of(&desc.brightness.clamp(0., 1.)),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
                 ResourceID::CanvasSize,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Value noise: `canvas_size` buffer"),
@@ -103,6 +87,25 @@ impl ValueNoise {
                 }),
             ),
         ]);
+
+        resource_manager.insert_texture(
+            ResourceID::WhiteNoiseTexture,
+            desc.white_noise_texture.clone(),
+        );
+
+        resource_manager.insert_sampler(
+            ResourceID::WhiteNoiseSampler,
+            device.create_sampler(&wgpu::SamplerDescriptor {
+                label: Some("Value noise: White noise sampler"),
+                address_mode_u: wgpu::AddressMode::Repeat,
+                address_mode_v: wgpu::AddressMode::Repeat,
+                address_mode_w: wgpu::AddressMode::Repeat,
+                mipmap_filter: wgpu::FilterMode::Nearest,
+                min_filter: wgpu::FilterMode::Nearest,
+                mag_filter: wgpu::FilterMode::Nearest,
+                ..Default::default()
+            }),
+        );
 
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Value noise: vertex buffer"),

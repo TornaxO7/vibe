@@ -322,7 +322,7 @@ impl<'a> State<'a> {
             })) as Box<dyn Component>),
 
             ComponentName::TextureValueNoise => {
-                let texture = renderer.create_value_noise_texture(256, 1., 7);
+                let texture = renderer.create_value_noise_texture(256, 7);
 
                 Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
                     device: renderer.device(),
