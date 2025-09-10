@@ -145,6 +145,14 @@ where
     }
 }
 
+impl<ResourceID> Default for ResourceManager<ResourceID>
+where
+    ResourceID: Clone + Copy + Eq + Hash + Debug,
+{
+    fn default() -> Self {
+        Self::new()
+    }
+}
 #[derive(Debug)]
 enum Resource {
     Buffer(wgpu::Buffer),
