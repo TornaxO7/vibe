@@ -1,15 +1,20 @@
-pub mod components;
 mod resource_manager;
-pub(crate) mod util;
+
+pub mod components;
+pub mod util;
 
 use std::ops::Deref;
 
-use components::{ValueNoise, ValueNoiseDescriptor};
+use components::{
+    SdfMask, SdfMaskDescriptor, SdfPattern, ValueNoise, ValueNoiseDescriptor, WhiteNoise,
+    WhiteNoiseDescriptor,
+};
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
-use crate::components::{SdfMask, SdfMaskDescriptor, SdfPattern};
+pub use components::Component;
+pub use resource_manager::ResourceManager;
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
@@ -165,36 +170,18 @@ impl Renderer {
 
 impl Renderer {
     // `brightness`: should be within the range `0` and `1`
-    pub fn create_value_noise_texture(
-        &self,
-        width: u32,
-        height: u32,
-        brightness: f32,
-    ) -> wgpu::Texture {
+    pub fn create_value_noise_texture(&self, texture_size: u32, octaves: u32) -> wgpu::Texture {
         let device = self.device();
+        let texture = self.create_texture("Value noise texture", texture_size);
 
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Value noise texture"),
-            size: wgpu::Extent3d {
-                width,
-                height,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::Rgba8UnormSrgb,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
+        let white_noise_texture = self.create_white_noise(texture_size);
 
         let renderable = ValueNoise::new(&ValueNoiseDescriptor {
             device,
-            width,
-            height,
+            texture_size,
             format: texture.format(),
-            octaves: 7,
-            brightness,
+            octaves,
+            white_noise_texture,
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -205,21 +192,7 @@ impl Renderer {
 
     pub fn create_sdf_mask(&self, texture_size: u32, pattern: SdfPattern) -> wgpu::Texture {
         let device = self.device();
-
-        let texture = device.create_texture(&wgpu::TextureDescriptor {
-            label: Some("Grid texture"),
-            size: wgpu::Extent3d {
-                width: texture_size,
-                height: texture_size,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R16Float,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        });
+        let texture = self.create_texture("Grid texture", texture_size);
 
         let renderable = SdfMask::new(&SdfMaskDescriptor {
             device,
@@ -233,6 +206,49 @@ impl Renderer {
         self.render(&view, &[&renderable]);
 
         texture
+    }
+
+    pub fn create_white_noise(&self, texture_size: u32) -> wgpu::Texture {
+        let device = self.device();
+        let texture = self.create_texture("White noise texture", texture_size);
+
+        const MAX_SEED: f32 = 100.;
+        let seed = std::time::UNIX_EPOCH
+            .elapsed()
+            .unwrap()
+            .as_secs_f32()
+            .fract()
+            * MAX_SEED;
+
+        let renderable = WhiteNoise::new(&WhiteNoiseDescriptor {
+            device,
+            format: texture.format(),
+            seed,
+        });
+
+        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
+        self.render(&view, &[&renderable]);
+
+        texture
+    }
+
+    fn create_texture(&self, label: &'static str, texture_size: u32) -> wgpu::Texture {
+        let device = self.device();
+
+        device.create_texture(&wgpu::TextureDescriptor {
+            label: Some(label),
+            size: wgpu::Extent3d {
+                width: texture_size,
+                height: texture_size,
+                depth_or_array_layers: 1,
+            },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::R16Float,
+            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
+            view_formats: &[],
+        })
     }
 }
 

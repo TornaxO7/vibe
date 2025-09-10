@@ -1,3 +1,18 @@
+pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDescriptor {
+    label: None,
+    address_mode_u: wgpu::AddressMode::MirrorRepeat,
+    address_mode_v: wgpu::AddressMode::MirrorRepeat,
+    address_mode_w: wgpu::AddressMode::MirrorRepeat,
+    mipmap_filter: wgpu::FilterMode::Linear,
+    min_filter: wgpu::FilterMode::Linear,
+    mag_filter: wgpu::FilterMode::Linear,
+    lod_min_clamp: 0.0,
+    lod_max_clamp: 32.0,
+    compare: None,
+    anisotropy_clamp: 1,
+    border_color: None,
+};
+
 pub struct SimpleRenderPipelineDescriptor<'a> {
     pub label: &'static str,
     pub layout: &'a wgpu::PipelineLayout,
