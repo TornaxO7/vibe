@@ -21,7 +21,8 @@ pub enum ComponentName {
 
     ChessyBoxVariant,
 
-    ValueNoise,
+    TextureValueNoise,
+    TextureSdf,
 }
 
 #[derive(Parser)]

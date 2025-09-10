@@ -71,7 +71,7 @@ fn cellular_noise(uv: vec2<f32>, layer_idx: u32, time: f32) -> f32 {
 }
 
 fn dust_layer(uv: vec2<f32>, color: vec3<f32>) -> vec4<f32> {
-    return vec4<f32>(color * textureSample(value_noise_texture, value_noise_sampler, uv).rgb, 1.);
+    return vec4<f32>(color * textureSample(value_noise_texture, value_noise_sampler, uv).r, 1.);
 }
 
 @fragment

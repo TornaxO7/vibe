@@ -1,20 +1,16 @@
-use vibe_audio::fetcher::SystemAudioFetcher;
 use wgpu::util::DeviceExt;
 
 use crate::{resource_manager::ResourceManager, Renderable};
-
-use super::Component;
 
 const ENTRYPOINT: &str = "main";
 
 type VertexPosition = [f32; 2];
 
 #[rustfmt::skip]
-const VERTICES: [VertexPosition; 4] = [
-    [1.0, 1.0],   // top right
-    [-1.0, 1.0],  // top left
-    [1.0, -1.0],  // bottom right
-    [-1.0, -1.0]  // bottom left
+const VERTICES: [VertexPosition; 3] = [
+    [-3., -1.], // bottom left
+    [1., -1.], // bottom right
+    [1., 3.] // top right
 ];
 
 mod bindings0 {
@@ -23,15 +19,13 @@ mod bindings0 {
 
     pub const OCTAVES: u32 = 0;
     pub const SEED: u32 = 1;
-    pub const BRIGHTNESS: u32 = 2;
-    pub const CANVASSIZE: u32 = 3;
+    pub const CANVASSIZE: u32 = 2;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
             (ResourceID::Octaves, crate::util::buffer(OCTAVES, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::Seed, crate::util::buffer(SEED, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Brightness, crate::util::buffer(BRIGHTNESS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::CanvasSize, crate::util::buffer(CANVASSIZE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
@@ -41,22 +35,18 @@ mod bindings0 {
 enum ResourceID {
     Octaves,
     Seed,
-    Brightness,
     CanvasSize,
 }
 
 pub struct ValueNoiseDescriptor<'a> {
     pub device: &'a wgpu::Device,
-    pub width: u32,
-    pub height: u32,
+    pub texture_size: u32,
     pub format: wgpu::TextureFormat,
     pub octaves: u32,
-    // should be within the range [0, 1]
-    pub brightness: f32,
 }
 
 pub struct ValueNoise {
-    resource_manager: ResourceManager<ResourceID>,
+    _resource_manager: ResourceManager<ResourceID>,
 
     bind_group0: wgpu::BindGroup,
 
@@ -89,19 +79,11 @@ impl ValueNoise {
                 }),
             ),
             (
-                ResourceID::Brightness,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Value noise: `brightness` buffer"),
-                    contents: bytemuck::bytes_of(&desc.brightness.clamp(0., 1.)),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
                 ResourceID::CanvasSize,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Value noise: `canvas_size` buffer"),
-                    contents: bytemuck::cast_slice(&[desc.width as f32, desc.height as f32]),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    contents: bytemuck::bytes_of(&(desc.texture_size as f32)),
+                    usage: wgpu::BufferUsages::UNIFORM,
                 }),
             ),
         ]);
@@ -175,7 +157,7 @@ impl ValueNoise {
         Self {
             bind_group0,
 
-            resource_manager,
+            _resource_manager: resource_manager,
 
             pipeline,
             vbuffer,
@@ -188,32 +170,6 @@ impl Renderable for ValueNoise {
         pass.set_bind_group(0, &self.bind_group0, &[]);
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
-        pass.draw(0..4, 0..1);
-    }
-}
-
-impl Component for ValueNoise {
-    fn update_audio(
-        &mut self,
-        _queue: &wgpu::Queue,
-        _processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
-    }
-
-    fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
-
-    fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
-        let queue = renderer.queue();
-
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::CanvasSize)
-            .unwrap();
-
-        queue.write_buffer(
-            buffer,
-            0,
-            bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-        );
+        pass.draw(0..VERTICES.len() as u32, 0..1);
     }
 }
