@@ -1,3 +1,6 @@
+mod cli;
+mod texture_component;
+
 use std::{num::NonZero, sync::Arc, time::Instant};
 
 use anyhow::bail;
@@ -15,7 +18,7 @@ use vibe_renderer::{
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
         CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant, SdfPattern,
-        ShaderCode, ValueNoise, ValueNoiseDescriptor,
+        ShaderCode,
     },
     Renderer,
 };
@@ -27,7 +30,7 @@ use winit::{
     window::{Window, WindowAttributes},
 };
 
-mod cli;
+use crate::texture_component::{TextureComponent, TextureComponentDescriptor};
 
 const TURQUOISE: [f32; 4] = [0., 1., 1., 1.];
 const DARK_BLUE: [f32; 4] = [0.05, 0., 0.321, 255.];
@@ -130,9 +133,8 @@ impl<'a> State<'a> {
                         "
                         @fragment
                         fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                            var uv = pos.xy / iResolution.xy;
-                            uv.y = 1. - uv.y;
-                            uv.x *= iResolution.x / iResolution.y;
+                            var uv = (2. * pos.xy - iResolution.xy) / iResolution.y;
+                            uv.y *= -1.;
 
                             let col: vec3<f32> = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
                             return vec4<f32>(col, uv.y);
@@ -162,14 +164,6 @@ impl<'a> State<'a> {
                 format: BarsFormat::TrebleBassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
-            ComponentName::ValueNoise => Ok(Box::new(ValueNoise::new(&ValueNoiseDescriptor {
-                device: renderer.device(),
-                width: size.width,
-                height: size.height,
-                format: surface_config.format,
-                octaves: 6,
-                brightness: 0.5,
-            })) as Box<dyn Component>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {
                 device: renderer.device(),
                 sample_processor: processor,
@@ -326,6 +320,34 @@ impl<'a> State<'a> {
                 pattern: SdfPattern::Box,
                 zoom_factor: 4.,
             })) as Box<dyn Component>),
+
+            ComponentName::TextureValueNoise => {
+                let texture = renderer.create_value_noise_texture(256, 7);
+
+                Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
+                    device: renderer.device(),
+                    texture,
+                    format: surface_config.format,
+                })) as Box<dyn Component>)
+            }
+            ComponentName::TextureSdf => {
+                let texture = renderer.create_sdf_mask(256, SdfPattern::Box);
+
+                Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
+                    device: renderer.device(),
+                    texture,
+                    format: surface_config.format,
+                })) as Box<dyn Component>)
+            }
+            ComponentName::TextureWhiteNoise => {
+                let texture = renderer.create_white_noise(256);
+
+                Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
+                    device: renderer.device(),
+                    texture,
+                    format: surface_config.format,
+                })) as Box<dyn Component>)
+            }
         }?;
 
         Ok(Self {
