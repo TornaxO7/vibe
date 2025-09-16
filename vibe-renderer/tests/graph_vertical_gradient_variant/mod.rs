@@ -19,6 +19,7 @@ fn test() {
             bottom: super::RED,
         },
         placement: vibe_renderer::components::GraphPlacement::Top,
+        format: vibe_renderer::components::GraphFormat::TrebleBassTreble,
     });
 
     let _img = tester.render(graph);

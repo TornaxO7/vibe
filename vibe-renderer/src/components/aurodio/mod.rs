@@ -3,6 +3,7 @@ pub use descriptor::*;
 
 use super::Component;
 use crate::{resource_manager::ResourceManager, Renderable};
+use rand::Rng;
 use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
@@ -26,19 +27,25 @@ mod bindings0 {
     use std::collections::HashMap;
 
     pub const RESOLUTION: u32 = 0;
-    pub const ZOOM_FACTORS: u32 = 1;
-    pub const BASE_COLOR: u32 = 2;
-    pub const VALUE_NOISE_TEXTURE: u32 = 3;
-    pub const VALUE_NOISE_SAMPLER: u32 = 4;
-    pub const MOVEMENT_SPEED: u32 = 5;
+    pub const POINTS: u32 = 1;
+    pub const POINTS_WIDTH: u32 = 2;
+    pub const ZOOM_FACTORS: u32 = 3;
+    pub const RANDOM_SEEDS: u32 = 4;
+    pub const BASE_COLOR: u32 = 5;
+    pub const VALUE_NOISE_TEXTURE: u32 = 6;
+    pub const VALUE_NOISE_SAMPLER: u32 = 7;
+    pub const MOVEMENT_SPEED: u32 = 8;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
             (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::ZoomFactors, crate::util::buffer(ZOOM_FACTORS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::RandomSeeds, crate::util::buffer(RANDOM_SEEDS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
             (ResourceID::BaseColor, crate::util::buffer(BASE_COLOR, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::MovementSpeed, crate::util::buffer(MOVEMENT_SPEED, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Points, crate::util::buffer(POINTS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
+            (ResourceID::PointsWidth, crate::util::buffer(POINTS_WIDTH, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::ValueNoiseTexture, crate::util::texture(VALUE_NOISE_TEXTURE, wgpu::ShaderStages::FRAGMENT)),
             (ResourceID::ValueNoiseSampler, crate::util::sampler(VALUE_NOISE_SAMPLER, wgpu::ShaderStages::FRAGMENT)),
         ])
@@ -63,7 +70,10 @@ mod bindings1 {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum ResourceID {
     Resolution,
+    Points,
+    PointsWidth,
     ZoomFactors,
+    RandomSeeds,
     BaseColor,
     ValueNoiseTexture,
     ValueNoiseSampler,
@@ -135,6 +145,18 @@ impl Aurodio {
                     }),
                 )
             },
+            {
+                let random_seeds: Vec<f32> = get_random_seeds(amount_layers);
+
+                (
+                    ResourceID::RandomSeeds,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `random_seeds` buffer"),
+                        contents: bytemuck::cast_slice(&random_seeds),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    }),
+                )
+            },
             (
                 ResourceID::BaseColor,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -172,10 +194,39 @@ impl Aurodio {
         ]);
 
         {
+            let (points, width) = get_points(amount_layers * 2);
+
+            resource_manager.extend_buffers([
+                (
+                    ResourceID::Points,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `points` buffer"),
+                        contents: bytemuck::cast_slice(&points),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    }),
+                ),
+                (
+                    ResourceID::PointsWidth,
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Aurodio: `points_width` buffer"),
+                        contents: bytemuck::bytes_of(&width),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    }),
+                ),
+            ]);
+        }
+
+        {
             let value_noise_texture = desc.renderer.create_value_noise_texture(256, 7);
             let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("Aurodio: Value noise sampler"),
-                ..crate::util::DEFAULT_SAMPLER_DESCRIPTOR
+                address_mode_u: wgpu::AddressMode::MirrorRepeat,
+                address_mode_v: wgpu::AddressMode::MirrorRepeat,
+                address_mode_w: wgpu::AddressMode::MirrorRepeat,
+                mipmap_filter: wgpu::FilterMode::Linear,
+                min_filter: wgpu::FilterMode::Linear,
+                mag_filter: wgpu::FilterMode::Linear,
+                ..Default::default()
             });
 
             resource_manager.insert_texture(ResourceID::ValueNoiseTexture, value_noise_texture);
@@ -318,4 +369,36 @@ impl Component for Aurodio {
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
     }
+}
+
+fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
+    let mut points = Vec::with_capacity(amount_layers);
+
+    let width = amount_layers + 2; // `+2` one square for the left/top and right/bottom
+    let height = width;
+    let mut rng = rand::rng();
+    for _y in 0..height {
+        for _x in 0..width {
+            let mut point = [0u8; 2];
+            rng.fill(&mut point[..]);
+
+            points.push([
+                (point[0] as f32 / u8::MAX as f32),
+                (point[1] as f32 / u8::MAX as f32),
+            ]);
+        }
+    }
+
+    (points, width as u32)
+}
+
+fn get_random_seeds(amount_layers: usize) -> Vec<f32> {
+    let mut seeds = Vec::with_capacity(amount_layers);
+    let mut rng = rand::rng();
+
+    for _ in 0..amount_layers {
+        seeds.push(rng.random_range(0f32..100f32));
+    }
+
+    seeds
 }

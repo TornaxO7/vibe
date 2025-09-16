@@ -23,7 +23,6 @@ pub enum ComponentName {
 
     TextureValueNoise,
     TextureSdf,
-    TextureWhiteNoise,
 }
 
 #[derive(Parser)]

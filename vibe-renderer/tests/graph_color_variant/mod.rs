@@ -1,5 +1,5 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
+use vibe_renderer::components::{Graph, GraphDescriptor, GraphFormat, GraphVariant};
 
 use crate::{Tester, RED};
 
@@ -16,6 +16,7 @@ fn test() {
         max_height: 1.,
         variant: GraphVariant::Color(RED),
         placement: vibe_renderer::components::GraphPlacement::Bottom,
+        format: GraphFormat::BassTreble,
     });
 
     let _img = tester.render(graph);

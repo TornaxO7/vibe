@@ -2,18 +2,27 @@
 var<uniform> iResolution: vec2<f32>;
 
 @group(0) @binding(1)
-var<storage, read> zoom_factors: array<f32>;
+var<storage, read> points: array<vec2<f32>>;
 
 @group(0) @binding(2)
-var<uniform> base_color: vec3<f32>;
+var<uniform> points_width: u32;
 
 @group(0) @binding(3)
-var value_noise_texture: texture_2d<f32>;
+var<storage, read> zoom_factors: array<f32>;
 
 @group(0) @binding(4)
-var value_noise_sampler: sampler;
+var<storage, read> random_seeds: array<f32>;
 
 @group(0) @binding(5)
+var<uniform> base_color: vec3<f32>;
+
+@group(0) @binding(6)
+var value_noise_texture: texture_2d<f32>;
+
+@group(0) @binding(7)
+var value_noise_sampler: sampler;
+
+@group(0) @binding(8)
 var<uniform> movement_speed: f32;
 
 @group(1) @binding(0)
@@ -24,34 +33,35 @@ var<storage, read> freqs: array<f32>;
 
 const CELL_DIAG: f32 = sqrt(2.);
 
-fn get_point(id: vec2f) -> vec2<f32> {
-    let x = textureSample(value_noise_texture, value_noise_sampler, id).r;
-    let y = textureSample(value_noise_texture, value_noise_sampler, id + vec2f(1.15, 3.33)).r;
+fn get_point(id: vec2<i32>) -> vec2<f32> {
+    let points_len = i32(arrayLength(&points));
 
-    return vec2f(x, y);
+    let idx = ((id.x + id.y * i32(points_width)) + points_len) % points_len;
+
+    return points[idx];
 }
 
-fn cellular_noise(uv: vec2f, layer_idx: u32, time: f32) -> f32 {
+fn cellular_noise(uv: vec2<f32>, layer_idx: u32, time: f32) -> f32 {
     let points_len = arrayLength(&points);
     let zoom_factor = zoom_factors[layer_idx];
-    let random_seed = textureSample(value_noise_texture, value_noise_sampler, uv).r;
+    let random_seed = random_seeds[layer_idx];
 
     let grid_cell = modf(uv * zoom_factor);
-    let id: vec2f = grid_cell.whole;
-    let gv: vec2f = grid_cell.fract;
+    let id: vec2<i32> = vec2<i32>(grid_cell.whole);
+    let gv: vec2<f32> = grid_cell.fract;
 
     var point = get_point(id);
     var min_d = 2.;
     for (var y = -1; y < 2; y++) {
         for (var x = -1; x < 2; x++) {
-            let offset = vec2f(x, y);
+            let offset = vec2<i32>(x, y);
             let nid = id + offset;
 
             point = get_point(nid) * time + random_seed * f32(layer_idx);
             point.x = cos(point.x);
             point.y = sin(point.y);
             point = point * .5 + .5;
-            point += offset;
+            point += vec2<f32>(offset);
 
             min_d = min(min_d, dot(gv - point, gv - point));
         }

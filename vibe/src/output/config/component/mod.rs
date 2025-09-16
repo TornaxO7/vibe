@@ -25,7 +25,7 @@ pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVaria
 pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use fragment_canvas::FragmentCanvasAudioConfig;
-pub use graph::{GraphAudioConfig, GraphPlacementConfig, GraphVariantConfig};
+pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
 const GAMMA: f32 = 2.2;
@@ -54,6 +54,7 @@ pub enum ComponentConfig {
         max_height: f32,
         variant: GraphVariantConfig,
         placement: GraphPlacementConfig,
+        format: GraphFormatConfig,
     },
     Circle {
         audio_conf: CircleAudioConfig,
@@ -176,6 +177,7 @@ impl ComponentConfig {
                 max_height,
                 variant,
                 placement,
+                format,
             } => {
                 let variant = GraphVariant::from(variant);
                 let placement = GraphPlacement::from(placement);
@@ -188,6 +190,7 @@ impl ComponentConfig {
                     variant,
                     max_height: *max_height,
                     placement,
+                    format: format.into(),
                 })) as Box<dyn Component>)
             }
             ComponentConfig::Circle {
