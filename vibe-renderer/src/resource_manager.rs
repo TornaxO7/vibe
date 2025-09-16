@@ -19,9 +19,7 @@ where
     ResourceID: Clone + Copy + Eq + Hash + Debug,
 {
     pub fn new() -> Self {
-        Self {
-            resources: FastHashMap::default(),
-        }
+        Self::default()
     }
 
     pub fn get_buffer(&self, id: ResourceID) -> Option<&wgpu::Buffer> {
@@ -142,6 +140,17 @@ where
         });
 
         (bind_group, layout)
+    }
+}
+
+impl<ResourceID> Default for ResourceManager<ResourceID>
+where
+    ResourceID: Clone + Copy + Eq + Hash + Debug,
+{
+    fn default() -> Self {
+        Self {
+            resources: FastHashMap::default(),
+        }
     }
 }
 
