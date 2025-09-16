@@ -39,7 +39,8 @@ impl OutputCtx {
     ) -> Self {
         let size = Size::from(&info);
 
-        layer_surface.set_exclusive_zone(-69); // nice! (arbitrary chosen :P hehe)
+        // Should be "-1" otherwise: https://github.com/TornaxO7/vibe/issues/167 happens
+        layer_surface.set_exclusive_zone(-1);
         layer_surface.set_anchor(Anchor::all());
         layer_surface.set_size(size.width, size.height);
         layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
