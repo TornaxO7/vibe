@@ -36,7 +36,7 @@ pub enum RadialVariantConfig {
     HeightGradient { inner: Rgba, outer: Rgba },
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum RadialFormatConfig {
     BassTreble,
     TrebleBass,

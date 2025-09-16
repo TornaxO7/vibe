@@ -25,10 +25,13 @@ use wayland_client::{
 };
 
 use crate::{
-    config::ConfigError,
+    config::{Config, ConfigError},
     output::{config::OutputConfig, OutputCtx},
     types::size::Size,
 };
+
+const STEREO_AUDIO: Option<u16> = Some(2);
+const MONO_AUDIO: Option<u16> = Some(1);
 
 pub struct State {
     pub run: bool,
@@ -43,7 +46,8 @@ pub struct State {
 
     time: Instant,
 
-    outputs: HashMap<WlOutput, OutputCtx>,
+    outputs: HashMap<WlOutput, OutputCtx<SystemAudioFetcher>>,
+    config: Config,
 }
 
 impl State {
@@ -100,10 +104,10 @@ impl State {
             default_config
         });
 
-        let sample_processor = vibe_config.sample_processor()?;
+        let sample_processor = vibe_config.sample_processor(Some(2))?;
 
         let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::from(
-            vibe_config.graphics_config,
+            vibe_config.graphics_config.clone(),
         ));
 
         Ok(Self {
@@ -119,6 +123,7 @@ impl State {
             sample_processor,
 
             outputs: HashMap::new(),
+            config: vibe_config,
         })
     }
 
@@ -209,6 +214,14 @@ impl OutputHandler for State {
             return;
         }
 
+        if config.uses_stereo_audio() && self.sample_processor.amount_channels() != 2 {
+            self.sample_processor = self.config.sample_processor(STEREO_AUDIO).unwrap();
+
+            for component in self.outputs.values_mut() {
+                component.update_sample_processor(&self.sample_processor);
+            }
+        }
+
         let layer_surface = {
             let region = Region::new(&self.compositor_state).unwrap();
             let wl_surface = self.compositor_state.create_surface(qh);
@@ -266,6 +279,16 @@ impl OutputHandler for State {
     fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
         info!("An output was removed.");
         self.outputs.remove(&output);
+
+        let no_component_uses_stereo_audio =
+            self.outputs.values().all(|ctx| !ctx.uses_stereo_audio());
+        if no_component_uses_stereo_audio {
+            self.sample_processor = self.config.sample_processor(MONO_AUDIO).unwrap();
+
+            for component in self.outputs.values_mut() {
+                component.update_sample_processor(&self.sample_processor);
+            }
+        }
     }
 }
 

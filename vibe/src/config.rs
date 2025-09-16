@@ -61,7 +61,10 @@ impl Config {
         std::fs::write(crate::get_config_path(), toml::to_string(self).unwrap())
     }
 
-    pub fn sample_processor(&self) -> anyhow::Result<SampleProcessor<SystemAudioFetcher>> {
+    pub fn sample_processor(
+        &self,
+        amount_channels: Option<u16>,
+    ) -> anyhow::Result<SampleProcessor<SystemAudioFetcher>> {
         let device = match self
             .audio_config
             .clone()
@@ -103,6 +106,7 @@ impl Config {
 
         let system_audio_fetcher = SystemAudioFetcher::new(&SystemAudioFetcherDescriptor {
             device,
+            amount_channels,
             ..Default::default()
         })?;
 

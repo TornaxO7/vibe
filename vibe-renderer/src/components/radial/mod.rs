@@ -4,10 +4,7 @@ pub use descriptor::*;
 use std::{collections::HashMap, num::NonZero};
 
 use cgmath::{Deg, Matrix2, Rad, Vector2};
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{resource_manager::ResourceManager, Renderable};
@@ -424,12 +421,8 @@ impl Renderable for Radial {
     }
 }
 
-impl Component for Radial {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> Component<F> for Radial {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         {
@@ -461,6 +454,8 @@ impl Component for Radial {
             queue.write_buffer(buffer, 0, bytemuck::bytes_of(&aspect_ratio));
         }
     }
+
+    fn update_sample_processor(&mut self, _processor: &SampleProcessor<F>) {}
 }
 
 #[derive(Debug, Clone, Copy)]

@@ -69,6 +69,12 @@ impl OutputConfig {
 
         paths
     }
+
+    pub fn uses_stereo_audio(&self) -> bool {
+        self.components
+            .iter()
+            .any(|component| component.uses_stereo_audio())
+    }
 }
 
 pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<OutputConfig>)> {

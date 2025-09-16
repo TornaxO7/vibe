@@ -262,12 +262,8 @@ impl Renderable for Chessy {
     }
 }
 
-impl Component for Chessy {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> Component<F> for Chessy {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &vibe_audio::SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
@@ -322,5 +318,9 @@ impl Component for Chessy {
                 bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
             );
         }
+    }
+
+    fn update_sample_processor(&mut self, processor: &vibe_audio::SampleProcessor<F>) {
+        self.bar_processor.update_sample_processor(processor);
     }
 }
