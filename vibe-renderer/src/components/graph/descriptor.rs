@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use cgmath::Deg;
 use vibe_audio::fetcher::Fetcher;
 
@@ -6,6 +8,10 @@ use crate::components::Rgba;
 pub struct GraphDescriptor<'a, F: Fetcher> {
     pub device: &'a wgpu::Device,
     pub sample_processor: &'a vibe_audio::SampleProcessor<F>,
+    // NOTE: Maybe it's better to create a custom struct for the audio config
+    // and remove the `amount_bars` from `audio_conf` since we only need it,
+    // if the placement is `GraphPlacement::Custom` and we are
+    // ignoring `audio_conf.amount_bars` anyhow.
     pub audio_conf: vibe_audio::BarProcessorConfig,
     pub output_texture_format: wgpu::TextureFormat,
 
@@ -29,6 +35,7 @@ pub enum GraphPlacement {
         //   (1., 1.) => bottom right corner
         bottom_left_corner: [f32; 2],
         rotation: Deg<f32>,
+        amount_bars: NonZero<u16>,
     },
 }
 

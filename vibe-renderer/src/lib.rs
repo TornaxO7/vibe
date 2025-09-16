@@ -5,10 +5,7 @@ pub mod util;
 
 use std::ops::Deref;
 
-use components::{
-    SdfMask, SdfMaskDescriptor, SdfPattern, ValueNoise, ValueNoiseDescriptor, WhiteNoise,
-    WhiteNoiseDescriptor,
-};
+use components::{SdfMask, SdfMaskDescriptor, SdfPattern, ValueNoise, ValueNoiseDescriptor};
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
@@ -174,14 +171,11 @@ impl Renderer {
         let device = self.device();
         let texture = self.create_texture("Value noise texture", texture_size);
 
-        let white_noise_texture = self.create_white_noise(texture_size);
-
         let renderable = ValueNoise::new(&ValueNoiseDescriptor {
             device,
             texture_size,
             format: texture.format(),
             octaves,
-            white_noise_texture,
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
@@ -200,30 +194,6 @@ impl Renderer {
             pattern,
 
             texture_size,
-        });
-
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        self.render(&view, &[&renderable]);
-
-        texture
-    }
-
-    pub fn create_white_noise(&self, texture_size: u32) -> wgpu::Texture {
-        let device = self.device();
-        let texture = self.create_texture("White noise texture", texture_size);
-
-        const MAX_SEED: f32 = 100.;
-        let seed = std::time::UNIX_EPOCH
-            .elapsed()
-            .unwrap()
-            .as_secs_f32()
-            .fract()
-            * MAX_SEED;
-
-        let renderable = WhiteNoise::new(&WhiteNoiseDescriptor {
-            device,
-            format: texture.format(),
-            seed,
         });
 
         let view = texture.create_view(&wgpu::TextureViewDescriptor::default());

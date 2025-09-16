@@ -2,7 +2,7 @@ use std::{num::NonZero, ops::Range};
 
 use cgmath::Deg;
 use serde::{Deserialize, Serialize};
-use vibe_renderer::components::{GraphPlacement, GraphVariant};
+use vibe_renderer::components::{GraphFormat, GraphPlacement, GraphVariant};
 
 use super::Rgba;
 
@@ -71,8 +71,7 @@ pub enum GraphPlacementConfig {
     Custom {
         offset: [f32; 2],
         rotation: Deg<f32>,
-        // aka: Amount bars
-        width: NonZero<u16>,
+        amount_bars: NonZero<u16>,
     },
 }
 
@@ -86,11 +85,11 @@ impl From<GraphPlacementConfig> for GraphPlacement {
             GraphPlacementConfig::Custom {
                 offset,
                 rotation,
-                width,
+                amount_bars,
             } => Self::Custom {
                 bottom_left_corner: offset,
                 rotation,
-                amount_bars: width,
+                amount_bars,
             },
         }
     }
@@ -98,6 +97,31 @@ impl From<GraphPlacementConfig> for GraphPlacement {
 
 impl From<&GraphPlacementConfig> for GraphPlacement {
     fn from(conf: &GraphPlacementConfig) -> Self {
+        Self::from(conf.clone())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum GraphFormatConfig {
+    BassTreble,
+    TrebleBass,
+    BassTrebleBass,
+    TrebleBassTreble,
+}
+
+impl From<GraphFormatConfig> for GraphFormat {
+    fn from(conf: GraphFormatConfig) -> Self {
+        match conf {
+            GraphFormatConfig::BassTreble => Self::BassTreble,
+            GraphFormatConfig::TrebleBass => Self::TrebleBass,
+            GraphFormatConfig::BassTrebleBass => Self::BassTrebleBass,
+            GraphFormatConfig::TrebleBassTreble => Self::TrebleBassTreble,
+        }
+    }
+}
+
+impl From<&GraphFormatConfig> for GraphFormat {
+    fn from(conf: &GraphFormatConfig) -> Self {
         Self::from(conf.clone())
     }
 }

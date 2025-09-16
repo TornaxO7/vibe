@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
 
@@ -24,6 +26,7 @@ fn test() {
         placement: vibe_renderer::components::GraphPlacement::Custom {
             bottom_left_corner: [0.2, 0.5],
             rotation: cgmath::Deg(90.),
+            amount_bars: NonZero::new(50).unwrap(),
         },
         format: vibe_renderer::components::GraphFormat::BassTrebleBass,
     });

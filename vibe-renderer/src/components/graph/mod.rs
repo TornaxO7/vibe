@@ -123,7 +123,7 @@ impl Graph {
         let amount_bars = match desc.placement {
             GraphPlacement::Bottom | GraphPlacement::Top => GraphAmountBars::ScreenWidth,
             GraphPlacement::Right | GraphPlacement::Left => GraphAmountBars::ScreenHeight,
-            GraphPlacement::Custom { .. } => GraphAmountBars::Custom(desc.audio_conf.amount_bars),
+            GraphPlacement::Custom { amount_bars, .. } => GraphAmountBars::Custom(amount_bars),
         };
 
         let bar_processor = BarProcessor::new(
@@ -142,6 +142,7 @@ impl Graph {
             GraphPlacement::Custom {
                 bottom_left_corner,
                 rotation,
+                ..
             } => {
                 let bottom_left_corner = {
                     // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
@@ -158,7 +159,7 @@ impl Graph {
                     pos
                 };
 
-                (bottom_left_corner, rotation.clone())
+                (bottom_left_corner, rotation)
             }
         };
         let rotation = Matrix2::from_angle(angle);
@@ -446,7 +447,7 @@ impl Component for Graph {
             let buffer = self.resource_manager.get_buffer(ResourceID::Right).unwrap();
 
             let pixel_width_in_vertex_space =
-                1. / (new_resolution[0] as f32 / VERTEX_SURFACE_WIDTH as f32);
+                1. / (new_resolution[0] as f32 / VERTEX_SURFACE_WIDTH);
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
@@ -518,7 +519,7 @@ impl GraphAmountBars {
             GraphAmountBars::ScreenWidth | GraphAmountBars::ScreenHeight => {
                 Self::DEFAULT_AMOUNT_BARS
             }
-            GraphAmountBars::Custom(non_zero) => non_zero.clone(),
+            GraphAmountBars::Custom(non_zero) => *non_zero,
         }
     }
 }

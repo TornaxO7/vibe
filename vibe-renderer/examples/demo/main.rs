@@ -209,10 +209,7 @@ impl<'a> State<'a> {
             ComponentName::GraphColorVariant => Ok(Box::new(Graph::new(&GraphDescriptor {
                 device: renderer.device(),
                 sample_processor: processor,
-                audio_conf: BarProcessorConfig {
-                    amount_bars: NonZero::new(500).unwrap(),
-                    ..Default::default()
-                },
+                audio_conf: BarProcessorConfig::default(),
                 output_texture_format: surface_config.format,
                 variant: GraphVariant::Color([0., 0., 1., 1.]),
                 max_height: 0.5,
@@ -221,6 +218,7 @@ impl<'a> State<'a> {
                 placement: vibe_renderer::components::GraphPlacement::Custom {
                     bottom_left_corner: [0.25, 0.2],
                     rotation: Deg(-45.),
+                    amount_bars: NonZero::new(500).unwrap(),
                 },
             })) as Box<dyn Component>),
             ComponentName::GraphHorizontalGradientVariant => {
@@ -228,7 +226,6 @@ impl<'a> State<'a> {
                     device: renderer.device(),
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
-                        amount_bars: NonZero::new(size.width as u16).unwrap(),
                         sensitivity: 4.0,
                         ..Default::default()
                     },
@@ -333,15 +330,6 @@ impl<'a> State<'a> {
             }
             ComponentName::TextureSdf => {
                 let texture = renderer.create_sdf_mask(256, SdfPattern::Box);
-
-                Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
-                    device: renderer.device(),
-                    texture,
-                    format: surface_config.format,
-                })) as Box<dyn Component>)
-            }
-            ComponentName::TextureWhiteNoise => {
-                let texture = renderer.create_white_noise(256);
 
                 Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
                     device: renderer.device(),
