@@ -17,8 +17,8 @@ use vibe_renderer::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
         CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
-        GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant, SdfPattern,
-        ShaderCode,
+        GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
+        SdfPattern, ShaderCode,
     },
     Renderer,
 };
@@ -216,11 +216,11 @@ impl<'a> State<'a> {
                 output_texture_format: surface_config.format,
                 variant: GraphVariant::Color([0., 0., 1., 1.]),
                 max_height: 0.5,
+                format: GraphFormat::BassTreble,
                 // placement: vibe_renderer::components::GraphPlacement::Bottom,
                 placement: vibe_renderer::components::GraphPlacement::Custom {
-                    offset: [0.25, 0.75],
-                    rotation: Deg(45.),
-                    amount_bars: NonZero::new(512).unwrap(),
+                    bottom_left_corner: [0.25, 0.2],
+                    rotation: Deg(-45.),
                 },
             })) as Box<dyn Component>),
             ComponentName::GraphHorizontalGradientVariant => {
@@ -238,6 +238,7 @@ impl<'a> State<'a> {
                         right: [0., 0., 1., 1.],
                     },
                     max_height: 0.5,
+                    format: GraphFormat::BassTreble,
                     placement: vibe_renderer::components::GraphPlacement::Bottom,
                 })) as Box<dyn Component>)
             }
@@ -256,12 +257,12 @@ impl<'a> State<'a> {
                         bottom: [0., 0., 1., 1.],
                     },
                     max_height: 0.5,
-                    // placement: vibe_renderer::components::GraphPlacement::Top,
-                    placement: vibe_renderer::components::GraphPlacement::Custom {
-                        offset: [0.5, 0.2],
-                        rotation: Deg(-45.),
-                        amount_bars: NonZero::new(512).unwrap(),
-                    },
+                    format: GraphFormat::BassTrebleBass,
+                    placement: vibe_renderer::components::GraphPlacement::Bottom,
+                    // placement: vibe_renderer::components::GraphPlacement::Custom {
+                    //     bottom_left_corner: [0.5, 0.2],
+                    //     rotation: Deg(-45.),
+                    // },
                 })) as Box<dyn Component>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {

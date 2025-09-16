@@ -88,7 +88,7 @@ impl From<GraphPlacementConfig> for GraphPlacement {
                 rotation,
                 width,
             } => Self::Custom {
-                offset,
+                bottom_left_corner: offset,
                 rotation,
                 amount_bars: width,
             },

@@ -1,5 +1,3 @@
-use std::num::NonZero;
-
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
 
@@ -24,10 +22,10 @@ fn test() {
             right: BLUE,
         },
         placement: vibe_renderer::components::GraphPlacement::Custom {
-            offset: [0.2, 0.5],
+            bottom_left_corner: [0.2, 0.5],
             rotation: cgmath::Deg(90.),
-            amount_bars: NonZero::new(512).unwrap(),
         },
+        format: vibe_renderer::components::GraphFormat::BassTrebleBass,
     });
 
     let _img = tester.render(graph);
