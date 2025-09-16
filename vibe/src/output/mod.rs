@@ -7,7 +7,7 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 use tracing::error;
 use vibe_renderer::{components::Component, Renderer};
@@ -18,23 +18,24 @@ use crate::{state::State, types::size::Size};
 use config::OutputConfig;
 
 /// Contains every relevant information for an output.
-pub struct OutputCtx {
-    pub components: Vec<Box<dyn Component>>,
+pub struct OutputCtx<F: Fetcher> {
+    pub components: Vec<Box<dyn Component<F>>>,
 
     // don't know if this is required, but better drop `surface` first before
     // `layer_surface`
     surface: Surface<'static>,
     layer_surface: LayerSurface,
     surface_config: SurfaceConfiguration,
+    config: OutputConfig,
 }
 
-impl OutputCtx {
+impl<F: Fetcher> OutputCtx<F> {
     pub fn new(
         info: OutputInfo,
         surface: Surface<'static>,
         layer_surface: LayerSurface,
         renderer: &Renderer,
-        sample_processor: &SampleProcessor<SystemAudioFetcher>,
+        sample_processor: &SampleProcessor<F>,
         config: OutputConfig,
     ) -> Self {
         let size = Size::from(&info);
@@ -52,8 +53,8 @@ impl OutputCtx {
         let components = {
             let mut components = Vec::with_capacity(config.components.len());
 
-            for comp_conf in config.components {
-                let component: Box<dyn Component> = comp_conf
+            for comp_conf in &config.components {
+                let component: Box<dyn Component<F>> = comp_conf
                     .to_component(renderer, sample_processor, surface_config.format)
                     .unwrap_or_else(|msg| {
                         error!("{}", msg);
@@ -71,6 +72,7 @@ impl OutputCtx {
             surface,
             layer_surface,
             components,
+            config,
         }
     }
 
@@ -101,10 +103,20 @@ impl OutputCtx {
             }
         }
     }
+
+    pub fn uses_stereo_audio(&self) -> bool {
+        self.config.uses_stereo_audio()
+    }
+
+    pub fn update_sample_processor(&mut self, sample_processor: &SampleProcessor<F>) {
+        for component in self.components.iter_mut() {
+            component.update_sample_processor(sample_processor);
+        }
+    }
 }
 
 // getters
-impl OutputCtx {
+impl<F: Fetcher> OutputCtx<F> {
     pub fn layer_surface(&self) -> &LayerSurface {
         &self.layer_surface
     }

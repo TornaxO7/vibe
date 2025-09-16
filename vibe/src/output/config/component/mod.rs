@@ -8,7 +8,10 @@ mod radial;
 
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
-use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use vibe_audio::{
+    fetcher::{Fetcher, SystemAudioFetcher},
+    SampleProcessor,
+};
 use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
@@ -99,12 +102,12 @@ impl Default for ComponentConfig {
 }
 
 impl ComponentConfig {
-    pub fn to_component(
+    pub fn to_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
-        processor: &SampleProcessor<SystemAudioFetcher>,
+        processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn Component>, ShaderCodeError> {
+    ) -> Result<Box<dyn Component<F>>, ShaderCodeError> {
         match self {
             ComponentConfig::Bars {
                 audio_conf,
@@ -135,7 +138,7 @@ impl ComponentConfig {
                     placement: BarsPlacement::from(placement),
                     format: BarsFormat::from(format),
                 })
-                .map(|bars| Box::new(bars) as Box<dyn Component>)
+                .map(|bars| Box::new(bars) as Box<dyn Component<F>>)
             }
             ComponentConfig::FragmentCanvas {
                 audio_conf,
@@ -147,7 +150,7 @@ impl ComponentConfig {
                 format: texture_format,
                 fragment_code: fragment_code.clone(),
             })
-            .map(|canvas| Box::new(canvas) as Box<dyn Component>),
+            .map(|canvas| Box::new(canvas) as Box<dyn Component<F>>),
             ComponentConfig::Aurodio {
                 base_color,
                 movement_speed,
@@ -170,7 +173,7 @@ impl ComponentConfig {
                     movement_speed: *movement_speed,
                     sensitivity: audio_conf.sensitivity,
                     layers: &layers,
-                })) as Box<dyn Component>)
+                })) as Box<dyn Component<F>>)
             }
             ComponentConfig::Graph {
                 audio_conf,
@@ -191,7 +194,7 @@ impl ComponentConfig {
                     max_height: *max_height,
                     placement,
                     format: format.into(),
-                })) as Box<dyn Component>)
+                })) as Box<dyn Component<F>>)
             }
             ComponentConfig::Circle {
                 audio_conf,
@@ -269,6 +272,31 @@ impl ComponentConfig {
                 pattern: *pattern,
                 zoom_factor: *zoom_factor,
             }))),
+        }
+    }
+
+    /// Returns `true` if the given component needs two audio channels.
+    pub fn uses_stereo_audio(&self) -> bool {
+        match self {
+            ComponentConfig::Bars { format, .. } => [
+                BarsFormatConfig::TrebleBassTreble,
+                BarsFormatConfig::BassTrebleBass,
+            ]
+            .contains(format),
+            ComponentConfig::FragmentCanvas { .. } => false,
+            ComponentConfig::Aurodio { .. } => false,
+            ComponentConfig::Graph { format, .. } => [
+                GraphFormatConfig::BassTrebleBass,
+                GraphFormatConfig::TrebleBassTreble,
+            ]
+            .contains(format),
+            ComponentConfig::Circle { .. } => false,
+            ComponentConfig::Radial { format, .. } => [
+                RadialFormatConfig::BassTrebleBass,
+                RadialFormatConfig::TrebleBassTreble,
+            ]
+            .contains(format),
+            ComponentConfig::Chessy { .. } => false,
         }
     }
 }

@@ -1,10 +1,7 @@
 use std::borrow::Cow;
 
 use pollster::FutureExt;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::util::DeviceExt;
 
 use crate::{resource_manager::ResourceManager, Renderable};
@@ -245,7 +242,7 @@ impl Renderable for FragmentCanvas {
     }
 }
 
-impl Component for FragmentCanvas {
+impl<F: Fetcher> Component<F> for FragmentCanvas {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
@@ -261,11 +258,7 @@ impl Component for FragmentCanvas {
         );
     }
 
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
@@ -275,5 +268,9 @@ impl Component for FragmentCanvas {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
         queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
+    }
+
+    fn update_sample_processor(&mut self, processor: &SampleProcessor<F>) {
+        self.bar_processor.update_sample_processor(processor);
     }
 }

@@ -21,25 +21,23 @@ pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
 use crate::{Renderable, Renderer};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
-use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 // rgba values are each directly set in the fragment shader
 pub type Rgba = [f32; 4];
 pub type Rgb = [f32; 3];
 
-pub trait Component: Renderable {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    );
+pub trait Component<F: Fetcher>: Renderable {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>);
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32);
 
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
+
+    fn update_sample_processor(&mut self, processor: &SampleProcessor<F>);
 }
 
-impl Renderable for Box<dyn Component> {
+impl<F: Fetcher> Renderable for Box<dyn Component<F>> {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         self.as_ref().render_with_renderpass(pass)
     }

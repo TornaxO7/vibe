@@ -7,10 +7,7 @@ pub use descriptor::*;
 
 use super::Component;
 use crate::{resource_manager::ResourceManager, Renderable, Renderer};
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// Each graph is put inside a box with 4 vertices.
@@ -403,12 +400,8 @@ impl Renderable for Graph {
     }
 }
 
-impl Component for Graph {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> Component<F> for Graph {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &vibe_audio::SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self
@@ -502,6 +495,8 @@ impl Component for Graph {
             right.bind_group1 = bind_group;
         }
     }
+
+    fn update_sample_processor(&mut self, _processor: &vibe_audio::SampleProcessor<F>) {}
 }
 
 enum GraphAmountBars {

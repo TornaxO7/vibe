@@ -7,10 +7,7 @@ use crate::{resource_manager::ResourceManager, Renderable};
 use cgmath::{Deg, InnerSpace, Matrix2, Vector2};
 use pollster::FutureExt;
 use std::{borrow::Cow, num::NonZero};
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::util::DeviceExt;
 
 const FRAGMENT_ENTRYPOINT: &str = "main";
@@ -433,12 +430,8 @@ impl Renderable for Bars {
     }
 }
 
-impl Component for Bars {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> Component<F> for Bars {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         let buffer = self
@@ -469,6 +462,8 @@ impl Component for Bars {
             );
         }
     }
+
+    fn update_sample_processor(&mut self, _processor: &SampleProcessor<F>) {}
 }
 
 fn compute_position_data(

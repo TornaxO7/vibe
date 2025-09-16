@@ -103,7 +103,7 @@ impl From<&BarsPlacementConfig> for BarsPlacement {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BarsFormatConfig {
     BassTreble,
     TrebleBass,

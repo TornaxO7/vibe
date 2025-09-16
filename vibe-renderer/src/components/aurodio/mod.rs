@@ -5,10 +5,7 @@ use super::Component;
 use crate::{resource_manager::ResourceManager, Renderable};
 use rand::Rng;
 use std::num::NonZero;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig};
 use wgpu::util::DeviceExt;
 
 type VertexPosition = [f32; 2];
@@ -333,12 +330,8 @@ impl Renderable for Aurodio {
     }
 }
 
-impl Component for Aurodio {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> Component<F> for Aurodio {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &vibe_audio::SampleProcessor<F>) {
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
         let mut bar_values: Vec<f32> = Vec::with_capacity(self.amount_layers());
 
@@ -368,6 +361,12 @@ impl Component for Aurodio {
             0,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
+    }
+
+    fn update_sample_processor(&mut self, processor: &vibe_audio::SampleProcessor<F>) {
+        for bar_processor in self.bar_processors.iter_mut() {
+            bar_processor.update_sample_processor(processor);
+        }
     }
 }
 

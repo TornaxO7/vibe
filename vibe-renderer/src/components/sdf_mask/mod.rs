@@ -1,6 +1,7 @@
 mod descriptor;
 
 pub use descriptor::*;
+use vibe_audio::fetcher::Fetcher;
 use wgpu::util::DeviceExt;
 
 use crate::{components::Component, resource_manager::ResourceManager, Renderable};
@@ -179,13 +180,8 @@ impl Renderable for SdfMask {
     }
 }
 
-impl Component for SdfMask {
-    fn update_audio(
-        &mut self,
-        _: &wgpu::Queue,
-        _: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
-    }
+impl<F: Fetcher> Component<F> for SdfMask {
+    fn update_audio(&mut self, _: &wgpu::Queue, _: &vibe_audio::SampleProcessor<F>) {}
 
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
@@ -203,4 +199,6 @@ impl Component for SdfMask {
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
     }
+
+    fn update_sample_processor(&mut self, _processor: &vibe_audio::SampleProcessor<F>) {}
 }

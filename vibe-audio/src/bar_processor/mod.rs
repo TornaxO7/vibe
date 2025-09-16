@@ -242,6 +242,11 @@ impl BarProcessor {
         }
     }
 
+    pub fn update_sample_processor<F: Fetcher>(&mut self, sample_processor: &SampleProcessor<F>) {
+        let new = Self::new(sample_processor, self.config.clone());
+        *self = new;
+    }
+
     /// Returns the bar values for each channel.
     ///
     /// If you access the returned value like this: `bar_processor.process_bars(&processor)[i][j]` then this would mean:

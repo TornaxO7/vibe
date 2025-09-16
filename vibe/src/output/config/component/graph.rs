@@ -101,7 +101,7 @@ impl From<&GraphPlacementConfig> for GraphPlacement {
     }
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum GraphFormatConfig {
     BassTreble,
     TrebleBass,

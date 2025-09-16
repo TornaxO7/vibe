@@ -27,7 +27,7 @@ struct State<'a> {
     surface_config: wgpu::SurfaceConfiguration,
     window: Arc<Window>,
 
-    components: Vec<Box<dyn Component>>,
+    components: Vec<Box<dyn Component<SystemAudioFetcher>>>,
 }
 
 impl State<'_> {
@@ -117,7 +117,7 @@ impl OutputRenderer<'_> {
         let config = crate::config::load()?;
 
         let renderer = Renderer::new(&RendererDescriptor::from(config.graphics_config.clone()));
-        let processor = config.sample_processor()?;
+        let processor = config.sample_processor(Some(2))?;
 
         let (output_config_path, output_config) = {
             let Some((path, config)) = crate::output::config::load(&output_name) else {
