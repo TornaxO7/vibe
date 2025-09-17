@@ -6,6 +6,7 @@ resolver = "2"
 anyhow = "1"
 wgpu = { version = "26.0", default-features = false, features = [
   # from the default features
+  "gles",
   "parking_lot",
   "std",
   "vulkan",
