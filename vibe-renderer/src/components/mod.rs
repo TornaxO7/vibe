@@ -1,3 +1,4 @@
+//! Contains the implementation of each component.
 mod aurodio;
 mod bars;
 mod chessy;
@@ -27,6 +28,9 @@ use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 pub type Rgba = [f32; 4];
 pub type Rgb = [f32; 3];
 
+/// Every component needs to implement this.
+/// It provides methods to update its internal state regarding the current
+/// audio and time for example.
 pub trait Component: Renderable {
     fn update_audio(
         &mut self,

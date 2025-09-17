@@ -1,3 +1,4 @@
+//! Some helper utilities which can be used in the whole crate.
 pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDescriptor {
     label: None,
     address_mode_u: wgpu::AddressMode::MirrorRepeat,

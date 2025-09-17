@@ -15,9 +15,15 @@ pub use resource_manager::ResourceManager;
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
+    /// The renderer will call this function on the renderable object
+    /// and it can starts its preparations (for example `pass.set_vertex_buffer` etc.)
+    /// and call the draw command (`pass.draw(...)`).
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
 }
 
+/// The descriptor to configure and create a new renderer.
+///
+/// See [Renderer::new] for more information.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RendererDescriptor {
     /// Decide which kind of gpu should be used.
@@ -58,6 +64,13 @@ pub struct Renderer {
 
 impl Renderer {
     /// Create a new instance of this struct.
+    ///
+    /// # Example
+    /// ```rust
+    /// use vibe_renderer::{Renderer, RendererDescriptor};
+    ///
+    /// let renderer = Renderer::new(&RendererDescriptor::default());
+    /// ```
     pub fn new(desc: &RendererDescriptor) -> Self {
         let instance = wgpu::Instance::new(
             &wgpu::InstanceDescriptor {
