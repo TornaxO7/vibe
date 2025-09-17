@@ -1,12 +1,13 @@
-use std::io;
-
 use serde::{Deserialize, Serialize};
+use std::io;
 use vibe_audio::{
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
     SampleProcessor,
 };
 use vibe_renderer::RendererDescriptor;
+
+const STEREO_AUDIO: u16 = 2;
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigError {
@@ -103,6 +104,7 @@ impl Config {
 
         let system_audio_fetcher = SystemAudioFetcher::new(&SystemAudioFetcherDescriptor {
             device,
+            amount_channels: Some(STEREO_AUDIO),
             ..Default::default()
         })?;
 
