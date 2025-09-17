@@ -103,6 +103,7 @@ impl<'a> Tester<'a> {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view: &view,
                     resolve_target: None,
+                    depth_slice: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::BLACK),
                         store: wgpu::StoreOp::Store,
@@ -141,7 +142,7 @@ impl<'a> Tester<'a> {
                 tx.send(result).unwrap();
             });
 
-            self.renderer.device().poll(wgpu::MaintainBase::Wait);
+            self.renderer.device().poll(wgpu::PollType::Wait).unwrap();
             rx.recv().unwrap().unwrap();
 
             let data = buffer_slice.get_mapped_range();

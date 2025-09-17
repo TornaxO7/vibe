@@ -297,7 +297,7 @@ impl Bars {
                             wgpu::ShaderSource::Glsl {
                                 shader: Cow::Owned(full_code),
                                 stage: wgpu::naga::ShaderStage::Fragment,
-                                defines: wgpu::naga::FastHashMap::default(),
+                                defines: &[],
                             }
                         }
                     };
