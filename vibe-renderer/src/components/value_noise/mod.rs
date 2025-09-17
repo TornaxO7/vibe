@@ -73,14 +73,15 @@ impl ValueNoise {
                     usage: wgpu::BufferUsages::UNIFORM,
                 }),
             ),
-            (
-                ResourceID::Seed,
+            (ResourceID::Seed, {
+                // range: 15..35
+                let seed = fastrand::f32() * 20. + 15.;
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Value noise: `seed` buffer"),
-                    contents: bytemuck::bytes_of(&rand::random_range(15.0f32..35.0)),
+                    contents: bytemuck::bytes_of(&seed),
                     usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
+                })
+            }),
             (
                 ResourceID::CanvasSize,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
