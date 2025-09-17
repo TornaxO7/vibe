@@ -88,7 +88,7 @@ impl Default for ComponentConfig {
             audio_conf: BarsAudioConfig {
                 amount_bars: NonZero::new(60).unwrap(),
                 freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-                sensitivity: 0.2,
+                sensitivity: 4.0,
             },
             max_height: 0.75,
             variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
