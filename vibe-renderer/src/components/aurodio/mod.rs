@@ -3,7 +3,6 @@ pub use descriptor::*;
 
 use super::Component;
 use crate::{resource_manager::ResourceManager, Renderable};
-use rand::Rng;
 use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
@@ -376,7 +375,7 @@ fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
 
     let width = amount_layers + 2; // `+2` one square for the left/top and right/bottom
     let height = width;
-    let mut rng = rand::rng();
+    let mut rng = fastrand::Rng::new();
     for _y in 0..height {
         for _x in 0..width {
             let mut point = [0u8; 2];
@@ -394,10 +393,11 @@ fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
 
 fn get_random_seeds(amount_layers: usize) -> Vec<f32> {
     let mut seeds = Vec::with_capacity(amount_layers);
-    let mut rng = rand::rng();
+    let mut rng = fastrand::Rng::new();
 
     for _ in 0..amount_layers {
-        seeds.push(rng.random_range(0f32..100f32));
+        // range: 0..100
+        seeds.push(rng.f32() * 100.);
     }
 
     seeds

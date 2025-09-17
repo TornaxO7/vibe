@@ -4,11 +4,18 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1"
-wgpu = { version = "24.0", default-features = false, features = [
+wgpu = { version = "26.0", default-features = false, features = [
+  # from the default features
+  "gles",
+  "parking_lot",
+  "std",
+  "vulkan",
   "wgsl",
+
+  # extra features
+  "serde",
   "glsl",
   "naga-ir",
-  "serde",
 ] }
 
 serde = { version = "1", features = ["derive"] }

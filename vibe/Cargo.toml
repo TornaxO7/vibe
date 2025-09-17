@@ -30,5 +30,11 @@ vibe-renderer = { path = "../vibe-renderer" }
 xdg = "3.0"
 toml = "0.9"
 
-winit = "0.30"
-notify = "8"
+winit = { version = "0.30", default-features = false, features = [
+  "rwh_06",
+  "wayland",
+  "wayland-csd-adwaita",
+  "wayland-dlopen",
+] }
+
+notify = { version = "8", default-features = false }

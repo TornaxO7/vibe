@@ -115,7 +115,7 @@ impl Renderer {
         info!("Choosing for rendering: {}", adapter.get_info().name);
 
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default(), None)
+            .request_device(&wgpu::DeviceDescriptor::default())
             .block_on()
             .unwrap();
 
@@ -142,6 +142,7 @@ impl Renderer {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
                     view,
                     resolve_target: None,
+                    depth_slice: None,
                     ops: wgpu::Operations {
                         load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
                         store: wgpu::StoreOp::Store,
