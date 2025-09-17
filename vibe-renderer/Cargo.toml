@@ -18,7 +18,7 @@ vibe-audio.workspace = true
 
 pollster = "0.4"
 bytemuck = "1.23"
-fastrand = "2.3.0"
+fastrand = "2.3"
 
 [dev-dependencies]
 anyhow.workspace = true
