@@ -19,6 +19,7 @@ fn test() {
         variant: BarVariant::Color(RED),
         placement: BarsPlacement::Top,
         format: BarsFormat::BassTreble,
+        y_mirrored: true,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

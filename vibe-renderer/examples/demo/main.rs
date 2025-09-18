@@ -118,6 +118,7 @@ impl<'a> State<'a> {
                 // },
                 placement: BarsPlacement::Bottom,
                 format: BarsFormat::BassTreble,
+                y_mirrored: true,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsFragmentCodeVariant => Bars::new(&BarsDescriptor {
@@ -144,6 +145,7 @@ impl<'a> State<'a> {
                     ),
                 }),
                 format: BarsFormat::BassTreble,
+                y_mirrored: false,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
@@ -155,13 +157,18 @@ impl<'a> State<'a> {
                     ..Default::default()
                 },
                 texture_format: surface_config.format,
-                max_height: 0.5,
+                max_height: 0.25,
                 variant: BarVariant::PresenceGradient {
                     high: TURQUOISE,
                     low: DARK_BLUE,
                 },
-                placement: BarsPlacement::Bottom,
+                placement: BarsPlacement::Custom {
+                    bottom_left_corner: (0., 0.5),
+                    width_factor: 1.0,
+                    rotation: Deg(0.),
+                },
                 format: BarsFormat::TrebleBassTreble,
+                y_mirrored: true,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {

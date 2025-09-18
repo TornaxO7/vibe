@@ -38,6 +38,7 @@ pub enum ComponentConfig {
         variant: BarsVariantConfig,
         placement: BarsPlacementConfig,
         format: BarsFormatConfig,
+        height_mirrored: bool,
     },
     FragmentCanvas {
         audio_conf: FragmentCanvasAudioConfig,
@@ -94,6 +95,7 @@ impl Default for ComponentConfig {
             variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
             placement: BarsPlacementConfig::Bottom,
             format: BarsFormatConfig::BassTreble,
+            height_mirrored: false,
         }
     }
 }
@@ -112,6 +114,7 @@ impl ComponentConfig {
                 variant,
                 placement,
                 format,
+                height_mirrored,
             } => {
                 let variant = match variant {
                     BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
@@ -134,6 +137,7 @@ impl ComponentConfig {
                     variant,
                     placement: BarsPlacement::from(placement),
                     format: BarsFormat::from(format),
+                    y_mirrored: *height_mirrored,
                 })
                 .map(|bars| Box::new(bars) as Box<dyn Component>)
             }
