@@ -18,15 +18,30 @@ const FRAGMENT_ENTRYPOINT: &str = "main";
 /// The x coords goes from -1 to 1.
 const VERTEX_SURFACE_WIDTH: f32 = 2.;
 
+const TRUE: u32 = 1;
+const FALSE: u32 = 0;
+
+type Vec2f = [f32; 2];
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+struct VertexParams {
+    bottom_left_corner: Vec2f,
+    up_direction: Vec2f,
+    column_direction: Vec2f,
+    // the padding between each bar
+    padding: Vec2f,
+    max_height: f32,
+    // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
+    // So, it's meaning is:
+    height_mirrored: u32,
+}
+
 mod bindings0 {
     use super::ResourceID;
     use std::collections::HashMap;
 
-    pub const BOTTOM_LEFT_CORNER: u32 = 0;
-    pub const UP_DIRECTION: u32 = 1;
-    pub const COLUMN_DIRECTION: u32 = 2;
-    pub const PADDING: u32 = 3;
-    pub const MAX_HEIGHT: u32 = 4;
+    pub const VERTEX_PARAMS: u32 = 0;
 
     pub const COLOR: u32 = 5;
     pub const RESOLUTION: u32 = 6;
@@ -36,11 +51,7 @@ mod bindings0 {
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
-            (ResourceID::BottomLeftCorner, crate::util::buffer(BOTTOM_LEFT_CORNER, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::UpDirection, crate::util::buffer(UP_DIRECTION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::ColumnDirection, crate::util::buffer(COLUMN_DIRECTION, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Padding, crate::util::buffer(PADDING, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::MaxHeight, crate::util::buffer(MAX_HEIGHT, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::VertexParams, crate::util::buffer(VERTEX_PARAMS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -62,11 +73,8 @@ mod bindings1 {
 
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 enum ResourceID {
-    BottomLeftCorner,
-    UpDirection,
-    ColumnDirection,
-    Padding,
-    MaxHeight,
+    VertexParams,
+
     Freqs1,
     Freqs2,
 
@@ -113,46 +121,27 @@ impl Bars {
         let mut bind_group1_mapping = bindings1::init_mapping();
 
         resource_manager.extend_buffers([
-            (
-                ResourceID::BottomLeftCorner,
+            (ResourceID::VertexParams, {
+                let height_mirrored = match desc.y_mirrored {
+                    true => TRUE,
+                    false => FALSE,
+                };
+
+                let vparams = VertexParams {
+                    bottom_left_corner: bottom_left_corner.into(),
+                    up_direction: up_direction.into(),
+                    column_direction: column_direction.into(),
+                    padding: padding.into(),
+                    max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
+                    height_mirrored,
+                };
+
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `bottom_left_corner` buffer"),
-                    contents: bytemuck::cast_slice(&[bottom_left_corner.x, bottom_left_corner.y]),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                }),
-            ),
-            (
-                ResourceID::UpDirection,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `up_direction` buffer"),
-                    contents: bytemuck::cast_slice(&[up_direction.x, up_direction.y]),
+                    label: Some("Bar: `vParams` buffer"),
+                    contents: bytemuck::bytes_of(&vparams),
                     usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::ColumnDirection,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `column_direction` buffer"),
-                    contents: bytemuck::cast_slice(&[column_direction.x, column_direction.y]),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::Padding,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `padding` buffer"),
-                    contents: bytemuck::cast_slice(&[padding.x, padding.y]),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::MaxHeight,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `max_height` buffer"),
-                    contents: bytemuck::bytes_of(&(desc.max_height * VERTEX_SURFACE_WIDTH)),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
+                })
+            }),
             (
                 ResourceID::Freqs1,
                 device.create_buffer(&wgpu::BufferDescriptor {

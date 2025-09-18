@@ -15,6 +15,7 @@ pub struct BarsDescriptor<'a, F: Fetcher> {
 
     pub placement: BarsPlacement,
     pub format: BarsFormat,
+    pub y_mirrored: bool,
 }
 
 #[derive(Debug, Clone)]
