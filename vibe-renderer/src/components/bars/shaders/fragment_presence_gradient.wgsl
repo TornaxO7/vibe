@@ -11,5 +11,5 @@ struct Input {
 
 @fragment
 fn main(in: Input) -> @location(0) vec4<f32> {
-    return mix(low_presence_color, high_presence_color, clamp(0., 1., in.bar_height));
+    return mix(low_presence_color, high_presence_color, smoothstep(0., 1., in.bar_height));
 }
