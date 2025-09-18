@@ -71,7 +71,7 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
 
     var output: Output;
     output.pos = vec4(pos, 0., 1.);
-    output.bar_height = freq * max_height;
+    output.bar_height = freq;
 
     return output;
 }
