@@ -15,6 +15,7 @@ pub struct BarsDescriptor<'a, F: Fetcher> {
 
     pub placement: BarsPlacement,
     pub format: BarsFormat,
+    // TODO: Move this to `BarsPlacement::Custom`
     pub y_mirrored: bool,
 }
 

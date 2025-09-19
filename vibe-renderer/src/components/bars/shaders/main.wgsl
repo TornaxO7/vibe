@@ -76,3 +76,22 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
 
     return output;
 }
+
+// == fragment ==
+struct FragmentParams {
+    color1: vec4f,
+    color2: vec4f,
+};
+
+@group(0) @binding(1)
+var<uniform> fp: FragmentParams;
+
+@fragment
+fn fs_color() -> @location(0) vec4f {
+    return fp.color1;
+}
+
+@fragment
+fn fs_presence(in: Output) -> @location(0) vec4f {
+    return mix(fp.color1, fp.color2, smoothstep(0., 1., in.bar_height));
+}
