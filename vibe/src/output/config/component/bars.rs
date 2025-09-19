@@ -48,6 +48,14 @@ pub enum BarsVariantConfig {
         low_presence: Rgba,
     },
     FragmentCode(ShaderCode),
+    HorizontalGradient {
+        left: Rgba,
+        right: Rgba,
+    },
+    VerticalGradient {
+        bottom: Rgba,
+        top: Rgba,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

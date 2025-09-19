@@ -122,6 +122,18 @@ impl ComponentConfig {
                         high: high_presence.as_f32(),
                         low: low_presence.as_f32(),
                     },
+                    BarsVariantConfig::HorizontalGradient { left, right } => {
+                        BarVariant::HorizontalGradient {
+                            left: left.as_f32(),
+                            right: right.as_f32(),
+                        }
+                    }
+                    BarsVariantConfig::VerticalGradient { bottom, top } => {
+                        BarVariant::VerticalGradient {
+                            top: top.as_f32(),
+                            bottom: bottom.as_f32(),
+                        }
+                    }
                     BarsVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
                 };
 

@@ -33,6 +33,10 @@ struct VertexParams {
     // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
     // So, it's meaning is:
     height_mirrored: u32,
+    amount_bars: u32,
+
+    // memory padding
+    _padding1: u32,
 }
 
 #[repr(C)]
@@ -42,11 +46,17 @@ struct FragmentParams {
     color2: Rgba,
 }
 
+impl FragmentParams {
+    const LABEL: &str = "Bars: `fragment_params` buffer";
+}
+
 #[derive(Debug, Clone, Copy)]
 enum FragmentEntrypoint {
     Color,
     Presence,
     CustomFragmentShader,
+    HorizontalGradient,
+    VerticalGradient,
 }
 
 impl FragmentEntrypoint {
@@ -55,6 +65,8 @@ impl FragmentEntrypoint {
             FragmentEntrypoint::Color => "fs_color",
             FragmentEntrypoint::Presence => "fs_presence",
             FragmentEntrypoint::CustomFragmentShader => "main",
+            FragmentEntrypoint::HorizontalGradient => "fs_horizontal_gradient",
+            FragmentEntrypoint::VerticalGradient => "fs_vertical_gradient",
         }
     }
 }
@@ -157,10 +169,12 @@ impl Bars {
                     padding: padding.into(),
                     max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
                     height_mirrored,
+                    amount_bars: amount_bars.get() as u32,
+                    _padding1: 0,
                 };
 
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `vParams` buffer"),
+                    label: Some(FragmentParams::LABEL),
                     contents: bytemuck::bytes_of(&vparams),
                     usage: wgpu::BufferUsages::UNIFORM,
                 })
@@ -190,7 +204,7 @@ impl Bars {
                     };
 
                     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Bar: `fragment_params` buffer"),
+                        label: Some(FragmentParams::LABEL),
                         contents: bytemuck::bytes_of(&fragment_params),
                         usage: wgpu::BufferUsages::UNIFORM,
                     })
@@ -231,6 +245,57 @@ impl Bars {
                 );
 
                 (main_shader_module, FragmentEntrypoint::Presence)
+            }
+
+            BarVariant::HorizontalGradient { left, right } => {
+                resource_manager.insert_buffer(ResourceID::FragmentParams, {
+                    let fp = FragmentParams {
+                        color1: *left,
+                        color2: *right,
+                    };
+
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(FragmentParams::LABEL),
+                        contents: bytemuck::bytes_of(&fp),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    })
+                });
+
+                bind_group0_mapping.insert(
+                    ResourceID::FragmentParams,
+                    crate::util::buffer(
+                        bindings0::FRAGMENT_PARAMS,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    ),
+                );
+
+                (main_shader_module, FragmentEntrypoint::HorizontalGradient)
+            }
+            BarVariant::VerticalGradient { top, bottom } => {
+                resource_manager.insert_buffer(ResourceID::FragmentParams, {
+                    let fp = FragmentParams {
+                        color1: *bottom,
+                        color2: *top,
+                    };
+
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(FragmentParams::LABEL),
+                        contents: bytemuck::bytes_of(&fp),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    })
+                });
+
+                bind_group0_mapping.insert(
+                    ResourceID::FragmentParams,
+                    crate::util::buffer(
+                        bindings0::FRAGMENT_PARAMS,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    ),
+                );
+
+                (main_shader_module, FragmentEntrypoint::VerticalGradient)
             }
             BarVariant::FragmentCode(code) => {
                 {

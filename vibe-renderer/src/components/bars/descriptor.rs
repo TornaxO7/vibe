@@ -49,4 +49,6 @@ pub enum BarVariant {
     Color(Rgba),
     PresenceGradient { high: Rgba, low: Rgba },
     FragmentCode(ShaderCode),
+    HorizontalGradient { left: Rgba, right: Rgba },
+    VerticalGradient { top: Rgba, bottom: Rgba },
 }
