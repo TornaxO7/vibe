@@ -115,7 +115,6 @@ mod tests {
                     }),
                     placement: component::BarsPlacementConfig::Bottom,
                     format: component::BarsFormatConfig::BassTreble,
-                    height_mirrored: true,
                 },
             ],
         };

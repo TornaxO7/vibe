@@ -15,8 +15,6 @@ pub struct BarsDescriptor<'a, F: Fetcher> {
 
     pub placement: BarsPlacement,
     pub format: BarsFormat,
-    // TODO: Move this to `BarsPlacement::Custom`
-    pub y_mirrored: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -29,6 +27,7 @@ pub enum BarsPlacement {
         // percentage of the screen width (so it should be within the range [0, 1])
         width_factor: f32,
         rotation: Deg<f32>,
+        height_mirrored: bool,
     },
     Bottom,
     Top,

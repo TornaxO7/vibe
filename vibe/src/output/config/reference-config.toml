@@ -8,7 +8,6 @@ enable = true
 placement = "Bottom"
 max_height = 0.75
 format = "BassTreble"
-height_mirrored = true
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 4.0
@@ -22,7 +21,6 @@ Color = [0, 255, 255, 255]
 max_height = 0.75
 placement = "Top"
 format = "TrebleBass"
-height_mirrored = false
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 2.0
@@ -37,7 +35,6 @@ low_presence = [13, 0, 82, 255]
 max_height = 0.75
 placement = "Left"
 format = "TrebleBassTreble"
-height_mirrored = false
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 2.0
@@ -52,7 +49,6 @@ path = "/tmp/fragment_code.wgsl"
 max_height = 0.75
 placement = "Right"
 format = "BassTrebleBass"
-height_mirrored = true
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 3.0
@@ -66,11 +62,11 @@ path = "/tmp/fragment_code.wgsl"
 [components.Bars]
 max_height = 0.75
 format = "BassTreble"
-height_mirrored = true
 [components.Bars.placement.Custom]
 bottom_left_corner = [0.0, 0.0]
 width_factor = 1.0
 rotation = 0.0
+height_mirrored = false
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 2.5
@@ -92,7 +88,6 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 max_height = 0.75
 placement = "Bottom"
 format = "TrebleBass"
-height_mirrored = true
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 0.5
@@ -107,7 +102,6 @@ path = "/tmp/fragment_code.glsl"
 max_height = 0.75
 placement = "Bottom"
 format = "TrebleBassTreble"
-height_mirrored = true
 [components.Bars.audio_conf]
 amount_bars = 60
 sensitivity = 3.0

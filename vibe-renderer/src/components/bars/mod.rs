@@ -140,9 +140,14 @@ impl Bars {
 
         resource_manager.extend_buffers([
             (ResourceID::VertexParams, {
-                let height_mirrored = match desc.y_mirrored {
-                    true => TRUE,
-                    false => FALSE,
+                let height_mirrored = match desc.placement {
+                    BarsPlacement::Custom {
+                        height_mirrored, ..
+                    } => match height_mirrored {
+                        true => TRUE,
+                        false => FALSE,
+                    },
+                    _ => FALSE,
                 };
 
                 let vparams = VertexParams {
@@ -477,6 +482,7 @@ fn compute_position_data(
             bottom_left_corner,
             width_factor,
             rotation,
+            ..
         } => {
             let bottom_left_corner = {
                 // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]

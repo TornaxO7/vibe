@@ -24,7 +24,6 @@ fn wgsl_passes() {
         }),
         placement: vibe_renderer::components::BarsPlacement::Left,
         format: BarsFormat::BassTrebleBass,
-        y_mirrored: true,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
@@ -55,7 +54,6 @@ fn glsl_passes() {
         }),
         placement: vibe_renderer::components::BarsPlacement::Left,
         format: BarsFormat::TrebleBass,
-        y_mirrored: false,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 

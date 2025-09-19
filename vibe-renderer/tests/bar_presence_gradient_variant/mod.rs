@@ -23,7 +23,6 @@ fn test() {
         },
         placement: vibe_renderer::components::BarsPlacement::Right,
         format: BarsFormat::TrebleBassTreble,
-        y_mirrored: true,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
