@@ -38,7 +38,6 @@ pub enum ComponentConfig {
         variant: BarsVariantConfig,
         placement: BarsPlacementConfig,
         format: BarsFormatConfig,
-        height_mirrored: bool,
     },
     FragmentCanvas {
         audio_conf: FragmentCanvasAudioConfig,
@@ -95,7 +94,6 @@ impl Default for ComponentConfig {
             variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
             placement: BarsPlacementConfig::Bottom,
             format: BarsFormatConfig::BassTreble,
-            height_mirrored: false,
         }
     }
 }
@@ -114,7 +112,6 @@ impl ComponentConfig {
                 variant,
                 placement,
                 format,
-                height_mirrored,
             } => {
                 let variant = match variant {
                     BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
@@ -125,6 +122,18 @@ impl ComponentConfig {
                         high: high_presence.as_f32(),
                         low: low_presence.as_f32(),
                     },
+                    BarsVariantConfig::HorizontalGradient { left, right } => {
+                        BarVariant::HorizontalGradient {
+                            left: left.as_f32(),
+                            right: right.as_f32(),
+                        }
+                    }
+                    BarsVariantConfig::VerticalGradient { bottom, top } => {
+                        BarVariant::VerticalGradient {
+                            top: top.as_f32(),
+                            bottom: bottom.as_f32(),
+                        }
+                    }
                     BarsVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
                 };
 
@@ -137,7 +146,6 @@ impl ComponentConfig {
                     variant,
                     placement: BarsPlacement::from(placement),
                     format: BarsFormat::from(format),
-                    y_mirrored: *height_mirrored,
                 })
                 .map(|bars| Box::new(bars) as Box<dyn Component>)
             }

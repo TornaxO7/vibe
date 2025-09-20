@@ -3,7 +3,7 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, ShaderCodeError};
-use crate::{resource_manager::ResourceManager, Renderable};
+use crate::{components::Rgba, resource_manager::ResourceManager, Renderable};
 use cgmath::{Deg, InnerSpace, Matrix2, Vector2};
 use pollster::FutureExt;
 use std::{borrow::Cow, num::NonZero};
@@ -12,8 +12,6 @@ use vibe_audio::{
     BarProcessor, SampleProcessor,
 };
 use wgpu::util::DeviceExt;
-
-const FRAGMENT_ENTRYPOINT: &str = "main";
 
 /// The x coords goes from -1 to 1.
 const VERTEX_SURFACE_WIDTH: f32 = 2.;
@@ -35,6 +33,42 @@ struct VertexParams {
     // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
     // So, it's meaning is:
     height_mirrored: u32,
+    amount_bars: u32,
+
+    // memory padding
+    _padding1: u32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+struct FragmentParams {
+    color1: Rgba,
+    color2: Rgba,
+}
+
+impl FragmentParams {
+    const LABEL: &str = "Bars: `fragment_params` buffer";
+}
+
+#[derive(Debug, Clone, Copy)]
+enum FragmentEntrypoint {
+    Color,
+    Presence,
+    CustomFragmentShader,
+    HorizontalGradient,
+    VerticalGradient,
+}
+
+impl FragmentEntrypoint {
+    fn as_str(&self) -> &'static str {
+        match self {
+            FragmentEntrypoint::Color => "fs_color",
+            FragmentEntrypoint::Presence => "fs_presence",
+            FragmentEntrypoint::CustomFragmentShader => "main",
+            FragmentEntrypoint::HorizontalGradient => "fs_horizontal_gradient",
+            FragmentEntrypoint::VerticalGradient => "fs_vertical_gradient",
+        }
+    }
 }
 
 mod bindings0 {
@@ -42,11 +76,9 @@ mod bindings0 {
     use std::collections::HashMap;
 
     pub const VERTEX_PARAMS: u32 = 0;
+    pub const FRAGMENT_PARAMS: u32 = 1;
 
-    pub const COLOR: u32 = 5;
     pub const RESOLUTION: u32 = 6;
-    pub const GRADIENT_HIGH_PRESENCE_COLOR: u32 = 7;
-    pub const GRADIENT_LOW_PRESENCE_COLOR: u32 = 8;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
@@ -74,13 +106,11 @@ mod bindings1 {
 #[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
 enum ResourceID {
     VertexParams,
+    FragmentParams,
 
     Freqs1,
     Freqs2,
 
-    Color,
-    GradientHighPresenceColor,
-    GradientLowPresenceColor,
     Resolution,
     Time,
 }
@@ -122,9 +152,14 @@ impl Bars {
 
         resource_manager.extend_buffers([
             (ResourceID::VertexParams, {
-                let height_mirrored = match desc.y_mirrored {
-                    true => TRUE,
-                    false => FALSE,
+                let height_mirrored = match desc.placement {
+                    BarsPlacement::Custom {
+                        height_mirrored, ..
+                    } => match height_mirrored {
+                        true => TRUE,
+                        false => FALSE,
+                    },
+                    _ => FALSE,
                 };
 
                 let vparams = VertexParams {
@@ -134,10 +169,12 @@ impl Bars {
                     padding: padding.into(),
                     max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
                     height_mirrored,
+                    amount_bars: amount_bars.get() as u32,
+                    _padding1: 0,
                 };
 
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Bar: `vParams` buffer"),
+                    label: Some(FragmentParams::LABEL),
                     contents: bytemuck::bytes_of(&vparams),
                     usage: wgpu::BufferUsages::UNIFORM,
                 })
@@ -153,78 +190,112 @@ impl Bars {
             ),
         ]);
 
-        let fragment_module = match &desc.variant {
-            BarVariant::Color(rgba) => {
-                resource_manager.insert_buffer(
-                    ResourceID::Color,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Bar: `color` buffer"),
-                        contents: bytemuck::cast_slice(rgba),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                );
+        let main_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+            label: Some("Bar: `main` module"),
+            source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
+        });
 
-                bind_group0_mapping.extend([(
-                    ResourceID::Color,
+        let (fragment_module, fragment_entrypoint) = match &desc.variant {
+            BarVariant::Color(rgba) => {
+                resource_manager.insert_buffer(ResourceID::FragmentParams, {
+                    let fragment_params = FragmentParams {
+                        color1: *rgba,
+                        color2: *rgba,
+                    };
+
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(FragmentParams::LABEL),
+                        contents: bytemuck::bytes_of(&fragment_params),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    })
+                });
+
+                bind_group0_mapping.insert(
+                    ResourceID::FragmentParams,
                     crate::util::buffer(
-                        bindings0::COLOR,
+                        bindings0::FRAGMENT_PARAMS,
                         wgpu::ShaderStages::FRAGMENT,
                         wgpu::BufferBindingType::Uniform,
                     ),
-                )]);
+                );
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar: Color fragment module"),
-                    source: wgpu::ShaderSource::Wgsl(
-                        include_str!("./shaders/fragment_color.wgsl").into(),
-                    ),
-                })
+                (main_shader_module, FragmentEntrypoint::Color)
             }
             BarVariant::PresenceGradient { high, low } => {
-                resource_manager.extend_buffers([
-                    (
-                        ResourceID::GradientHighPresenceColor,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Bar: `high_presence_color` buffer"),
-                            contents: bytemuck::cast_slice(high),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                    (
-                        ResourceID::GradientLowPresenceColor,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Bar: `low_presence_color` buffer"),
-                            contents: bytemuck::cast_slice(low),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                ]);
+                resource_manager.insert_buffer(ResourceID::FragmentParams, {
+                    let fragment_params = FragmentParams {
+                        color1: *low,
+                        color2: *high,
+                    };
 
-                bind_group0_mapping.extend([
-                    (
-                        ResourceID::GradientHighPresenceColor,
-                        crate::util::buffer(
-                            bindings0::GRADIENT_HIGH_PRESENCE_COLOR,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                    (
-                        ResourceID::GradientLowPresenceColor,
-                        crate::util::buffer(
-                            bindings0::GRADIENT_LOW_PRESENCE_COLOR,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                ]);
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Bar: `fragment_params` buffer"),
+                        contents: bytemuck::bytes_of(&fragment_params),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    })
+                });
 
-                device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Bar: Gradient fragment module"),
-                    source: wgpu::ShaderSource::Wgsl(
-                        include_str!("./shaders/fragment_presence_gradient.wgsl").into(),
+                bind_group0_mapping.insert(
+                    ResourceID::FragmentParams,
+                    crate::util::buffer(
+                        bindings0::FRAGMENT_PARAMS,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
                     ),
-                })
+                );
+
+                (main_shader_module, FragmentEntrypoint::Presence)
+            }
+
+            BarVariant::HorizontalGradient { left, right } => {
+                resource_manager.insert_buffer(ResourceID::FragmentParams, {
+                    let fp = FragmentParams {
+                        color1: *left,
+                        color2: *right,
+                    };
+
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(FragmentParams::LABEL),
+                        contents: bytemuck::bytes_of(&fp),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    })
+                });
+
+                bind_group0_mapping.insert(
+                    ResourceID::FragmentParams,
+                    crate::util::buffer(
+                        bindings0::FRAGMENT_PARAMS,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    ),
+                );
+
+                (main_shader_module, FragmentEntrypoint::HorizontalGradient)
+            }
+            BarVariant::VerticalGradient { top, bottom } => {
+                resource_manager.insert_buffer(ResourceID::FragmentParams, {
+                    let fp = FragmentParams {
+                        color1: *bottom,
+                        color2: *top,
+                    };
+
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some(FragmentParams::LABEL),
+                        contents: bytemuck::bytes_of(&fp),
+                        usage: wgpu::BufferUsages::UNIFORM,
+                    })
+                });
+
+                bind_group0_mapping.insert(
+                    ResourceID::FragmentParams,
+                    crate::util::buffer(
+                        bindings0::FRAGMENT_PARAMS,
+                        wgpu::ShaderStages::FRAGMENT,
+                        wgpu::BufferBindingType::Uniform,
+                    ),
+                );
+
+                (main_shader_module, FragmentEntrypoint::VerticalGradient)
             }
             BarVariant::FragmentCode(code) => {
                 {
@@ -304,7 +375,7 @@ impl Bars {
                     module
                 };
 
-                fragment_module
+                (fragment_module, FragmentEntrypoint::CustomFragmentShader)
             }
         };
 
@@ -335,6 +406,7 @@ impl Bars {
                 pipeline_layout,
                 entry_point,
                 fragment_module.clone(),
+                fragment_entrypoint,
             )
         };
 
@@ -384,6 +456,7 @@ impl Bars {
                     pipeline_layout,
                     entry_point,
                     fragment_module,
+                    fragment_entrypoint,
                 );
 
                 Some((pipeline, bind_group1_right))
@@ -474,6 +547,7 @@ fn compute_position_data(
             bottom_left_corner,
             width_factor,
             rotation,
+            ..
         } => {
             let bottom_left_corner = {
                 // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
@@ -518,10 +592,11 @@ fn create_pipeline(
     pipeline_layout: wgpu::PipelineLayout,
     vertex_entrypoint: &'static str,
     fragment_module: wgpu::ShaderModule,
+    fragment_entrypoint: FragmentEntrypoint,
 ) -> wgpu::RenderPipeline {
     let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Bar vertex module"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/vertex_shader.wgsl").into()),
+        source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
     });
 
     let fragment_targets = [Some(wgpu::ColorTargetState {
@@ -542,7 +617,7 @@ fn create_pipeline(
             },
             fragment: wgpu::FragmentState {
                 module: &fragment_module,
-                entry_point: Some(FRAGMENT_ENTRYPOINT),
+                entry_point: Some(fragment_entrypoint.as_str()),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 targets: &fragment_targets,
             },

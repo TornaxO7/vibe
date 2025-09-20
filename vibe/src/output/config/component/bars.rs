@@ -48,6 +48,14 @@ pub enum BarsVariantConfig {
         low_presence: Rgba,
     },
     FragmentCode(ShaderCode),
+    HorizontalGradient {
+        left: Rgba,
+        right: Rgba,
+    },
+    VerticalGradient {
+        bottom: Rgba,
+        top: Rgba,
+    },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -60,6 +68,7 @@ pub enum BarsPlacementConfig {
         bottom_left_corner: (f32, f32),
         width_factor: f32,
         rotation: cgmath::Deg<f32>,
+        height_mirrored: Option<bool>,
     },
 }
 
@@ -74,32 +83,20 @@ impl From<BarsPlacementConfig> for BarsPlacement {
                 bottom_left_corner,
                 width_factor,
                 rotation,
+                height_mirrored,
             } => BarsPlacement::Custom {
                 bottom_left_corner,
                 width_factor,
                 rotation,
+                height_mirrored: height_mirrored.unwrap_or(false),
             },
         }
     }
 }
 
 impl From<&BarsPlacementConfig> for BarsPlacement {
-    fn from(value: &BarsPlacementConfig) -> Self {
-        match *value {
-            BarsPlacementConfig::Bottom => BarsPlacement::Bottom,
-            BarsPlacementConfig::Top => BarsPlacement::Top,
-            BarsPlacementConfig::Left => BarsPlacement::Left,
-            BarsPlacementConfig::Right => BarsPlacement::Right,
-            BarsPlacementConfig::Custom {
-                bottom_left_corner,
-                width_factor,
-                rotation,
-            } => BarsPlacement::Custom {
-                bottom_left_corner,
-                width_factor,
-                rotation,
-            },
-        }
+    fn from(conf: &BarsPlacementConfig) -> Self {
+        Self::from(conf.clone())
     }
 }
 

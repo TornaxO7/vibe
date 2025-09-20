@@ -15,7 +15,6 @@ pub struct BarsDescriptor<'a, F: Fetcher> {
 
     pub placement: BarsPlacement,
     pub format: BarsFormat,
-    pub y_mirrored: bool,
 }
 
 #[derive(Debug, Clone)]
@@ -28,6 +27,7 @@ pub enum BarsPlacement {
         // percentage of the screen width (so it should be within the range [0, 1])
         width_factor: f32,
         rotation: Deg<f32>,
+        height_mirrored: bool,
     },
     Bottom,
     Top,
@@ -49,4 +49,6 @@ pub enum BarVariant {
     Color(Rgba),
     PresenceGradient { high: Rgba, low: Rgba },
     FragmentCode(ShaderCode),
+    HorizontalGradient { left: Rgba, right: Rgba },
+    VerticalGradient { top: Rgba, bottom: Rgba },
 }
