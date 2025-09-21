@@ -92,7 +92,7 @@ max_height = 0.75
 format = "BassTreble"
 [components.Bars.placement.Custom]
 bottom_left_corner = [0.0, 0.0]
-width_factor = 1.0
+width = 100
 rotation = 0.0
 height_mirrored = false
 [components.Bars.audio_conf]
