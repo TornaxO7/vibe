@@ -5,8 +5,6 @@ struct VertexParams {
     // Not normalized.
     // Length equals a full column "slot" (with the direction to the next column)
     column_direction: vec2f,
-    // Length: The step required for the padding
-    padding: vec2f,
     max_height: f32,
     height_mirrored: u32,
     amount_bars: u32,
@@ -61,13 +59,15 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
     var output: Output;
     output.freq = freq;
 
+    let padding = vp.column_direction * .2;
+
     // x
     let is_left_channel = instance_idx < vp.amount_bars;
     let is_bar_left_side = vertex_idx == 0 || vertex_idx == 2;
 
     var pos = vp.bottom_left_corner;
     if (is_bar_left_side) {
-        pos += f32(instance_idx) * vp.column_direction + vp.padding;
+        pos += f32(instance_idx) * vp.column_direction + padding;
 
         if (is_left_channel) {
             output.rel_pos.x = f32(instance_idx) / f32(vp.amount_bars);
@@ -75,7 +75,7 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
             output.rel_pos.x = f32(vp.amount_bars*2 - instance_idx) / f32(vp.amount_bars);
         }
     } else {
-        pos += f32(instance_idx + 1) * vp.column_direction - vp.padding;
+        pos += f32(instance_idx + 1) * vp.column_direction - padding;
 
         if (is_left_channel) {
             output.rel_pos.x = f32(instance_idx + 1) / f32(vp.amount_bars);

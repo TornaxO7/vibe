@@ -27,8 +27,6 @@ struct VertexParams {
     bottom_left_corner: Vec2f,
     up_direction: Vec2f,
     column_direction: Vec2f,
-    // the padding between each bar
-    padding: Vec2f,
     max_height: f32,
     // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
     // So, it's meaning is:
@@ -142,8 +140,6 @@ impl Bars {
             desc.audio_conf.amount_bars.get(),
         );
 
-        let padding = column_direction * 0.2;
-
         // == create buffers ==
         let mut resource_manager = ResourceManager::new();
 
@@ -166,7 +162,6 @@ impl Bars {
                     bottom_left_corner: bottom_left_corner.into(),
                     up_direction: up_direction.into(),
                     column_direction: column_direction.into(),
-                    padding: padding.into(),
                     max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
                     height_mirrored,
                     amount_bars: amount_bars.get() as u32,
