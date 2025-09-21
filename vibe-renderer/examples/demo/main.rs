@@ -162,7 +162,7 @@ impl<'a> State<'a> {
                 },
                 placement: BarsPlacement::Custom {
                     bottom_left_corner: (0., 0.5),
-                    width_factor: 0.25,
+                    width: NonZero::new(100).unwrap(),
                     rotation: Deg(0.),
                     height_mirrored: true,
                 },

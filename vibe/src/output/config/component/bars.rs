@@ -1,7 +1,7 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use vibe_renderer::components::{BarsFormat, BarsPlacement, ShaderCode};
+use vibe_renderer::components::{BarsFormat, BarsPlacement, Pixels, ShaderCode};
 
 use super::Rgba;
 
@@ -66,7 +66,7 @@ pub enum BarsPlacementConfig {
     Right,
     Custom {
         bottom_left_corner: (f32, f32),
-        width_factor: f32,
+        width: Pixels<u16>,
         rotation: cgmath::Deg<f32>,
         height_mirrored: Option<bool>,
     },
@@ -81,12 +81,12 @@ impl From<BarsPlacementConfig> for BarsPlacement {
             BarsPlacementConfig::Right => BarsPlacement::Right,
             BarsPlacementConfig::Custom {
                 bottom_left_corner,
-                width_factor,
+                width,
                 rotation,
                 height_mirrored,
             } => BarsPlacement::Custom {
                 bottom_left_corner,
-                width_factor,
+                width,
                 rotation,
                 height_mirrored: height_mirrored.unwrap_or(false),
             },

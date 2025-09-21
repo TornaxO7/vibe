@@ -3,8 +3,12 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, ShaderCodeError};
-use crate::{components::Rgba, resource_manager::ResourceManager, Renderable};
-use cgmath::{Deg, InnerSpace, Matrix2, Vector2};
+use crate::{
+    components::{Pixels, Rgba},
+    resource_manager::ResourceManager,
+    Renderable,
+};
+use cgmath::{Deg, Matrix2, Vector2};
 use pollster::FutureExt;
 use std::{borrow::Cow, num::NonZero};
 use vibe_audio::{
@@ -15,6 +19,10 @@ use wgpu::util::DeviceExt;
 
 /// The x coords goes from -1 to 1.
 const VERTEX_SURFACE_WIDTH: f32 = 2.;
+
+// The actual column direction needs to be computed first after we know
+// the size of the screen.
+const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
 
 const TRUE: u32 = 1;
 const FALSE: u32 = 0;
@@ -29,7 +37,7 @@ struct VertexParams {
     column_direction: Vec2f,
     max_height: f32,
     // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
-    // So, it's meaning is:
+    // So, it's meaning is: 1 = TRUE, 0 = False
     height_mirrored: u32,
     amount_bars: u32,
 
@@ -125,6 +133,11 @@ pub struct Bars {
 
     // the bind group and render pipeline for the second audio channel
     right: Option<(wgpu::RenderPipeline, wgpu::BindGroup)>,
+
+    // thing we need to update the column-direction-vector
+    vparams: VertexParams,
+    angle: Deg<f32>,
+    width: BarsWidth,
 }
 
 impl Bars {
@@ -133,12 +146,60 @@ impl Bars {
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        // `bottom_left_corner`: In vertex space coords
-        let (bottom_left_corner, up_direction, column_direction) = compute_position_data(
-            desc.placement.clone(),
-            desc.format.clone(),
-            desc.audio_conf.amount_bars.get(),
-        );
+        let (bottom_left_corner, angle, width) = match desc.placement {
+            BarsPlacement::Bottom => (Vector2::from([-1., -1.]), Deg(0.), BarsWidth::ScreenWidth),
+            BarsPlacement::Right => (Vector2::from([1., -1.]), Deg(90.), BarsWidth::ScreenHeight),
+            BarsPlacement::Top => (Vector2::from([1., 1.]), Deg(180.), BarsWidth::ScreenWidth),
+            BarsPlacement::Left => (Vector2::from([-1., 1.]), Deg(270.), BarsWidth::ScreenHeight),
+            BarsPlacement::Custom {
+                bottom_left_corner,
+                width,
+                rotation,
+                ..
+            } => {
+                let bottom_left_corner = {
+                    // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
+                    let mut pos = {
+                        let bottom_left_corner = Vector2::from(bottom_left_corner);
+
+                        let x = 2. * bottom_left_corner.x - 1.0;
+                        let y = -(2. * bottom_left_corner.y - 1.0);
+
+                        Vector2::from((x, y))
+                    };
+                    pos.x = pos.x.clamp(-1., 1.);
+                    pos.y = pos.y.clamp(-1., 1.);
+                    pos
+                };
+
+                (bottom_left_corner, rotation, BarsWidth::Custom(width))
+            }
+        };
+
+        let vparams = {
+            let rotation = Matrix2::from_angle(angle);
+            let up_direction = rotation * Vector2::unit_y();
+            let column_direction = INIT_COLUMN_DIRECTION;
+            let height_mirrored = match desc.placement {
+                BarsPlacement::Custom {
+                    height_mirrored, ..
+                } => match height_mirrored {
+                    true => TRUE,
+                    false => FALSE,
+                },
+                _ => FALSE,
+            };
+
+            VertexParams {
+                bottom_left_corner: bottom_left_corner.into(),
+                up_direction: up_direction.into(),
+                column_direction: column_direction.into(),
+                max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
+                height_mirrored,
+                amount_bars: amount_bars.get() as u32,
+                _padding1: 0,
+            }
+        };
 
         // == create buffers ==
         let mut resource_manager = ResourceManager::new();
@@ -147,33 +208,14 @@ impl Bars {
         let mut bind_group1_mapping = bindings1::init_mapping();
 
         resource_manager.extend_buffers([
-            (ResourceID::VertexParams, {
-                let height_mirrored = match desc.placement {
-                    BarsPlacement::Custom {
-                        height_mirrored, ..
-                    } => match height_mirrored {
-                        true => TRUE,
-                        false => FALSE,
-                    },
-                    _ => FALSE,
-                };
-
-                let vparams = VertexParams {
-                    bottom_left_corner: bottom_left_corner.into(),
-                    up_direction: up_direction.into(),
-                    column_direction: column_direction.into(),
-                    max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
-                    height_mirrored,
-                    amount_bars: amount_bars.get() as u32,
-                    _padding1: 0,
-                };
-
+            (
+                ResourceID::VertexParams,
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some(FragmentParams::LABEL),
                     contents: bytemuck::bytes_of(&vparams),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                })
-            }),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                }),
+            ),
             (
                 ResourceID::Freqs1,
                 device.create_buffer(&wgpu::BufferDescriptor {
@@ -468,6 +510,9 @@ impl Bars {
             bind_group1_left,
             pipeline,
 
+            vparams,
+            angle,
+            width,
             right,
         })
     }
@@ -518,67 +563,48 @@ impl Component for Bars {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
+        let new_width = new_resolution[0] as f32;
+        let new_height = new_resolution[1] as f32;
+
         if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::Resolution) {
-            queue.write_buffer(
-                buffer,
-                0,
-                bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
-            );
+            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[new_width, new_height]));
         }
-    }
-}
 
-fn compute_position_data(
-    placement: BarsPlacement,
-    format: BarsFormat,
-    amount_bars: u16,
-) -> (Vector2<f32>, Vector2<f32>, Vector2<f32>) {
-    let (bottom_left_corner, rotation, mut width_factor) = match placement {
-        BarsPlacement::Bottom => (Vector2::from([-1., -1.]), Matrix2::from_angle(Deg(0.)), 1.),
-        BarsPlacement::Right => (Vector2::from([1., -1.]), Matrix2::from_angle(Deg(90.)), 1.),
-        BarsPlacement::Top => (Vector2::from([1., 1.]), Matrix2::from_angle(Deg(180.)), 1.),
-        BarsPlacement::Left => (Vector2::from([-1., 1.]), Matrix2::from_angle(Deg(270.)), 1.),
-        BarsPlacement::Custom {
-            bottom_left_corner,
-            width_factor,
-            rotation,
-            ..
-        } => {
-            let bottom_left_corner = {
-                // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
-                let mut pos = {
-                    let bottom_left_corner = Vector2::from(bottom_left_corner);
+        // update the column direction vector
+        {
+            let buffer = self
+                .resource_manager
+                .get_buffer(ResourceID::VertexParams)
+                .unwrap();
 
-                    let x = 2. * bottom_left_corner.x - 1.0;
-                    let y = -(2. * bottom_left_corner.y - 1.0);
+            let rotation = Matrix2::from_angle(self.angle);
+            let aspect_ratio = new_width / new_height;
 
-                    Vector2::from((x, y))
-                };
-                pos.x = pos.x.clamp(-1., 1.);
-                pos.y = pos.y.clamp(-1., 1.);
-                pos
+            let component_width = match self.width {
+                BarsWidth::ScreenWidth => new_width,
+                BarsWidth::ScreenHeight => new_height,
+                BarsWidth::Custom(custom) => custom.get() as f32,
             };
-            let width = width_factor.clamp(0., 1.);
-            let rotation = Matrix2::from_angle(rotation);
 
-            (bottom_left_corner, rotation, width)
+            let bar_len = component_width / self.amount_bars.get() as f32;
+            let mut dir = rotation * Vector2::unit_x();
+
+            dir = bar_len * dir;
+
+            let is_mono_channel = self.right.is_none();
+            if is_mono_channel {
+                dir *= 2.;
+            }
+
+            // apply aspect ratio
+            dir.y *= aspect_ratio;
+            dir /= new_width;
+
+            self.vparams.column_direction = dir.into();
+
+            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&self.vparams));
         }
-    };
-
-    // if we have to render two "sections" of the bars, we need to divide the width by 2
-    if [BarsFormat::TrebleBassTreble, BarsFormat::BassTrebleBass].contains(&format) {
-        width_factor /= 2.;
     }
-
-    let up_direction = (rotation * Vector2::unit_y()).normalize();
-    let column_direction = {
-        let column_width = (VERTEX_SURFACE_WIDTH * width_factor) / amount_bars as f32;
-        let direction = rotation * Vector2::unit_x();
-
-        direction.normalize_to(column_width)
-    };
-
-    (bottom_left_corner, up_direction, column_direction)
 }
 
 fn create_pipeline(
@@ -618,4 +644,10 @@ fn create_pipeline(
             },
         },
     ))
+}
+
+enum BarsWidth {
+    ScreenWidth,
+    ScreenHeight,
+    Custom(Pixels<u16>),
 }

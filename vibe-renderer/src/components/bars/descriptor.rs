@@ -1,7 +1,7 @@
 use cgmath::Deg;
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
-use crate::components::{Rgba, ShaderCode};
+use crate::components::{Pixels, Rgba, ShaderCode};
 
 pub struct BarsDescriptor<'a, F: Fetcher> {
     pub device: &'a wgpu::Device,
@@ -24,8 +24,7 @@ pub enum BarsPlacement {
         // - (0., 0.) is the top left corner
         // - (1., 1.) is the bottom right corner
         bottom_left_corner: (f32, f32),
-        // percentage of the screen width (so it should be within the range [0, 1])
-        width_factor: f32,
+        width: Pixels<u16>,
         rotation: Deg<f32>,
         height_mirrored: bool,
     },

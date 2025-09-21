@@ -21,12 +21,14 @@ pub use value_noise::{ValueNoise, ValueNoiseDescriptor};
 
 use crate::{Renderable, Renderer};
 use serde::{Deserialize, Serialize};
-use std::path::PathBuf;
+use std::{num::NonZero, path::PathBuf};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 
 // rgba values are each directly set in the fragment shader
 pub type Rgba = [f32; 4];
 pub type Rgb = [f32; 3];
+
+pub type Pixels<N> = NonZero<N>;
 
 /// Every component needs to implement this.
 /// It provides methods to update its internal state regarding the current
