@@ -34,12 +34,15 @@ struct Output {
 
 // Assuming:
 //
-// 0    1
-//  ----
-//  |\ |
-//  | \|
-//  ----
-// 2    3
+// ^ y
+// |
+// |  0    1
+// |   ----
+// |   |\ |
+// |   | \|
+// |   ----
+// |  2    3
+// ----------> x
 @vertex
 fn bass_treble(in: Input) -> Output {
     let freq_idx = in.instance_idx % arrayLength(&freqs);
