@@ -433,16 +433,16 @@ impl PointerHandler for State {
         events: &[smithay_client_toolkit::seat::pointer::PointerEvent],
     ) {
         for event in events {
-            self.outputs
+            if let Some(output) = self
+                .outputs
                 .values_mut()
                 .find(|output| &event.surface == output.layer_surface().wl_surface())
-                .map(|output| match event.kind {
-                    PointerEventKind::Motion { .. } => {
-                        let queue = self.renderer.queue();
-                        output.update_mouse_position(queue, event.position);
-                    }
-                    _ => {}
-                });
+            {
+                if let PointerEventKind::Motion { .. } = event.kind {
+                    let queue = self.renderer.queue();
+                    output.update_mouse_position(queue, event.position);
+                }
+            }
         }
     }
 }

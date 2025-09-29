@@ -15,6 +15,11 @@ var<storage, read> freqs: array<f32>;
 @group(0) @binding(2)
 var<uniform> iTime: f32;
 
-// Contains the position of the mouse of the canvas.
+// Contains the (x, y) coordinate of the mouse.
+// `x` and `y` are within the range [0, 1]:
+//   - (0, 0) => top left corner
+//   - (1, 0) => top right corner
+//   - (0, 1) => bottom left corner
+//   - (1, 1) => bottom right corner
 @group(0) @binding(3)
 var<uniform> iMouse: vec2f;

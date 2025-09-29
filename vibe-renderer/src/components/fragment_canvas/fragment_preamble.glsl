@@ -14,6 +14,12 @@ layout(set = 0, binding = 1) readonly buffer iAudio {
 // Contains the time how long the shader has been running.
 layout(set = 0, binding = 2) uniform float iTime;
 
+// Contains the (x, y) coordinate of the mouse.
+// `x` and `y` are within the range [0, 1]:
+//   - (0, 0) => top left corner
+//   - (1, 0) => top right corner
+//   - (0, 1) => bottom left corner
+//   - (1, 1) => bottom right corner
 layout(set = 0, binding = 3) uniform vec2 iMouse;
 
 // The color for the fragment/pixel.
