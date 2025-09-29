@@ -368,6 +368,8 @@ impl Component for Aurodio {
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
     }
+
+    fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }
 
 fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {

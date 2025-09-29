@@ -461,6 +461,8 @@ impl Component for Radial {
             queue.write_buffer(buffer, 0, bytemuck::bytes_of(&aspect_ratio));
         }
     }
+
+    fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }
 
 #[derive(Debug, Clone, Copy)]

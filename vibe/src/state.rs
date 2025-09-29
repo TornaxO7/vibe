@@ -4,11 +4,16 @@ use raw_window_handle::{
 
 use anyhow::Context;
 use smithay_client_toolkit::{
-    compositor::{CompositorHandler, CompositorState, Region},
-    delegate_compositor, delegate_layer, delegate_output, delegate_registry,
+    compositor::{CompositorHandler, CompositorState},
+    delegate_compositor, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
+    delegate_seat,
     output::{OutputHandler, OutputState},
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
+    seat::{
+        pointer::{PointerEventKind, PointerHandler},
+        Capability, SeatHandler, SeatState,
+    },
     shell::{
         wlr_layer::{Layer, LayerShell, LayerShellHandler, LayerSurface, LayerSurfaceConfigure},
         WaylandSurface,
@@ -20,7 +25,7 @@ use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::Renderer;
 use wayland_client::{
     globals::GlobalList,
-    protocol::{wl_output::WlOutput, wl_surface::WlSurface},
+    protocol::{wl_output::WlOutput, wl_pointer::WlPointer, wl_surface::WlSurface},
     Connection, Proxy, QueueHandle,
 };
 
@@ -35,6 +40,7 @@ pub struct State {
 
     output_state: OutputState,
     registry_state: RegistryState,
+    seat_state: SeatState,
     layer_shell: LayerShell,
     compositor_state: CompositorState,
 
@@ -42,6 +48,7 @@ pub struct State {
     sample_processor: SampleProcessor<SystemAudioFetcher>,
 
     time: Instant,
+    pointer: Option<WlPointer>,
 
     outputs: HashMap<WlOutput, OutputCtx>,
 }
@@ -109,12 +116,14 @@ impl State {
         Ok(Self {
             run: true,
             compositor_state: CompositorState::bind(globals, qh).unwrap(),
+            seat_state: SeatState::new(globals, qh),
             output_state: OutputState::new(globals, qh),
             registry_state: RegistryState::new(globals),
             layer_shell,
             renderer,
 
             time: Instant::now(),
+            pointer: None,
 
             sample_processor,
 
@@ -210,22 +219,14 @@ impl OutputHandler for State {
         }
 
         let layer_surface = {
-            let region = Region::new(&self.compositor_state).unwrap();
             let wl_surface = self.compositor_state.create_surface(qh);
-            let layer_background = if is_running_kde() {
-                // https://github.com/TornaxO7/vibe/issues/28
-                Layer::Bottom
-            } else {
-                Layer::Background
-            };
             let layer_surface = self.layer_shell.create_layer_surface(
                 qh,
                 wl_surface,
-                layer_background,
+                Layer::Bottom,
                 Some(format!("{} background", crate::APP_NAME)),
                 Some(&output),
             );
-            layer_surface.set_input_region(Some(region.wl_region()));
             layer_surface
         };
 
@@ -369,21 +370,79 @@ impl ProvidesRegistryState for State {
     registry_handlers![OutputState];
 }
 
-fn is_running_kde() -> bool {
-    const XDG_CURRENT_DESKTOP_ENV: &str = "XDG_CURRENT_DESKTOP";
+delegate_seat!(State);
+impl SeatHandler for State {
+    fn seat_state(&mut self) -> &mut SeatState {
+        &mut self.seat_state
+    }
 
-    match std::env::var(XDG_CURRENT_DESKTOP_ENV) {
-        Ok(de_name) => {
-            debug!("env[{XDG_CURRENT_DESKTOP_ENV}]: {de_name}");
-            de_name.eq_ignore_ascii_case("kde")
+    fn new_seat(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _seat: wayland_client::protocol::wl_seat::WlSeat,
+    ) {
+    }
+
+    fn new_capability(
+        &mut self,
+        _conn: &Connection,
+        qh: &QueueHandle<Self>,
+        seat: wayland_client::protocol::wl_seat::WlSeat,
+        capability: smithay_client_toolkit::seat::Capability,
+    ) {
+        if capability == Capability::Pointer && self.pointer.is_none() {
+            debug!("Mouse found");
+            let pointer = self
+                .seat_state
+                .get_pointer(qh, &seat)
+                .expect("Create pointer");
+            self.pointer = Some(pointer);
         }
-        Err(err) => {
-            error!(
-                "Couldn't find out which desktop environment is used:\n{}",
-                err
-            );
+    }
 
-            panic!("Please create an issue.");
+    fn remove_capability(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _seat: wayland_client::protocol::wl_seat::WlSeat,
+        capability: smithay_client_toolkit::seat::Capability,
+    ) {
+        if capability == Capability::Pointer && self.pointer.is_some() {
+            debug!("Mouse removed");
+            self.pointer.take().unwrap().release();
+        }
+    }
+
+    fn remove_seat(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _seat: wayland_client::protocol::wl_seat::WlSeat,
+    ) {
+    }
+}
+
+delegate_pointer!(State);
+impl PointerHandler for State {
+    fn pointer_frame(
+        &mut self,
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+        _pointer: &wayland_client::protocol::wl_pointer::WlPointer,
+        events: &[smithay_client_toolkit::seat::pointer::PointerEvent],
+    ) {
+        for event in events {
+            self.outputs
+                .values_mut()
+                .find(|output| &event.surface == output.layer_surface().wl_surface())
+                .map(|output| match event.kind {
+                    PointerEventKind::Motion { .. } => {
+                        let queue = self.renderer.queue();
+                        output.update_mouse_position(queue, event.position);
+                    }
+                    _ => {}
+                });
         }
     }
 }

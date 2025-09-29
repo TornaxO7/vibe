@@ -24,7 +24,7 @@ use vibe_renderer::{
 };
 use winit::{
     application::ApplicationHandler,
-    dpi::PhysicalSize,
+    dpi::{PhysicalPosition, PhysicalSize},
     event::KeyEvent,
     event_loop::EventLoop,
     window::{Window, WindowAttributes},
@@ -193,9 +193,8 @@ impl<'a> State<'a> {
                         "
                     @fragment
                     fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                        let uv = pos.xy / iResolution.xy;
-                        // return vec4(sin(uv + iTime + freqs[3]) * .5 + .5, 0., 1.0);
-                        return vec4(uv, .0, 1.);
+                        let uv = pos.xy / iResolution.xy - iMouse.xy;
+                        return vec4(abs(uv), .0, 1.);
                     }
                     "
                         .into(),
@@ -385,6 +384,14 @@ impl<'a> State<'a> {
         surface_texture.present();
         Ok(())
     }
+
+    pub fn update_mouse_pos(&mut self, new_pos: PhysicalPosition<f64>) {
+        let rel_x = new_pos.x as f32 / self.surface_config.width as f32;
+        let rel_y = new_pos.y as f32 / self.surface_config.height as f32;
+
+        self.component
+            .update_mouse_position(self.renderer.queue(), (rel_x, rel_y));
+    }
 }
 
 struct App<'a> {
@@ -479,6 +486,9 @@ impl<'a> ApplicationHandler for App<'a> {
                 }
                 _ => {}
             },
+            winit::event::WindowEvent::CursorMoved { position, .. } => {
+                state.update_mouse_pos(position);
+            }
             _ => {}
         }
     }

@@ -323,4 +323,6 @@ impl Component for Chessy {
             );
         }
     }
+
+    fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }

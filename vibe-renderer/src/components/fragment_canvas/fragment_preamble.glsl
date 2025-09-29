@@ -7,12 +7,14 @@ layout(set = 0, binding = 0) uniform vec2 iResolution;
 // You can imagine this to be the height-value for the bar-shader.
 //
 // Note: You can get the length of the array `freqs.length()`
-layout(set = 1, binding = 0) readonly buffer iAudio {
+layout(set = 0, binding = 1) readonly buffer iAudio {
     float[] freqs;
 };
 
 // Contains the time how long the shader has been running.
-layout(set = 1, binding = 1) uniform float iTime;
+layout(set = 0, binding = 2) uniform float iTime;
+
+layout(set = 0, binding = 3) uniform vec2 iMouse;
 
 // The color for the fragment/pixel.
 // Needs to be set in your shader (like in shadertoy).
