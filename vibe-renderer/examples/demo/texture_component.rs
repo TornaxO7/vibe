@@ -180,4 +180,6 @@ impl Component for TextureComponent {
             );
         }
     }
+
+    fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }

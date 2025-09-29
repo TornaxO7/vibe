@@ -13,8 +13,8 @@ use vibe_renderer::{
     Renderer, RendererDescriptor,
 };
 use winit::{
-    application::ApplicationHandler, event::WindowEvent, event_loop::EventLoop, keyboard::Key,
-    window::Window,
+    application::ApplicationHandler, dpi::PhysicalPosition, event::WindowEvent,
+    event_loop::EventLoop, keyboard::Key, window::Window,
 };
 
 use crate::{
@@ -96,6 +96,15 @@ impl State<'_> {
 
         surface_texture.present();
         Ok(())
+    }
+
+    pub fn update_mouse_pos(&mut self, queue: &wgpu::Queue, new_pos: PhysicalPosition<f64>) {
+        let rel_x = new_pos.x as f32 / self.surface_config.width as f32;
+        let rel_y = new_pos.y as f32 / self.surface_config.height as f32;
+
+        for component in self.components.iter_mut() {
+            component.update_mouse_position(queue, (rel_x, rel_y));
+        }
     }
 }
 
@@ -313,6 +322,11 @@ impl ApplicationHandler for OutputRenderer<'_> {
                 if event.logical_key == Key::Character("q".into()) =>
             {
                 event_loop.exit()
+            }
+            WindowEvent::CursorMoved { position, .. } => {
+                if let Some(state) = self.state.as_mut() {
+                    state.update_mouse_pos(self.renderer.queue(), position);
+                }
             }
             _ => {}
         }

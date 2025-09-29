@@ -3,7 +3,7 @@ pub mod config;
 use smithay_client_toolkit::{
     output::OutputInfo,
     shell::{
-        wlr_layer::{Anchor, KeyboardInteractivity, LayerSurface},
+        wlr_layer::{Anchor, LayerSurface},
         WaylandSurface,
     },
 };
@@ -43,7 +43,6 @@ impl OutputCtx {
         layer_surface.set_exclusive_zone(-1);
         layer_surface.set_anchor(Anchor::all());
         layer_surface.set_size(size.width, size.height);
-        layer_surface.set_keyboard_interactivity(KeyboardInteractivity::None);
         layer_surface.commit();
 
         let surface_config = get_surface_config(renderer.adapter(), &surface, size);
@@ -88,6 +87,7 @@ impl OutputCtx {
         self.layer_surface.commit();
     }
 
+    /// Update the internal data to the new output size.
     pub fn resize(&mut self, renderer: &Renderer, new_size: Size) {
         if new_size.width > 0 && new_size.height > 0 {
             self.surface_config.width = new_size.width;
@@ -99,6 +99,17 @@ impl OutputCtx {
             for component in self.components.iter_mut() {
                 component.update_resolution(renderer, [new_size.width, new_size.height]);
             }
+        }
+    }
+
+    pub fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f64, f64)) {
+        let normalized_pos = (
+            new_pos.0 as f32 / self.surface_config.width as f32,
+            new_pos.1 as f32 / self.surface_config.height as f32,
+        );
+
+        for component in self.components.iter_mut() {
+            component.update_mouse_position(queue, normalized_pos);
         }
     }
 }

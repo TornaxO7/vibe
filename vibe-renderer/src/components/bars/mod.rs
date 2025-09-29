@@ -605,6 +605,8 @@ impl Component for Bars {
             queue.write_buffer(buffer, 0, bytemuck::bytes_of(&self.vparams));
         }
     }
+
+    fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }
 
 fn create_pipeline(

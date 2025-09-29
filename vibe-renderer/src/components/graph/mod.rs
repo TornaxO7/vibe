@@ -502,6 +502,8 @@ impl Component for Graph {
             right.bind_group1 = bind_group;
         }
     }
+
+    fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }
 
 enum GraphAmountBars {

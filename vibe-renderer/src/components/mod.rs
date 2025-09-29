@@ -43,6 +43,8 @@ pub trait Component: Renderable {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32);
 
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
+
+    fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32));
 }
 
 impl Renderable for Box<dyn Component> {

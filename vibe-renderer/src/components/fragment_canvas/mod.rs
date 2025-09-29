@@ -20,27 +20,17 @@ mod bindings0 {
     use std::collections::HashMap;
 
     pub const RESOLUTION: u32 = 0;
+    pub const FREQS: u32 = 1;
+    pub const TIME: u32 = 2;
+    pub const MOUSE: u32 = 3;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
         HashMap::from([
             (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-mod bindings1 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const FREQS: u32 = 0;
-    pub const TIME: u32 = 1;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
             (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
             (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Mouse, crate::util::buffer(MOUSE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -50,6 +40,7 @@ enum ResourceID {
     Resolution,
     Freqs,
     Time,
+    Mouse,
 }
 
 #[rustfmt::skip]
@@ -77,7 +68,6 @@ pub struct FragmentCanvas {
     resource_manager: ResourceManager<ResourceID>,
 
     bind_group0: wgpu::BindGroup,
-    bind_group1: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
 }
@@ -90,7 +80,6 @@ impl FragmentCanvas {
         let mut resource_manager = ResourceManager::new();
 
         let bind_group0_mapping = bindings0::init_mapping();
-        let bind_group1_mapping = bindings1::init_mapping();
 
         resource_manager.extend_buffers([
             (
@@ -122,6 +111,15 @@ impl FragmentCanvas {
                     mapped_at_creation: false,
                 }),
             ),
+            (
+                ResourceID::Mouse,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Fragment canvas: `iMouse` buffer"),
+                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
         ]);
 
         let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -136,16 +134,10 @@ impl FragmentCanvas {
             &bind_group0_mapping,
         );
 
-        let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
-            "Fragment canvas: Bind group 1",
-            device,
-            &bind_group1_mapping,
-        );
-
         let pipeline = {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
+                bind_group_layouts: &[&bind_group0_layout],
                 push_constant_ranges: &[],
             });
 
@@ -227,7 +219,6 @@ impl FragmentCanvas {
             resource_manager,
 
             bind_group0,
-            bind_group1,
 
             pipeline,
         })
@@ -237,7 +228,6 @@ impl FragmentCanvas {
 impl Renderable for FragmentCanvas {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        pass.set_bind_group(1, &self.bind_group1, &[]);
 
         pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
@@ -275,5 +265,11 @@ impl Component for FragmentCanvas {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
         queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
+    }
+
+    fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32)) {
+        let buffer = self.resource_manager.get_buffer(ResourceID::Mouse).unwrap();
+
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[new_pos.0, new_pos.1]));
     }
 }
