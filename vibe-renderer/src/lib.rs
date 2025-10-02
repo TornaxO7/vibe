@@ -1,17 +1,20 @@
 mod resource_manager;
 
 pub mod components;
+pub mod texture_generation;
 pub mod util;
 
 use std::ops::Deref;
 
-use components::{SdfMask, SdfMaskDescriptor, SdfPattern, ValueNoise, ValueNoiseDescriptor};
+use components::{SdfMask, SdfMaskDescriptor, SdfPattern};
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
 
 pub use components::Component;
 pub use resource_manager::ResourceManager;
+
+use crate::texture_generation::TextureGenerator;
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
@@ -63,6 +66,8 @@ pub struct Renderer {
 }
 
 impl Renderer {
+    const REQUIRED_FEATURES: wgpu::Features = wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
+
     /// Create a new instance of this struct.
     ///
     /// # Example
@@ -91,7 +96,10 @@ impl Renderer {
 
             adapters
                 .into_iter()
-                .find(|adapter| &adapter.get_info().name == adapter_name)
+                .find(|adapter| {
+                    &adapter.get_info().name == adapter_name
+                        && adapter.features().contains(Self::REQUIRED_FEATURES)
+                })
                 .clone()
                 .unwrap_or_else(|| {
                     error!(
@@ -115,7 +123,10 @@ impl Renderer {
         info!("Choosing for rendering: {}", adapter.get_info().name);
 
         let (device, queue) = adapter
-            .request_device(&wgpu::DeviceDescriptor::default())
+            .request_device(&wgpu::DeviceDescriptor {
+                required_features: Self::REQUIRED_FEATURES,
+                ..Default::default()
+            })
             .block_on()
             .unwrap();
 
@@ -158,6 +169,13 @@ impl Renderer {
 
         self.queue.submit(std::iter::once(encoder.finish()));
     }
+
+    pub fn generate<G: TextureGenerator>(&self, gen: G) -> wgpu::Texture {
+        let device = self.device();
+        let queue = self.queue();
+
+        gen.generate(device, queue)
+    }
 }
 
 /// Getter functions
@@ -180,24 +198,6 @@ impl Renderer {
 }
 
 impl Renderer {
-    // `brightness`: should be within the range `0` and `1`
-    pub fn create_value_noise_texture(&self, texture_size: u32, octaves: u32) -> wgpu::Texture {
-        let device = self.device();
-        let texture = self.create_texture("Value noise texture", texture_size);
-
-        let renderable = ValueNoise::new(&ValueNoiseDescriptor {
-            device,
-            texture_size,
-            format: texture.format(),
-            octaves,
-        });
-
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        self.render(&view, &[&renderable]);
-
-        texture
-    }
-
     pub fn create_sdf_mask(&self, texture_size: u32, pattern: SdfPattern) -> wgpu::Texture {
         let device = self.device();
         let texture = self.create_texture("Grid texture", texture_size);
@@ -233,6 +233,12 @@ impl Renderer {
             usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
             view_formats: &[],
         })
+    }
+}
+
+impl Default for Renderer {
+    fn default() -> Self {
+        Self::new(&RendererDescriptor::default())
     }
 }
 

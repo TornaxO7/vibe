@@ -20,6 +20,7 @@ use vibe_renderer::{
         GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
         SdfPattern, ShaderCode,
     },
+    texture_generation::ValueNoise,
     Renderer,
 };
 use winit::{
@@ -324,7 +325,10 @@ impl<'a> State<'a> {
             })) as Box<dyn Component>),
 
             ComponentName::TextureValueNoise => {
-                let texture = renderer.create_value_noise_texture(256, 7);
+                let texture = renderer.generate(ValueNoise {
+                    texture_size: 256,
+                    octaves: 7,
+                });
 
                 Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
                     device: renderer.device(),

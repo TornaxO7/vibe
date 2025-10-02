@@ -2,7 +2,7 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::Component;
-use crate::{resource_manager::ResourceManager, Renderable};
+use crate::{resource_manager::ResourceManager, texture_generation::ValueNoise, Renderable};
 use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
@@ -216,7 +216,10 @@ impl Aurodio {
         }
 
         {
-            let value_noise_texture = desc.renderer.create_value_noise_texture(256, 7);
+            let value_noise_texture = desc.renderer.generate(ValueNoise {
+                texture_size: 256,
+                octaves: 7,
+            });
             let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("Aurodio: Value noise sampler"),
                 address_mode_u: wgpu::AddressMode::MirrorRepeat,
