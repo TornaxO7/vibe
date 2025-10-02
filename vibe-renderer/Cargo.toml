@@ -15,6 +15,7 @@ tracing.workspace = true
 wgpu.workspace = true
 cgmath.workspace = true
 vibe-audio.workspace = true
+image.workspace = true
 
 pollster = "0.4"
 bytemuck = "1.23"
@@ -25,4 +26,3 @@ anyhow.workspace = true
 clap.workspace = true
 
 winit = "0.30"
-image = "0.25"
