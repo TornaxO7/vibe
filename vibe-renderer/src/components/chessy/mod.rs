@@ -10,19 +10,10 @@ use crate::{
 };
 use std::collections::HashMap;
 use vibe_audio::{fetcher::Fetcher, BarProcessor};
-use wgpu::util::DeviceExt;
-
-type VertexPosition = [f32; 2];
+use wgpu::{include_wgsl, util::DeviceExt};
 
 // this texture size seems good enough for a 1920x1080 screen.
 const DEFAULT_SDF_TEXTURE_SIZE: u32 = 512;
-
-#[rustfmt::skip]
-const VERTICES: [VertexPosition; 3] = [
-    [-3., -1.], // bottom left
-    [1., -1.], // bottom right
-    [1., 3.] // top right
-];
 
 mod bindings0 {
     use super::ResourceID;
@@ -86,7 +77,6 @@ pub struct Chessy {
 
     bind_group0_mapping: HashMap<ResourceID, wgpu::BindGroupLayoutEntry>,
 
-    vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
 
     // data to recreate the grid texture
@@ -153,7 +143,7 @@ impl Chessy {
 
         {
             // arbitrary size for the beginning
-            let grid_texture = desc.renderer.generate(SdfMask {
+            let grid_texture = desc.renderer.generate(&SdfMask {
                 texture_size: 50,
                 pattern: desc.pattern,
             });
@@ -174,12 +164,6 @@ impl Chessy {
             resource_manager.insert_sampler(ResourceID::GridSampler, sampler);
         }
 
-        let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Chessy: Vertex buffer"),
-            contents: bytemuck::cast_slice(&VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
         let (bind_group0, bind_group0_layout) =
             resource_manager.build_bind_group("Chessy: Bind group 0", device, &bind_group0_mapping);
 
@@ -187,10 +171,8 @@ impl Chessy {
             resource_manager.build_bind_group("Chessy: Bind group 1", device, &bind_group1_mapping);
 
         let pipeline = {
-            let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Chessy: Vertex module"),
-                source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/vertex.wgsl").into()),
-            });
+            let vertex_module =
+                device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
 
             let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Chessy: Fragment shader"),
@@ -208,21 +190,12 @@ impl Chessy {
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Chessy: Render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
-                        entry_point: Some("main"),
+                        entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<VertexPosition>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Vertex,
-                            attributes: &[wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x2,
-                                offset: 0,
-                                shader_location: 0,
-                            }],
-                        }],
+                        buffers: &[],
                     },
                     fragment: wgpu::FragmentState {
                         module: &fragment_module,
@@ -246,7 +219,6 @@ impl Chessy {
 
             bind_group0_mapping,
 
-            vbuffer,
             pipeline,
 
             pattern: desc.pattern,
@@ -259,9 +231,8 @@ impl Renderable for Chessy {
         pass.set_bind_group(0, &self.bind_group0, &[]);
         pass.set_bind_group(1, &self.bind_group1, &[]);
 
-        pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
-        pass.draw(0..VERTICES.len() as u32, 0..1);
+        pass.draw(0..4, 0..1);
     }
 }
 
@@ -299,7 +270,7 @@ impl Component for Chessy {
             // ... so we double it ~~and give it to the next person~~
             let new_size = DEFAULT_SDF_TEXTURE_SIZE as f32 * factor;
 
-            let grid_texture = renderer.generate(SdfMask {
+            let grid_texture = renderer.generate(&SdfMask {
                 texture_size: new_size.ceil() as u32,
                 pattern: self.pattern,
             });

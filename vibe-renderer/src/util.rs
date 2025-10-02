@@ -16,7 +16,7 @@ pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDes
 
 pub struct SimpleRenderPipelineDescriptor<'a> {
     pub label: &'static str,
-    pub layout: &'a wgpu::PipelineLayout,
+    pub layout: Option<&'a wgpu::PipelineLayout>,
     pub vertex: wgpu::VertexState<'a>,
     pub fragment: wgpu::FragmentState<'a>,
 }
@@ -26,7 +26,7 @@ pub fn simple_pipeline_descriptor(
 ) -> wgpu::RenderPipelineDescriptor {
     wgpu::RenderPipelineDescriptor {
         label: Some(desc.label),
-        layout: Some(desc.layout),
+        layout: desc.layout,
         vertex: desc.vertex.clone(),
         primitive: wgpu::PrimitiveState {
             topology: wgpu::PrimitiveTopology::TriangleStrip,

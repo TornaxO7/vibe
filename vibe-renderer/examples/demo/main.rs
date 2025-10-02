@@ -7,6 +7,8 @@ use anyhow::bail;
 use cgmath::Deg;
 use clap::Parser;
 use cli::ComponentName;
+use tracing_indicatif::IndicatifLayer;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 use vibe_audio::{
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
@@ -14,6 +16,7 @@ use vibe_audio::{
 };
 use vibe_renderer::{
     components::{
+        live_wallpaper::pulse_edges::{PulseEdges, PulseEdgesDescriptor},
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
         CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
@@ -325,7 +328,7 @@ impl<'a> State<'a> {
             })) as Box<dyn Component>),
 
             ComponentName::TextureValueNoise => {
-                let texture = renderer.generate(ValueNoise {
+                let texture = renderer.generate(&ValueNoise {
                     texture_size: 256,
                     octaves: 7,
                 });
@@ -337,7 +340,7 @@ impl<'a> State<'a> {
                 })) as Box<dyn Component>)
             }
             ComponentName::TextureSdf => {
-                let texture = renderer.generate(SdfMask {
+                let texture = renderer.generate(&SdfMask {
                     texture_size: 256,
                     pattern: SdfPattern::Box,
                 });
@@ -348,6 +351,29 @@ impl<'a> State<'a> {
                     format: surface_config.format,
                 })) as Box<dyn Component>)
             }
+            ComponentName::WallpaperPulseEdges => Ok(Box::new(
+                PulseEdges::new(&PulseEdgesDescriptor {
+                    renderer: &renderer,
+                    sample_processor: &processor,
+                    img: image::ImageReader::open("./assets/castle.jpg")
+                        .unwrap()
+                        .decode()
+                        .unwrap(),
+
+                    freq_range: NonZero::new(100).unwrap()..NonZero::new(250).unwrap(),
+                    audio_sensitivity: 8.,
+                    texture_format: surface_config.format,
+
+                    low_threshold_ratio: 0.4,
+                    high_threshold_ratio: 0.6,
+                    wallpaper_brightness: 0.5,
+                    edge_width: 0.3,
+                    pulse_brightness: 1.5,
+                    sigma: 10.,
+                    kernel_size: 49,
+                })
+                .unwrap(),
+            ) as Box<dyn Component>),
         }?;
 
         Ok(Self {
@@ -502,6 +528,7 @@ impl<'a> ApplicationHandler for App<'a> {
 }
 
 fn main() -> anyhow::Result<()> {
+    init_logging();
     let cli = cli::Cli::parse();
 
     if cli.show_output_devices {
@@ -521,4 +548,22 @@ fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn init_logging() {
+    let env_filter = EnvFilter::try_from_default_env()
+        .unwrap_or(EnvFilter::builder().parse("vibe_renderer=info").unwrap());
+
+    let indicatif_layer = IndicatifLayer::new();
+
+    tracing_subscriber::fmt()
+        .with_writer(indicatif_layer.get_stderr_writer())
+        .with_env_filter(env_filter)
+        .without_time()
+        .pretty()
+        .finish()
+        .with(indicatif_layer)
+        .init();
+
+    tracing::debug!("Debug logging enabled");
 }

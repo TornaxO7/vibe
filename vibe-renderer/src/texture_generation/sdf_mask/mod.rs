@@ -120,7 +120,7 @@ mod tests {
     fn generate(pattern: SdfPattern) {
         let renderer = Renderer::default();
 
-        renderer.generate(SdfMask {
+        renderer.generate(&SdfMask {
             pattern,
             texture_size: 256,
         });

@@ -2,20 +2,22 @@ mod aurodio;
 mod bars;
 mod chessy;
 mod circle;
+mod encrust_wallpaper;
 mod fragment_canvas;
 mod graph;
 mod radial;
 
+use image::ImageReader;
 use serde::{Deserialize, Serialize};
-use std::num::NonZero;
+use std::{num::NonZero, path::PathBuf};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
-        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
-        BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor, CircleVariant,
-        Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        live_wallpaper, Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars,
+        BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
+        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
-        ShaderCode, ShaderCodeError,
+        ShaderCode,
     },
     texture_generation::SdfPattern,
     Renderer,
@@ -25,11 +27,30 @@ pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
 pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVariantConfig};
 pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
+pub use encrust_wallpaper::WallpaperPulseEdgeAudioConfig;
 pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
 const GAMMA: f32 = 2.2;
+
+#[derive(thiserror::Error, Debug)]
+pub enum ConfigError {
+    #[error(transparent)]
+    ShaderCode(#[from] vibe_renderer::components::ShaderCodeError),
+
+    #[error(transparent)]
+    PulseError(#[from] vibe_renderer::components::live_wallpaper::pulse_edges::PulseEdgesError),
+
+    #[error("Couldn't open '{path}': {reason}")]
+    OpenFile {
+        path: String,
+        reason: std::io::Error,
+    },
+
+    #[error(transparent)]
+    Image(#[from] image::error::ImageError),
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum ComponentConfig {
@@ -81,6 +102,19 @@ pub enum ComponentConfig {
         zoom_factor: f32,
         audio_conf: ChessyAudioConfig,
     },
+    WallpaperPulseEdges {
+        wallpaper_path: PathBuf,
+        audio_conf: WallpaperPulseEdgeAudioConfig,
+
+        low_threshold_ratio: f32,
+        high_threshold_ratio: f32,
+        wallpaper_brightness: f32,
+        edge_width: f32,
+        pulse_brightness: f32,
+
+        sigma: f32,
+        kernel_size: usize,
+    },
 }
 
 impl Default for ComponentConfig {
@@ -105,7 +139,7 @@ impl ComponentConfig {
         renderer: &Renderer,
         processor: &SampleProcessor<SystemAudioFetcher>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn Component>, ShaderCodeError> {
+    ) -> Result<Box<dyn Component>, ConfigError> {
         match self {
             ComponentConfig::Bars {
                 audio_conf,
@@ -138,7 +172,7 @@ impl ComponentConfig {
                     BarsVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
                 };
 
-                Bars::new(&vibe_renderer::components::BarsDescriptor {
+                let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {
                     device: renderer.device(),
                     sample_processor: processor,
                     audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
@@ -147,20 +181,24 @@ impl ComponentConfig {
                     variant,
                     placement: BarsPlacement::from(placement),
                     format: BarsFormat::from(format),
-                })
-                .map(|bars| Box::new(bars) as Box<dyn Component>)
+                })?;
+
+                Ok(Box::new(bars) as Box<dyn Component>)
             }
             ComponentConfig::FragmentCanvas {
                 audio_conf,
                 fragment_code,
-            } => FragmentCanvas::new(&FragmentCanvasDescriptor {
-                sample_processor: processor,
-                audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
-                device: renderer.device(),
-                format: texture_format,
-                fragment_code: fragment_code.clone(),
-            })
-            .map(|canvas| Box::new(canvas) as Box<dyn Component>),
+            } => {
+                let fragment_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
+                    sample_processor: processor,
+                    audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
+                    device: renderer.device(),
+                    format: texture_format,
+                    fragment_code: fragment_code.clone(),
+                })?;
+
+                Ok(Box::new(fragment_canvas) as Box<dyn Component>)
+            }
             ComponentConfig::Aurodio {
                 base_color,
                 movement_speed,
@@ -282,6 +320,50 @@ impl ComponentConfig {
                 pattern: *pattern,
                 zoom_factor: *zoom_factor,
             }))),
+            ComponentConfig::WallpaperPulseEdges {
+                wallpaper_path,
+                audio_conf,
+                low_threshold_ratio,
+                high_threshold_ratio,
+                wallpaper_brightness,
+                edge_width,
+                pulse_brightness,
+
+                sigma,
+                kernel_size,
+            } => {
+                let img = ImageReader::open(wallpaper_path)
+                    .map_err(|err| ConfigError::OpenFile {
+                        path: wallpaper_path.to_string_lossy().to_string(),
+                        reason: err,
+                    })?
+                    .decode()?;
+
+                let high_threshold_ratio = high_threshold_ratio.clamp(0.0, 1.0);
+                let low_threshold_ratio = low_threshold_ratio.min(high_threshold_ratio);
+
+                let pulse_edges = live_wallpaper::pulse_edges::PulseEdges::new(
+                    &live_wallpaper::pulse_edges::PulseEdgesDescriptor {
+                        renderer,
+                        sample_processor: processor,
+                        texture_format,
+
+                        img,
+                        freq_range: audio_conf.freq_range.clone(),
+                        audio_sensitivity: audio_conf.sensitivity,
+                        high_threshold_ratio,
+                        low_threshold_ratio,
+                        wallpaper_brightness: *wallpaper_brightness,
+                        edge_width: *edge_width,
+                        pulse_brightness: *pulse_brightness,
+
+                        sigma: *sigma,
+                        kernel_size: *kernel_size,
+                    },
+                )?;
+
+                Ok(Box::new(pulse_edges) as Box<dyn Component>)
+            }
         }
     }
 }

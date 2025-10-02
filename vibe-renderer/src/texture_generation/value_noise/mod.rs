@@ -110,7 +110,7 @@ mod tests {
     fn general() {
         let renderer = Renderer::default();
 
-        renderer.generate(ValueNoise {
+        renderer.generate(&ValueNoise {
             texture_size: 50,
             octaves: 7,
         });

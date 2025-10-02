@@ -9,20 +9,24 @@ repository = "https://github.com/TornaxO7/vibe/vibe-renderer"
 publish = false
 
 [dependencies]
+cgmath.workspace = true
+image.workspace = true
 serde.workspace = true
 thiserror.workspace = true
+toml.workspace = true
 tracing.workspace = true
-wgpu.workspace = true
-cgmath.workspace = true
 vibe-audio.workspace = true
+wgpu.workspace = true
+xdg.workspace = true
+tracing-indicatif.workspace = true
 
-pollster = "0.4"
 bytemuck = "1.23"
 fastrand = "2.3"
+pollster = "0.4"
 
 [dev-dependencies]
 anyhow.workspace = true
 clap.workspace = true
+tracing-subscriber.workspace = true
 
 winit = "0.30"
-image = "0.25"
