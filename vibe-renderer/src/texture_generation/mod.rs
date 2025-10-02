@@ -1,6 +1,8 @@
+mod edge_distance_map;
 mod sdf_mask;
 mod value_noise;
 
+pub use edge_distance_map::EdgeDistanceMap;
 pub use sdf_mask::{SdfMask, SdfPattern};
 pub use value_noise::ValueNoise;
 
