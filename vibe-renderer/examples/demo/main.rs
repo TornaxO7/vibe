@@ -18,9 +18,9 @@ use vibe_renderer::{
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
         CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
-        SdfPattern, ShaderCode,
+        ShaderCode,
     },
-    texture_generation::ValueNoise,
+    texture_generation::{SdfMask, SdfPattern, ValueNoise},
     Renderer,
 };
 use winit::{
@@ -337,7 +337,10 @@ impl<'a> State<'a> {
                 })) as Box<dyn Component>)
             }
             ComponentName::TextureSdf => {
-                let texture = renderer.create_sdf_mask(256, SdfPattern::Box);
+                let texture = renderer.generate(SdfMask {
+                    texture_size: 256,
+                    pattern: SdfPattern::Box,
+                });
 
                 Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
                     device: renderer.device(),

@@ -1,8 +1,13 @@
 @group(0) @binding(0)
-var<uniform> iResolution: vec2<f32>;
+var output: texture_storage_2d<r16unorm, write>;
+
+struct Data {
+    canvas_size: f32,
+    pattern: u32,
+}
 
 @group(0) @binding(1)
-var<uniform> pattern: u32;
+var<uniform> data: Data;
 
 const BOX: u32 = 0;
 const CIRCLE: u32 = 1;
@@ -44,12 +49,14 @@ fn sdfHeart(uv: vec2f) -> f32
                 )
             ) * sign(p.x-p.y);
 }
-@fragment
-fn main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
-    var uv = (2. * pos.xy - iResolution.xy) / iResolution.y;
+
+@compute
+@workgroup_size(16, 16, 1)
+fn main(@builtin(global_invocation_id) gid: vec3u) {
+    var uv = (2. * vec2f(gid.xy) - vec2f(data.canvas_size)) / data.canvas_size;
 
     var d: f32 = 0.;
-    switch pattern {
+    switch data.pattern {
         case BOX, default: {
             d = sdfBox(uv);
         }
@@ -62,5 +69,5 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) f32 {
     }
 
     let glow = min(1., .1 / max(1e-5, d) - .15);
-    return glow;
+    textureStore(output, gid.xy, vec4f(glow, 0., 0., 0.));
 }

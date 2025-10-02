@@ -15,8 +15,9 @@ use vibe_renderer::{
         BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor, CircleVariant,
         Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
-        SdfPattern, ShaderCode, ShaderCodeError,
+        ShaderCode, ShaderCodeError,
     },
+    texture_generation::SdfPattern,
     Renderer,
 };
 

@@ -1,16 +1,16 @@
 mod descriptor;
 
-use std::collections::HashMap;
-
 pub use descriptor::*;
-use vibe_audio::{fetcher::Fetcher, BarProcessor};
-use wgpu::util::DeviceExt;
 
 use crate::{
-    components::{Component, SdfPattern},
+    components::Component,
     resource_manager::ResourceManager,
+    texture_generation::{SdfMask, SdfPattern},
     Renderable,
 };
+use std::collections::HashMap;
+use vibe_audio::{fetcher::Fetcher, BarProcessor};
+use wgpu::util::DeviceExt;
 
 type VertexPosition = [f32; 2];
 
@@ -153,7 +153,10 @@ impl Chessy {
 
         {
             // arbitrary size for the beginning
-            let grid_texture = desc.renderer.create_sdf_mask(50, desc.pattern);
+            let grid_texture = desc.renderer.generate(SdfMask {
+                texture_size: 50,
+                pattern: desc.pattern,
+            });
 
             let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
                 label: Some("Chessy: Grid texture sampler"),
@@ -296,7 +299,10 @@ impl Component for Chessy {
             // ... so we double it ~~and give it to the next person~~
             let new_size = DEFAULT_SDF_TEXTURE_SIZE as f32 * factor;
 
-            let grid_texture = renderer.create_sdf_mask(new_size.ceil() as u32, self.pattern);
+            let grid_texture = renderer.generate(SdfMask {
+                texture_size: new_size.ceil() as u32,
+                pattern: self.pattern,
+            });
 
             self.resource_manager
                 .replace_texture(ResourceID::GridTexture, grid_texture);

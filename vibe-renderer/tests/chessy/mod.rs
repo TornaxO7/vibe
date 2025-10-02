@@ -1,5 +1,8 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{Chessy, ChessyDescriptor, SdfPattern};
+use vibe_renderer::{
+    components::{Chessy, ChessyDescriptor},
+    texture_generation::SdfPattern,
+};
 
 use crate::Tester;
 

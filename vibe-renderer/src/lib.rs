@@ -6,7 +6,6 @@ pub mod util;
 
 use std::ops::Deref;
 
-use components::{SdfMask, SdfMaskDescriptor, SdfPattern};
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use tracing::{error, info};
@@ -197,59 +196,8 @@ impl Renderer {
     }
 }
 
-impl Renderer {
-    pub fn create_sdf_mask(&self, texture_size: u32, pattern: SdfPattern) -> wgpu::Texture {
-        let device = self.device();
-        let texture = self.create_texture("Grid texture", texture_size);
-
-        let renderable = SdfMask::new(&SdfMaskDescriptor {
-            device,
-            format: texture.format(),
-            pattern,
-
-            texture_size,
-        });
-
-        let view = texture.create_view(&wgpu::TextureViewDescriptor::default());
-        self.render(&view, &[&renderable]);
-
-        texture
-    }
-
-    fn create_texture(&self, label: &'static str, texture_size: u32) -> wgpu::Texture {
-        let device = self.device();
-
-        device.create_texture(&wgpu::TextureDescriptor {
-            label: Some(label),
-            size: wgpu::Extent3d {
-                width: texture_size,
-                height: texture_size,
-                depth_or_array_layers: 1,
-            },
-            mip_level_count: 1,
-            sample_count: 1,
-            dimension: wgpu::TextureDimension::D2,
-            format: wgpu::TextureFormat::R16Float,
-            usage: wgpu::TextureUsages::RENDER_ATTACHMENT | wgpu::TextureUsages::TEXTURE_BINDING,
-            view_formats: &[],
-        })
-    }
-}
-
 impl Default for Renderer {
     fn default() -> Self {
         Self::new(&RendererDescriptor::default())
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn create_sdf_mask() {
-        let renderer = Renderer::new(&RendererDescriptor::default());
-
-        renderer.create_sdf_mask(10, SdfPattern::Box);
     }
 }

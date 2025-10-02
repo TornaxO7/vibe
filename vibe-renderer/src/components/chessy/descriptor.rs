@@ -1,6 +1,6 @@
 use vibe_audio::{fetcher::Fetcher, BarProcessorConfig, SampleProcessor};
 
-use crate::{components::SdfPattern, Renderer};
+use crate::{texture_generation::SdfPattern, Renderer};
 
 pub struct ChessyDescriptor<'a, F: Fetcher> {
     pub renderer: &'a Renderer,
