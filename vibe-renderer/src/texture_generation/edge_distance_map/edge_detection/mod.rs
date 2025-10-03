@@ -16,7 +16,7 @@ pub fn apply(desc: EdgeDetectionDescriptor) -> wgpu::Texture {
         mip_level_count: 1,
         sample_count: 1,
         dimension: src_texture.dimension(),
-        format: wgpu::TextureFormat::Rgba8Unorm,
+        format: wgpu::TextureFormat::Rg16Unorm,
         usage: wgpu::TextureUsages::STORAGE_BINDING,
         view_formats: &[],
     });

@@ -10,7 +10,7 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
     var value = 0.;
     if (!is_at_border(gid.xy)) {
         let igid = vec2i(gid.xy);
-        let info = textureLoad(src_infos, gid.xy, 0).rg;
+        let info = textureLoad(src_infos, gid.xy).rg;
 
         let magnitude = info.r;
         let radian = info.g;
@@ -36,7 +36,7 @@ fn is_at_border(coord: vec2u) -> bool {
     let x_is_at_border = coord.x == 0 || coord.x == size.x - 1;
     let y_is_at_border = coord.y == 0 || coord.y == size.y - 1;
 
-    x_is_at_border || y_is_at_border
+    return x_is_at_border || y_is_at_border;
 }
 
 fn compute_magnitude(coord: vec2f) -> f32 {
@@ -48,10 +48,10 @@ fn compute_magnitude(coord: vec2f) -> f32 {
     let bl = id + vec2u(0, 1);
     let br = id + vec2u(1, 1);
 
-    let mtl = textureLoad(src_infos, tl, 0).r;
-    let mtr = textureLoad(src_infos, tr, 0).r;
-    let mbl = textureLoad(src_infos, bl, 0).r;
-    let mbr = textureLoad(src_infos, br, 0).r;
+    let mtl = textureLoad(src_infos, tl).r;
+    let mtr = textureLoad(src_infos, tr).r;
+    let mbl = textureLoad(src_infos, bl).r;
+    let mbr = textureLoad(src_infos, br).r;
 
     let m1 = mix(mtl, mtr, sgv.x);
     let m2 = mix(mbl, mbr, sgv.x);

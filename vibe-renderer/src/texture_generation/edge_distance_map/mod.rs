@@ -71,7 +71,7 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             queue,
             src: tv1.clone(),
             dst: tv2.clone(),
-            high_threshold_ratio: 0.7,
+            high_threshold_ratio: 0.75,
             low_threshold_ratio: 0.2,
         });
 

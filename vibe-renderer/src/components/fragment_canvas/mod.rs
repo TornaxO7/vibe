@@ -182,7 +182,7 @@ impl FragmentCanvas {
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Fragment canvas render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
                         entry_point: Some(ENTRYPOINT),

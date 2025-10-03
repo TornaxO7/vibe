@@ -7,7 +7,7 @@ var dst: texture_storage_2d<r16unorm, write>;
 @compute
 @workgroup_size(16, 16, 1)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
-    let value = textureLoad(src, gid.xy, 0).r;
+    let value = textureLoad(src, gid.xy).r;
 
     var dst_value = 1.;
     if (is_edge(value)) {

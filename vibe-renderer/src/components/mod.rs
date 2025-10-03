@@ -6,6 +6,7 @@ mod circle;
 mod fragment_canvas;
 mod graph;
 mod radial;
+mod wallpaper_encrust;
 
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
@@ -14,6 +15,7 @@ pub use circle::{Circle, CircleDescriptor, CircleVariant};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
 pub use graph::{Graph, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant};
 pub use radial::{Radial, RadialDescriptor, RadialFormat, RadialVariant};
+pub use wallpaper_encrust::{EncrustWallpaper, WallpaperEncrustDescriptor};
 
 use crate::{Renderable, Renderer};
 use serde::{Deserialize, Serialize};

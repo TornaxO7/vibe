@@ -281,7 +281,7 @@ impl Radial {
                 // Note:
                 // Because of this you can't move the whole logic which is relevant for the left side of the radial circle
                 // into a block because this layout needs to live until the right layout has been created (if needed)
-                layout: &left_pipeline_layout,
+                layout: Some(&left_pipeline_layout),
                 vertex: wgpu::VertexState {
                     module: &shader,
                     entry_point: Some(left_entry_point.as_str()),

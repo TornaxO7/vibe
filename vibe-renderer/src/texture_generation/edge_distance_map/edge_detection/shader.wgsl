@@ -2,7 +2,7 @@
 var src: texture_storage_2d<r16unorm, read>;
 
 @group(0) @binding(1)
-var dst: texture_storage_2d<rg61unorm, write>;
+var dst: texture_storage_2d<rg16unorm, write>;
 
 @compute
 @workgroup_size(16, 16, 1)
@@ -27,7 +27,7 @@ fn compute_vertical_value(coord: vec2u) -> f32 {
         array(-1., -2., -1.),
     );
 
-    return evaluate_kernel(coord, kernel);
+    return apply_kernel(coord, kernel);
 }
 
 fn compute_horizontal_value(coord: vec2u) -> f32 {
@@ -47,7 +47,7 @@ fn apply_kernel(coord: vec2u, kernel: array<array<f32, 3>, 3>) -> f32 {
     for (var x: i32 = -1; x < 2; x++) {
         for (var y: i32 = -1; y < 2; y++) {
             let pos = icoord + vec2i(x, y);
-            sum += kernel[y + 1][x + 1] * textureLoad(src, pos, 0.).r;
+            sum += kernel[y + 1][x + 1] * textureLoad(src, pos).r;
         }
     }
 
@@ -59,5 +59,6 @@ fn kernels_within_texture(coord: vec2u) -> bool {
 
     let valid_x = 0 < coord.x && coord.x < size.x;
     let valid_y = 0 < coord.y && coord.y < size.y;
-    valid_x && valid_y
+
+    return valid_x && valid_y;
 }

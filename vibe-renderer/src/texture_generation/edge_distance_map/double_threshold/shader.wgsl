@@ -22,7 +22,7 @@ const IS_EDGE: f32 = 1.;
 @compute
 @workgroup_size(16, 16, 1)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
-    let value = textureLoad(src, gid.xy, 0).r;
+    let value = textureLoad(src, gid.xy).r;
 
     let high_threshold = bitcast<f32>(max_value) * ratios.upper;
     let low_threshold = high_threshold * ratios.lower;

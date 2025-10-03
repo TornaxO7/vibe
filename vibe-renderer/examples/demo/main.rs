@@ -16,9 +16,9 @@ use vibe_renderer::{
     components::{
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
-        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
-        GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
-        ShaderCode,
+        CircleVariant, Component, EncrustWallpaper, FragmentCanvas, FragmentCanvasDescriptor,
+        Graph, GraphDescriptor, GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat,
+        RadialVariant, ShaderCode, WallpaperEncrustDescriptor,
     },
     texture_generation::{SdfMask, SdfPattern, ValueNoise},
     Renderer,
@@ -346,6 +346,13 @@ impl<'a> State<'a> {
                     device: renderer.device(),
                     texture,
                     format: surface_config.format,
+                })) as Box<dyn Component>)
+            }
+            ComponentName::EncrustWallpaper => {
+                Ok(Box::new(EncrustWallpaper::new(&WallpaperEncrustDescriptor {
+                    renderer: &renderer,
+                    img: image::ImageReader::open("yes").unwrap().decode().unwrap(),
+                    texture_format: surface_config.format,
                 })) as Box<dyn Component>)
             }
         }?;
