@@ -1,5 +1,6 @@
 mod double_threshold;
 mod edge_detection;
+mod edge_tracking;
 mod gaussian_blur;
 mod gray_scale;
 mod non_maximation_suppression;
@@ -7,7 +8,8 @@ mod non_maximation_suppression;
 use crate::texture_generation::{
     edge_distance_map::{
         double_threshold::DoubleThresholdDescriptor, edge_detection::EdgeDetectionDescriptor,
-        gaussian_blur::GaussianBlurDescriptor, non_maximation_suppression::NMSDescriptor,
+        edge_tracking::EdgeTrackingDescriptor, gaussian_blur::GaussianBlurDescriptor,
+        non_maximation_suppression::NMSDescriptor,
     },
     TextureGenerator,
 };
@@ -68,7 +70,15 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             low_threshold_ratio: 0.2,
         });
 
-        todo!()
+        edge_tracking::apply(EdgeTrackingDescriptor {
+            device,
+            queue,
+            src: tv2.clone(),
+            dst: tv1.clone(),
+            iterations: 256,
+        });
+
+        texture1
     }
 }
 
@@ -77,8 +87,8 @@ fn start_computing(
     device: &wgpu::Device,
     dst: &wgpu::Texture,
     queue: &wgpu::Queue,
-    pipeline: wgpu::ComputePipeline,
-    bind_group: wgpu::BindGroup,
+    pipeline: &wgpu::ComputePipeline,
+    bind_group: &wgpu::BindGroup,
 ) {
     let command_encoder_label = format!("{}: Command encoder", label_prefix);
     let pass_label = format!("{}: Compute pass", label_prefix);
@@ -93,8 +103,8 @@ fn start_computing(
             timestamp_writes: None,
         });
 
-        pass.set_bind_group(0, &bind_group, &[]);
-        pass.set_pipeline(&pipeline);
+        pass.set_bind_group(0, bind_group, &[]);
+        pass.set_pipeline(pipeline);
         pass.dispatch_workgroups(
             dst.width().div_ceil(WORKGROUP_SIZE),
             dst.height().div_ceil(WORKGROUP_SIZE),

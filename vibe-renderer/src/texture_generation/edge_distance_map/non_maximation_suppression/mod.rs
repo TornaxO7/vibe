@@ -45,5 +45,5 @@ pub fn apply(desc: NMSDescriptor) {
         ],
     });
 
-    super::start_computing("NMS", device, dst.texture(), queue, pipeline, bind_group);
+    super::start_computing("NMS", device, dst.texture(), queue, &pipeline, &bind_group);
 }

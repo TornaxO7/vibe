@@ -67,8 +67,8 @@ pub fn apply(desc: DoubleThresholdDescriptor) {
             device,
             &src.texture(),
             queue,
-            pipeline,
-            bind_group,
+            &pipeline,
+            &bind_group,
         );
     }
 
@@ -123,7 +123,7 @@ pub fn apply(desc: DoubleThresholdDescriptor) {
         device,
         &dst.texture(),
         queue,
-        pipeline,
-        bind_group,
+        &pipeline,
+        &bind_group,
     );
 }

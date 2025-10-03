@@ -72,8 +72,8 @@ pub fn apply(desc: GaussianBlurDescriptor) {
             device,
             desc.dst.texture(),
             desc.queue,
-            pipeline,
-            bind_group,
+            &pipeline,
+            &bind_group,
         );
     }
 
@@ -114,8 +114,8 @@ pub fn apply(desc: GaussianBlurDescriptor) {
             device,
             desc.dst.texture(),
             desc.queue,
-            pipeline,
-            bind_group,
+            &pipeline,
+            &bind_group,
         );
     }
 }

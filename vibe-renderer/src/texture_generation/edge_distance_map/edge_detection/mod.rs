@@ -56,8 +56,8 @@ pub fn apply(desc: EdgeDetectionDescriptor) -> wgpu::Texture {
         device,
         &texture,
         queue,
-        pipeline,
-        bind_group,
+        &pipeline,
+        &bind_group,
     );
 
     texture

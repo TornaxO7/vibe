@@ -90,7 +90,14 @@ pub fn apply(desc: GrayScaleDescriptor) -> wgpu::Texture {
         ],
     });
 
-    super::start_computing("Gray scale", device, &texture, queue, pipeline, bind_group);
+    super::start_computing(
+        "Gray scale",
+        device,
+        &texture,
+        queue,
+        &pipeline,
+        &bind_group,
+    );
 
     texture
 }
