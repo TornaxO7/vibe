@@ -1,8 +1,12 @@
+mod edge_detection;
 mod gaussian_blur;
 mod gray_scale;
 
 use crate::texture_generation::{
-    edge_distance_map::gaussian_blur::GaussianBlurDescriptor, TextureGenerator,
+    edge_distance_map::{
+        edge_detection::EdgeDetectionDescriptor, gaussian_blur::GaussianBlurDescriptor,
+    },
+    TextureGenerator,
 };
 
 const WORKGROUP_SIZE: u32 = 16;
@@ -39,6 +43,12 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             dst: tv2.clone(),
             sigma: 1.6,
             kernel_size: 5,
+        });
+
+        let edge_infos = edge_detection::apply(EdgeDetectionDescriptor {
+            device,
+            queue,
+            src: tv2.clone(),
         });
 
         todo!()

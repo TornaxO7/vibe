@@ -125,9 +125,17 @@ fn generate_kernel(size: usize, sigma: f32) -> Vec<f32> {
 
     let mut kernel = Vec::with_capacity(size);
 
+    let mut sum = 0.;
     let half_size = (size / 2) as isize;
     for x in (-half_size)..=half_size {
-        kernel.push(gauss(sigma, x as f32));
+        let value = gauss(sigma, x as f32);
+        kernel.push(value);
+        sum += value;
+    }
+
+    // normamlize kernel
+    for value in kernel.iter_mut() {
+        *value /= sum;
     }
 
     kernel
