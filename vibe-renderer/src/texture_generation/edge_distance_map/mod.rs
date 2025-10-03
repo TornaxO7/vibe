@@ -1,3 +1,4 @@
+mod double_threshold;
 mod edge_detection;
 mod gaussian_blur;
 mod gray_scale;
@@ -5,8 +6,8 @@ mod non_maximation_suppression;
 
 use crate::texture_generation::{
     edge_distance_map::{
-        edge_detection::EdgeDetectionDescriptor, gaussian_blur::GaussianBlurDescriptor,
-        non_maximation_suppression::NMSDescriptor,
+        double_threshold::DoubleThresholdDescriptor, edge_detection::EdgeDetectionDescriptor,
+        gaussian_blur::GaussianBlurDescriptor, non_maximation_suppression::NMSDescriptor,
     },
     TextureGenerator,
 };
@@ -56,6 +57,15 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
                 src: tv2.clone(),
             }),
             dst: tv1.clone(),
+        });
+
+        double_threshold::apply(DoubleThresholdDescriptor {
+            device,
+            queue,
+            src: tv1.clone(),
+            dst: tv2.clone(),
+            high_threshold_ratio: 0.7,
+            low_threshold_ratio: 0.2,
         });
 
         todo!()

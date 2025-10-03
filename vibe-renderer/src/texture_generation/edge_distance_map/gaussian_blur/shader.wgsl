@@ -25,7 +25,7 @@ fn horizontal(@builtin(global_invocation_id) gid: vec3u) {
             return;
         }
 
-        sum += kernel[x + half_kernel_size] * textureLoad(src, coord, 0);
+        sum += kernel[x + half_kernel_size] * textureLoad(src, coord, 0).r;
     }
 
     sum = clamp(0., 1., sum);
@@ -50,7 +50,7 @@ fn vertical(@builtin(global_invocation_id) gid: vec3u) {
             return;
         }
 
-        sum += kernel[y + half_kernel_size] * textureLoad(src, coord, 0);
+        sum += kernel[y + half_kernel_size] * textureLoad(src, coord, 0).r;
     }
 
     sum = clamp(0., 1., sum);
