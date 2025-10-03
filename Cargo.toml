@@ -24,6 +24,7 @@ thiserror = "2"
 cgmath = { version = "0.18", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 vibe-audio = { path = "./vibe-audio" }
+image = "0.25"
 
 [profile.release-lto]
 inherits = "release"

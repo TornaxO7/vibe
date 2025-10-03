@@ -281,7 +281,7 @@ impl Graph {
             let pipeline = device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Graph: Left render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &shader,
                         entry_point: Some(left_vertex_entrypoint.as_str()),
@@ -344,7 +344,7 @@ impl Graph {
             let pipeline = device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Graph: Right render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &shader,
                         entry_point: Some(vertex_entrypoint.as_str()),

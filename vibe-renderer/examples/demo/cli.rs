@@ -23,6 +23,8 @@ pub enum ComponentName {
 
     TextureValueNoise,
     TextureSdf,
+
+    EncrustWallpaper,
 }
 
 #[derive(Parser)]

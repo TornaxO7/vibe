@@ -105,7 +105,7 @@ impl TextureComponent {
             device.create_render_pipeline(&vibe_renderer::util::simple_pipeline_descriptor(
                 vibe_renderer::util::SimpleRenderPipelineDescriptor {
                     label: "Texture component: Render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &shader_module,
                         entry_point: Some("main_vs"),
