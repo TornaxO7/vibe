@@ -1,10 +1,12 @@
 mod edge_detection;
 mod gaussian_blur;
 mod gray_scale;
+mod non_maximation_suppression;
 
 use crate::texture_generation::{
     edge_distance_map::{
         edge_detection::EdgeDetectionDescriptor, gaussian_blur::GaussianBlurDescriptor,
+        non_maximation_suppression::NMSDescriptor,
     },
     TextureGenerator,
 };
@@ -45,10 +47,15 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             kernel_size: 5,
         });
 
-        let edge_infos = edge_detection::apply(EdgeDetectionDescriptor {
+        non_maximation_suppression::apply(NMSDescriptor {
             device,
             queue,
-            src: tv2.clone(),
+            edge_infos: edge_detection::apply(EdgeDetectionDescriptor {
+                device,
+                queue,
+                src: tv2.clone(),
+            }),
+            dst: tv1.clone(),
         });
 
         todo!()

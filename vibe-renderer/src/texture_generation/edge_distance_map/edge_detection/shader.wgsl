@@ -51,7 +51,7 @@ fn apply_kernel(coord: vec2u, kernel: array<array<f32, 3>, 3>) -> f32 {
         }
     }
 
-    return sum;
+    return clamp(0., 1., sum);
 }
 
 fn kernels_within_texture(coord: vec2u) -> bool {
