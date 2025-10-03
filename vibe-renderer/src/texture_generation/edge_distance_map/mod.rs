@@ -1,6 +1,7 @@
 mod double_threshold;
 mod edge_detection;
 mod edge_tracking;
+mod flag_cleanup;
 mod gaussian_blur;
 mod gray_scale;
 mod non_maximation_suppression;
@@ -76,6 +77,13 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             src: tv2.clone(),
             dst: tv1.clone(),
             iterations: 256,
+        });
+
+        flag_cleanup::apply(flag_cleanup::FlagCleanupDescriptor {
+            device,
+            queue,
+            src: tv1.clone(),
+            dst: tv2.clone(),
         });
 
         texture1
