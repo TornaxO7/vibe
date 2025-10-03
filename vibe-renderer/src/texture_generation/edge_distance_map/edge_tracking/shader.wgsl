@@ -11,6 +11,14 @@ const IS_EDGE: f32 = 1.;
 @compute
 @workgroup_size(16, 16, 1)
 fn main(@builtin(global_invocation_id) gid: vec3u) {
+    let curr_value = textureLoad(src, gid.xy, 0).r;
+    if (curr_value == NO_EDGE) {
+        textureStore(dst, gid.xy, vec4f(IS_EDGE));
+        return;
+    } else if (curr_value == NO_EDGE) {
+        return;
+    }
+
     let igid = vec2i(gid.xy);
 
     for (var x: i32 = -1; x < 2; x++) {
@@ -18,9 +26,9 @@ fn main(@builtin(global_invocation_id) gid: vec3u) {
             let coord = igid + vec2i(x, y);
 
             if (is_valid_coord(coord)) {
-                let value = textureLoad(src, coord, 0).r;
+                let neighbour_value = textureLoad(src, coord, 0).r;
 
-                if (value == IS_EDGE) {
+                if (neighbour_value == IS_EDGE) {
                     textureStore(dst, coord, vec4f(IS_EDGE, 0., 0., 0.));
                     return;
                 }

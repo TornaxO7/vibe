@@ -1,3 +1,4 @@
+mod compute_distance_map;
 mod double_threshold;
 mod edge_detection;
 mod edge_tracking;
@@ -8,6 +9,7 @@ mod non_maximation_suppression;
 
 use crate::texture_generation::{
     edge_distance_map::{
+        compute_distance_map::ComputeDistanceMapDescriptor,
         double_threshold::DoubleThresholdDescriptor, edge_detection::EdgeDetectionDescriptor,
         edge_tracking::EdgeTrackingDescriptor, gaussian_blur::GaussianBlurDescriptor,
         non_maximation_suppression::NMSDescriptor,
@@ -38,6 +40,8 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             usage: texture1.usage(),
             view_formats: &[],
         });
+
+        let max_side_length = texture1.width().max(texture1.height());
 
         let tv1 = texture1.create_view(&wgpu::TextureViewDescriptor::default());
         let tv2 = texture2.create_view(&wgpu::TextureViewDescriptor::default());
@@ -76,7 +80,7 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             queue,
             src: tv2.clone(),
             dst: tv1.clone(),
-            iterations: 256,
+            iterations: max_side_length,
         });
 
         flag_cleanup::apply(flag_cleanup::FlagCleanupDescriptor {
@@ -84,6 +88,14 @@ impl<'a> TextureGenerator for EdgeDistanceMap<'a> {
             queue,
             src: tv1.clone(),
             dst: tv2.clone(),
+        });
+
+        compute_distance_map::apply(ComputeDistanceMapDescriptor {
+            device,
+            queue,
+            src: tv2.clone(),
+            dst: tv1.clone(),
+            iterations: max_side_length,
         });
 
         texture1
