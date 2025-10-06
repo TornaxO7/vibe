@@ -17,7 +17,7 @@ cgmath.workspace = true
 vibe-audio.workspace = true
 
 pollster = "0.4"
-bytemuck = "1.23"
+bytemuck = "1.24"
 fastrand = "2.3"
 
 [dev-dependencies]
