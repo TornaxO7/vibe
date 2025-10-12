@@ -8,15 +8,6 @@ use crate::{resource_manager::ResourceManager, util::SimpleRenderPipelineDescrip
 use cgmath::Matrix2;
 use wgpu::{include_wgsl, util::DeviceExt};
 
-type VertexPosition = [f32; 2];
-
-const SHADER_ENTRYPOINT: &str = "main";
-const POSITIONS: [VertexPosition; 3] = [
-    [1., 1.],  // Top right corner
-    [-3., 1.], // Top left corner
-    [1., -3.], // Bottom right corner
-];
-
 mod bindings0 {
     use super::ResourceID;
     use std::collections::HashMap;
@@ -77,7 +68,6 @@ pub struct Circle {
     bind_group0: wgpu::BindGroup,
     bind_group1: wgpu::BindGroup,
 
-    vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
 }
 
@@ -91,12 +81,6 @@ impl Circle {
 
         let mut bind_group0_mapping = bindings0::init_mapping();
         let bind_group1_mapping = bindings1::init_mapping();
-
-        let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Circle: Vertex buffer"),
-            contents: bytemuck::cast_slice(&POSITIONS),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
 
         resource_manager.extend_buffers([
             (
@@ -225,30 +209,22 @@ impl Circle {
                 push_constant_ranges: &[],
             });
 
-            let vertex_module = device.create_shader_module(include_wgsl!("./vertex_shader.wgsl"));
+            let vertex_module =
+                device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
 
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 SimpleRenderPipelineDescriptor {
                     label: "Circle: Render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
-                        entry_point: Some(SHADER_ENTRYPOINT),
+                        entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<VertexPosition>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Vertex,
-                            attributes: &[wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x2,
-                                offset: 0,
-                                shader_location: 0,
-                            }],
-                        }],
+                        buffers: &[],
                     },
                     fragment: (wgpu::FragmentState {
                         module: &fragment_module,
-                        entry_point: Some(SHADER_ENTRYPOINT),
+                        entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         targets: &[Some(wgpu::ColorTargetState {
                             format: desc.texture_format,
@@ -268,7 +244,6 @@ impl Circle {
             bind_group0,
             bind_group1,
 
-            vbuffer,
             pipeline,
         }
     }
@@ -279,7 +254,6 @@ impl Renderable for Circle {
         pass.set_bind_group(0, &self.bind_group0, &[]);
         pass.set_bind_group(1, &self.bind_group1, &[]);
 
-        pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..3, 0..1);
     }

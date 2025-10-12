@@ -8,17 +8,17 @@ use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
 use tracing::{error, warn};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
-use vibe_renderer::{
-    components::{Component, ShaderCodeError},
-    Renderer, RendererDescriptor,
-};
+use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
 use winit::{
     application::ApplicationHandler, dpi::PhysicalPosition, event::WindowEvent,
     event_loop::EventLoop, keyboard::Key, window::Window,
 };
 
 use crate::{
-    output::config::{component::ComponentConfig, OutputConfig},
+    output::config::{
+        component::{ComponentConfig, ConfigError},
+        OutputConfig,
+    },
     types::size::Size,
 };
 
@@ -54,7 +54,7 @@ impl State<'_> {
         renderer: &Renderer,
         processor: &SampleProcessor<SystemAudioFetcher>,
         comp_configs: &[ComponentConfig],
-    ) -> Result<(), ShaderCodeError> {
+    ) -> Result<(), ConfigError> {
         let mut new_components = Vec::with_capacity(comp_configs.len());
 
         for config in comp_configs.iter() {

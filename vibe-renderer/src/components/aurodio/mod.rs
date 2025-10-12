@@ -8,18 +8,7 @@ use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, BarProcessorConfig,
 };
-use wgpu::util::DeviceExt;
-
-type VertexPosition = [f32; 2];
-
-#[rustfmt::skip]
-const VERTICES: [VertexPosition; 3] = [
-    [-3., -1.], // bottom left
-    [1., -1.], // bottom right
-    [1., 3.] // top right
-];
-
-const ENTRY_POINT: &str = "main";
+use wgpu::{include_wgsl, util::DeviceExt};
 
 mod bindings0 {
     use super::ResourceID;
@@ -90,7 +79,6 @@ pub struct Aurodio {
     bind_group0: wgpu::BindGroup,
     bind_group1: wgpu::BindGroup,
 
-    vbuffer: wgpu::Buffer,
     pipeline: wgpu::RenderPipeline,
 }
 
@@ -216,7 +204,7 @@ impl Aurodio {
         }
 
         {
-            let value_noise_texture = desc.renderer.generate(ValueNoise {
+            let value_noise_texture = desc.renderer.generate(&ValueNoise {
                 texture_size: 256,
                 octaves: 7,
             });
@@ -235,12 +223,6 @@ impl Aurodio {
             resource_manager.insert_sampler(ResourceID::ValueNoiseSampler, sampler);
         }
 
-        let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Aurodio: Vertex buffer"),
-            contents: bytemuck::cast_slice(&VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
-        });
-
         let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
             "Aurodio: Bind group 0",
             device,
@@ -254,12 +236,8 @@ impl Aurodio {
         );
 
         let pipeline = {
-            let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Aurodio: Vertex module"),
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("./shaders/vertex_shader.wgsl").into(),
-                ),
-            });
+            let vertex_module =
+                device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
 
             let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                 label: Some("Aurodio: Fragment module"),
@@ -277,25 +255,16 @@ impl Aurodio {
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Aurodio: Render pipeline",
-                    layout: &pipeline_layout,
+                    layout: Some(&pipeline_layout),
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
-                        entry_point: Some(ENTRY_POINT),
+                        entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<VertexPosition>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Vertex,
-                            attributes: &[wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x2,
-                                offset: 0,
-                                shader_location: 0,
-                            }],
-                        }],
+                        buffers: &[],
                     },
                     fragment: wgpu::FragmentState {
                         module: &fragment_module,
-                        entry_point: Some(ENTRY_POINT),
+                        entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         targets: &[Some(wgpu::ColorTargetState {
                             format: desc.texture_format,
@@ -315,7 +284,6 @@ impl Aurodio {
             bind_group0,
             bind_group1,
 
-            vbuffer,
             pipeline,
         }
     }
@@ -329,9 +297,8 @@ impl Renderable for Aurodio {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
         pass.set_bind_group(1, &self.bind_group1, &[]);
-        pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
-        pass.draw(0..VERTICES.len() as u32, 0..1);
+        pass.draw(0..4, 0..1);
     }
 }
 

@@ -20,10 +20,15 @@ wgpu = { version = "26.0", default-features = false, features = [
 
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 thiserror = "2"
 cgmath = { version = "0.18", features = ["serde"] }
 clap = { version = "4.5", features = ["derive"] }
 vibe-audio = { path = "./vibe-audio" }
+image = "0.25"
+xdg = "3.0"
+toml = "0.9"
+tracing-indicatif = "0.3"
 
 [profile.release-lto]
 inherits = "release"

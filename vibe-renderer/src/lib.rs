@@ -1,19 +1,29 @@
 mod resource_manager;
 
+pub mod cache;
 pub mod components;
 pub mod texture_generation;
 pub mod util;
 
-use std::ops::Deref;
-
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
+use std::{
+    ops::Deref,
+    path::{Path, PathBuf},
+    sync::OnceLock,
+};
 use tracing::{error, info};
+use xdg::BaseDirectories;
 
 pub use components::Component;
 pub use resource_manager::ResourceManager;
 
 use crate::texture_generation::TextureGenerator;
+
+static XDG: OnceLock<BaseDirectories> = OnceLock::new();
+
+const APP_NAME: &str = env!("CARGO_PKG_NAME");
+// const DISTANCE_MAP_DIR: &str = "distance-maps";
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
@@ -65,8 +75,6 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    const REQUIRED_FEATURES: wgpu::Features = wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
-
     /// Create a new instance of this struct.
     ///
     /// # Example
@@ -76,6 +84,9 @@ impl Renderer {
     /// let renderer = Renderer::new(&RendererDescriptor::default());
     /// ```
     pub fn new(desc: &RendererDescriptor) -> Self {
+        let required_features =
+            wgpu::Features::FLOAT32_FILTERABLE | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
+
         let instance = wgpu::Instance::new(
             &wgpu::InstanceDescriptor {
                 backends: desc.backend,
@@ -97,7 +108,7 @@ impl Renderer {
                 .into_iter()
                 .find(|adapter| {
                     &adapter.get_info().name == adapter_name
-                        && adapter.features().contains(Self::REQUIRED_FEATURES)
+                        && adapter.features().contains(required_features)
                 })
                 .clone()
                 .unwrap_or_else(|| {
@@ -123,7 +134,7 @@ impl Renderer {
 
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
-                required_features: Self::REQUIRED_FEATURES,
+                required_features,
                 ..Default::default()
             })
             .block_on()
@@ -169,7 +180,7 @@ impl Renderer {
         self.queue.submit(std::iter::once(encoder.finish()));
     }
 
-    pub fn generate<G: TextureGenerator>(&self, gen: G) -> wgpu::Texture {
+    pub fn generate<G: TextureGenerator>(&self, gen: &G) -> wgpu::Texture {
         let device = self.device();
         let queue = self.queue();
 
@@ -200,4 +211,12 @@ impl Default for Renderer {
     fn default() -> Self {
         Self::new(&RendererDescriptor::default())
     }
+}
+
+fn get_xdg() -> &'static BaseDirectories {
+    XDG.get_or_init(|| BaseDirectories::with_prefix(APP_NAME))
+}
+
+fn get_cache_dir<P: AsRef<Path>>(path: P) -> PathBuf {
+    get_xdg().create_cache_directory(path).unwrap()
 }

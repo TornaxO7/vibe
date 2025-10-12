@@ -23,6 +23,8 @@ pub enum ComponentName {
 
     TextureValueNoise,
     TextureSdf,
+
+    WallpaperPulseEdges,
 }
 
 #[derive(Parser)]

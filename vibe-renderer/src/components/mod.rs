@@ -1,4 +1,6 @@
 //! Contains the implementation of each component.
+pub mod live_wallpaper;
+
 mod aurodio;
 mod bars;
 mod chessy;
@@ -6,6 +8,7 @@ mod circle;
 mod fragment_canvas;
 mod graph;
 mod radial;
+mod utils;
 
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 pub use bars::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
