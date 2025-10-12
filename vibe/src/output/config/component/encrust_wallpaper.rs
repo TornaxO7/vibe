@@ -12,3 +12,9 @@ pub struct WallpaperPulseEdgeThresholds {
     pub high: f32,
     pub low: f32,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WallpaperPulseEdgeGaussianBlur {
+    pub sigma: f32,
+    pub kernel_size: usize,
+}

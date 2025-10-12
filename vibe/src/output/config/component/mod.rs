@@ -32,7 +32,9 @@ pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
-use crate::output::config::component::encrust_wallpaper::WallpaperPulseEdgeThresholds;
+use crate::output::config::component::encrust_wallpaper::{
+    WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds,
+};
 
 const GAMMA: f32 = 2.2;
 
@@ -113,8 +115,7 @@ pub enum ComponentConfig {
         edge_width: f32,
         pulse_brightness: f32,
 
-        sigma: f32,
-        kernel_size: usize,
+        gaussian_blur: WallpaperPulseEdgeGaussianBlur,
     },
 }
 
@@ -329,8 +330,7 @@ impl ComponentConfig {
                 edge_width,
                 pulse_brightness,
 
-                sigma,
-                kernel_size,
+                gaussian_blur,
             } => {
                 let img = ImageReader::open(wallpaper_path)
                     .map_err(|err| ConfigError::OpenFile {
@@ -357,8 +357,8 @@ impl ComponentConfig {
                         edge_width: *edge_width,
                         pulse_brightness: *pulse_brightness,
 
-                        sigma: *sigma,
-                        kernel_size: *kernel_size,
+                        sigma: gaussian_blur.sigma,
+                        kernel_size: gaussian_blur.kernel_size,
                     },
                 )?;
 
