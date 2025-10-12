@@ -32,6 +32,8 @@ pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
+use crate::output::config::component::encrust_wallpaper::WallpaperPulseEdgeThresholds;
+
 const GAMMA: f32 = 2.2;
 
 #[derive(thiserror::Error, Debug)]
@@ -106,8 +108,7 @@ pub enum ComponentConfig {
         wallpaper_path: PathBuf,
         audio_conf: WallpaperPulseEdgeAudioConfig,
 
-        low_threshold_ratio: f32,
-        high_threshold_ratio: f32,
+        thresholds: WallpaperPulseEdgeThresholds,
         wallpaper_brightness: f32,
         edge_width: f32,
         pulse_brightness: f32,
@@ -323,8 +324,7 @@ impl ComponentConfig {
             ComponentConfig::WallpaperPulseEdges {
                 wallpaper_path,
                 audio_conf,
-                low_threshold_ratio,
-                high_threshold_ratio,
+                thresholds,
                 wallpaper_brightness,
                 edge_width,
                 pulse_brightness,
@@ -339,8 +339,8 @@ impl ComponentConfig {
                     })?
                     .decode()?;
 
-                let high_threshold_ratio = high_threshold_ratio.clamp(0.0, 1.0);
-                let low_threshold_ratio = low_threshold_ratio.min(high_threshold_ratio);
+                let high_threshold_ratio = thresholds.high.clamp(0.0, 1.0);
+                let low_threshold_ratio = thresholds.low.min(high_threshold_ratio);
 
                 let pulse_edges = live_wallpaper::pulse_edges::PulseEdges::new(
                     &live_wallpaper::pulse_edges::PulseEdgesDescriptor {

@@ -6,3 +6,9 @@ pub struct WallpaperPulseEdgeAudioConfig {
     pub sensitivity: f32,
     pub freq_range: Range<NonZero<u16>>,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct WallpaperPulseEdgeThresholds {
+    pub high: f32,
+    pub low: f32,
+}
