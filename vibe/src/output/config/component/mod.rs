@@ -2,9 +2,9 @@ mod aurodio;
 mod bars;
 mod chessy;
 mod circle;
-mod encrust_wallpaper;
 mod fragment_canvas;
 mod graph;
+mod pulse_edges;
 mod radial;
 
 use image::ImageReader;
@@ -27,14 +27,12 @@ pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
 pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVariantConfig};
 pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
-pub use encrust_wallpaper::WallpaperPulseEdgeAudioConfig;
 pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
+pub use pulse_edges::PulseEdgeAudioConfig;
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
-use crate::output::config::component::encrust_wallpaper::{
-    WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds,
-};
+use crate::output::config::component::pulse_edges::{PulseEdgeGaussianBlur, PulseEdgeThresholds};
 
 const GAMMA: f32 = 2.2;
 
@@ -108,14 +106,14 @@ pub enum ComponentConfig {
     },
     WallpaperPulseEdges {
         wallpaper_path: PathBuf,
-        audio_conf: WallpaperPulseEdgeAudioConfig,
+        audio_conf: PulseEdgeAudioConfig,
 
-        thresholds: WallpaperPulseEdgeThresholds,
+        thresholds: PulseEdgeThresholds,
         wallpaper_brightness: f32,
         edge_width: f32,
         pulse_brightness: f32,
 
-        gaussian_blur: WallpaperPulseEdgeGaussianBlur,
+        gaussian_blur: PulseEdgeGaussianBlur,
     },
 }
 
