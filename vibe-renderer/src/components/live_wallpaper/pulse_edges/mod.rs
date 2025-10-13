@@ -3,7 +3,7 @@ mod descriptor;
 pub use descriptor::*;
 
 use crate::{
-    texture_generation::{edge_distance_map::EdgeDistanceMap, GaussianBlur},
+    texture_generation::{EdgeDistanceMap, GaussianBlur},
     Component, Renderable,
 };
 use std::num::NonZero;
