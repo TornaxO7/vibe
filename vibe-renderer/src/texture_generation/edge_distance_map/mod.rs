@@ -26,12 +26,6 @@ use std::hash::{DefaultHasher, Hash, Hasher};
 use tracing::info_span;
 use tracing_indicatif::{span_ext::IndicatifSpanExt, style::ProgressStyle};
 
-trait EdgeDistanceMapStep {
-    fn compute(&self, device: &wgpu::Device, queue: &wgpu::Queue, x: u32, y: u32);
-
-    fn amount_steps(&self) -> u32;
-}
-
 const WORKGROUP_SIZE: u32 = 16;
 /// The texture format used for the returned texture of `EdgeDistanceMap`.
 const TEXTURE_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::R32Float;

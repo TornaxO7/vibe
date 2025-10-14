@@ -2,7 +2,7 @@ use tracing::Span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use wgpu::{include_wgsl, util::DeviceExt};
 
-use crate::texture_generation::edge_distance_map::EdgeDistanceMapStep;
+use crate::texture_generation::TextureGeneratorStep;
 
 pub struct DoubleThresholdDescriptor<'a> {
     pub device: &'a wgpu::Device,
@@ -24,7 +24,7 @@ pub struct DoubleThreshold {
 }
 
 impl DoubleThreshold {
-    pub fn step(desc: DoubleThresholdDescriptor) -> Box<dyn EdgeDistanceMapStep> {
+    pub fn step(desc: DoubleThresholdDescriptor) -> Box<dyn TextureGeneratorStep> {
         let DoubleThresholdDescriptor {
             device,
             src,
@@ -129,7 +129,7 @@ impl DoubleThreshold {
     }
 }
 
-impl EdgeDistanceMapStep for DoubleThreshold {
+impl TextureGeneratorStep for DoubleThreshold {
     fn compute(&self, device: &wgpu::Device, queue: &wgpu::Queue, x: u32, y: u32) {
         let span = Span::current();
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());

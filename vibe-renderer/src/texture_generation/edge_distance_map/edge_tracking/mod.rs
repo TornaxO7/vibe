@@ -2,7 +2,7 @@ use tracing::Span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use wgpu::include_wgsl;
 
-use crate::texture_generation::edge_distance_map::EdgeDistanceMapStep;
+use crate::texture_generation::TextureGeneratorStep;
 
 pub struct EdgeTrackingDescriptor<'a> {
     pub device: &'a wgpu::Device,
@@ -22,7 +22,7 @@ pub struct EdgeTracking {
 }
 
 impl EdgeTracking {
-    pub fn step(desc: EdgeTrackingDescriptor) -> Box<dyn EdgeDistanceMapStep> {
+    pub fn step(desc: EdgeTrackingDescriptor) -> Box<dyn TextureGeneratorStep> {
         let EdgeTrackingDescriptor {
             device,
             src,
@@ -82,7 +82,7 @@ impl EdgeTracking {
     }
 }
 
-impl EdgeDistanceMapStep for EdgeTracking {
+impl TextureGeneratorStep for EdgeTracking {
     fn compute(&self, device: &wgpu::Device, queue: &wgpu::Queue, x: u32, y: u32) {
         let span = Span::current();
         for _ in 0..(self.iterations / 2) {

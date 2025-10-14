@@ -2,7 +2,7 @@ use tracing::Span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use wgpu::include_wgsl;
 
-use crate::texture_generation::edge_distance_map::EdgeDistanceMapStep;
+use crate::texture_generation::TextureGeneratorStep;
 
 pub struct FlagCleanupDescriptor<'a> {
     pub device: &'a wgpu::Device,
@@ -16,7 +16,7 @@ pub struct FlagCleanup {
 }
 
 impl FlagCleanup {
-    pub fn step(desc: FlagCleanupDescriptor) -> Box<dyn EdgeDistanceMapStep> {
+    pub fn step(desc: FlagCleanupDescriptor) -> Box<dyn TextureGeneratorStep> {
         let FlagCleanupDescriptor { device, src, dst } = desc;
 
         let pipeline = {
@@ -54,7 +54,7 @@ impl FlagCleanup {
     }
 }
 
-impl EdgeDistanceMapStep for FlagCleanup {
+impl TextureGeneratorStep for FlagCleanup {
     fn compute(&self, device: &wgpu::Device, queue: &wgpu::Queue, x: u32, y: u32) {
         let span = Span::current();
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());

@@ -2,9 +2,9 @@ use tracing::Span;
 use tracing_indicatif::span_ext::IndicatifSpanExt;
 use wgpu::include_wgsl;
 
-use crate::texture_generation::edge_distance_map::{
-    edge_detection::{EdgeDetection, EdgeDetectionDescriptor},
-    EdgeDistanceMapStep,
+use crate::texture_generation::{
+    edge_distance_map::edge_detection::{EdgeDetection, EdgeDetectionDescriptor},
+    TextureGeneratorStep,
 };
 
 pub struct NmsDescriptor<'a> {
@@ -21,7 +21,7 @@ pub struct Nms {
 }
 
 impl Nms {
-    pub fn step(desc: NmsDescriptor) -> Box<dyn EdgeDistanceMapStep> {
+    pub fn step(desc: NmsDescriptor) -> Box<dyn TextureGeneratorStep> {
         let NmsDescriptor { device, src, dst } = desc;
 
         let edge_detection = EdgeDetection::step(EdgeDetectionDescriptor { device, src });
@@ -62,7 +62,7 @@ impl Nms {
     }
 }
 
-impl EdgeDistanceMapStep for Nms {
+impl TextureGeneratorStep for Nms {
     fn compute(&self, device: &wgpu::Device, queue: &wgpu::Queue, x: u32, y: u32) {
         let span = Span::current();
         let mut encoder = device.create_command_encoder(&wgpu::CommandEncoderDescriptor::default());
