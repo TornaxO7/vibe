@@ -13,9 +13,13 @@ use std::{num::NonZero, path::PathBuf};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
-        live_wallpaper, Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars,
-        BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
-        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        live_wallpaper::{
+            self,
+            pulse_light_sources::{PulseLightSources, PulseLightSourcesDescriptor},
+        },
+        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
+        BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor, CircleVariant,
+        Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
         ShaderCode,
     },
@@ -114,6 +118,12 @@ pub enum ComponentConfig {
         pulse_brightness: f32,
 
         gaussian_blur: PulseEdgeGaussianBlur,
+    },
+    WallpaperPulseLightSources {
+        wallpaper_path: PathBuf,
+
+        light_threshold: f32,
+        wallpaper_brightness: f32,
     },
 }
 
@@ -361,6 +371,29 @@ impl ComponentConfig {
                 )?;
 
                 Ok(Box::new(pulse_edges) as Box<dyn Component>)
+            }
+            ComponentConfig::WallpaperPulseLightSources {
+                wallpaper_path,
+                wallpaper_brightness,
+                light_threshold,
+            } => {
+                let img = ImageReader::open(wallpaper_path)
+                    .map_err(|err| ConfigError::OpenFile {
+                        path: wallpaper_path.to_string_lossy().to_string(),
+                        reason: err,
+                    })?
+                    .decode()?;
+
+                let pulse_light_sources = PulseLightSources::new(&PulseLightSourcesDescriptor {
+                    renderer,
+                    format: texture_format,
+
+                    img,
+                    wallpaper_brightness: *wallpaper_brightness,
+                    light_threshold: *light_threshold,
+                });
+
+                Ok(Box::new(pulse_light_sources) as Box<dyn Component>)
             }
         }
     }
