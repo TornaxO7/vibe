@@ -232,7 +232,12 @@ fn store_texture<C: Cacheable>(
 
             let (tx, rx) = std::sync::mpsc::channel();
             buffer_slice.map_async(wgpu::MapMode::Read, move |result| tx.send(result).unwrap());
-            device.poll(wgpu::PollType::Wait).unwrap();
+            device
+                .poll(wgpu::PollType::Wait {
+                    submission_index: None,
+                    timeout: None,
+                })
+                .unwrap();
             rx.recv().unwrap().unwrap();
 
             let mut texture_bytes: Vec<u8> =

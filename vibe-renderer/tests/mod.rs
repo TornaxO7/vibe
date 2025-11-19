@@ -144,7 +144,13 @@ impl<'a> Tester<'a> {
                 tx.send(result).unwrap();
             });
 
-            self.renderer.device().poll(wgpu::PollType::Wait).unwrap();
+            self.renderer
+                .device()
+                .poll(wgpu::PollType::Wait {
+                    submission_index: None,
+                    timeout: None,
+                })
+                .unwrap();
             rx.recv().unwrap().unwrap();
 
             let data = buffer_slice.get_mapped_range();
