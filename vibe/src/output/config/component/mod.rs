@@ -5,6 +5,7 @@ mod circle;
 mod encrust_wallpaper;
 mod fragment_canvas;
 mod graph;
+mod light_sources;
 mod radial;
 
 use image::ImageReader;
@@ -13,9 +14,13 @@ use std::{num::NonZero, path::PathBuf};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
-        live_wallpaper, Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars,
-        BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
-        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        live_wallpaper::{
+            self,
+            light_sources::{LightSourceData, LightSources, LightSourcesDescriptor},
+        },
+        Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsFormat,
+        BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor, CircleVariant,
+        Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphPlacement, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
         ShaderCode,
     },
@@ -32,8 +37,11 @@ pub use fragment_canvas::FragmentCanvasAudioConfig;
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
-use crate::output::config::component::encrust_wallpaper::{
-    WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds,
+use crate::output::config::component::light_sources::LightSourcesError;
+
+use {
+    encrust_wallpaper::{WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds},
+    light_sources::{LightSourcesAudioConfig, LightSourcesSource},
 };
 
 const GAMMA: f32 = 2.2;
@@ -45,6 +53,9 @@ pub enum ConfigError {
 
     #[error(transparent)]
     PulseError(#[from] vibe_renderer::components::live_wallpaper::pulse_edges::PulseEdgesError),
+
+    #[error(transparent)]
+    LightSource(#[from] light_sources::LightSourcesError),
 
     #[error("Couldn't open '{path}': {reason}")]
     OpenFile {
@@ -117,6 +128,15 @@ pub enum ComponentConfig {
 
         gaussian_blur: WallpaperPulseEdgeGaussianBlur,
     },
+    WallpaperLightSources {
+        wallpaper_path: PathBuf,
+
+        audio_conf: LightSourcesAudioConfig,
+
+        sources: Vec<LightSourcesSource>,
+        uniform_pulse: bool,
+        debug_sources: bool,
+    },
 }
 
 impl Default for ComponentConfig {
@@ -143,7 +163,7 @@ impl ComponentConfig {
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn Component>, ConfigError> {
         match self {
-            ComponentConfig::Bars {
+            Self::Bars {
                 audio_conf,
                 max_height,
                 variant,
@@ -187,7 +207,7 @@ impl ComponentConfig {
 
                 Ok(Box::new(bars) as Box<dyn Component>)
             }
-            ComponentConfig::FragmentCanvas {
+            Self::FragmentCanvas {
                 audio_conf,
                 fragment_code,
             } => {
@@ -201,7 +221,7 @@ impl ComponentConfig {
 
                 Ok(Box::new(fragment_canvas) as Box<dyn Component>)
             }
-            ComponentConfig::Aurodio {
+            Self::Aurodio {
                 base_color,
                 movement_speed,
                 audio_conf,
@@ -225,7 +245,7 @@ impl ComponentConfig {
                     layers: &layers,
                 })) as Box<dyn Component>)
             }
-            ComponentConfig::Graph {
+            Self::Graph {
                 audio_conf,
                 max_height,
                 variant,
@@ -246,7 +266,7 @@ impl ComponentConfig {
                     format: format.into(),
                 })) as Box<dyn Component>)
             }
-            ComponentConfig::Circle {
+            Self::Circle {
                 audio_conf,
                 variant,
                 radius,
@@ -274,7 +294,7 @@ impl ComponentConfig {
                     position: *position,
                 })))
             }
-            ComponentConfig::Radial {
+            Self::Radial {
                 audio_conf,
                 variant,
                 init_rotation,
@@ -308,7 +328,7 @@ impl ComponentConfig {
                     format: RadialFormat::from(format),
                 })))
             }
-            ComponentConfig::Chessy {
+            Self::Chessy {
                 movement_speed,
                 pattern,
                 zoom_factor,
@@ -322,7 +342,7 @@ impl ComponentConfig {
                 pattern: *pattern,
                 zoom_factor: *zoom_factor,
             }))),
-            ComponentConfig::WallpaperPulseEdges {
+            Self::WallpaperPulseEdges {
                 wallpaper_path,
                 audio_conf,
                 thresholds,
@@ -363,6 +383,41 @@ impl ComponentConfig {
                 )?;
 
                 Ok(Box::new(pulse_edges) as Box<dyn Component>)
+            }
+            Self::WallpaperLightSources {
+                wallpaper_path,
+                sources,
+                audio_conf,
+                uniform_pulse,
+                debug_sources,
+            } => {
+                let img = ImageReader::open(wallpaper_path)
+                    .map_err(|err| ConfigError::OpenFile {
+                        path: wallpaper_path.to_string_lossy().to_string(),
+                        reason: err,
+                    })?
+                    .decode()?;
+
+                let sources = sources
+                    .iter()
+                    .map(LightSourceData::try_from)
+                    .collect::<Result<Vec<LightSourceData>, LightSourcesError>>()?;
+
+                let light_sources = LightSources::new(&LightSourcesDescriptor {
+                    renderer,
+                    format: texture_format,
+
+                    processor,
+                    freq_range: audio_conf.freq_range.clone(),
+                    sensitivity: audio_conf.sensitivity,
+
+                    wallpaper: img,
+                    sources: &sources,
+                    uniform_pulse: *uniform_pulse,
+                    debug_sources: *debug_sources,
+                });
+
+                Ok(Box::new(light_sources) as Box<dyn Component>)
             }
         }
     }

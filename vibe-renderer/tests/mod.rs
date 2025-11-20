@@ -20,6 +20,7 @@ mod radial_height_gradient_variant;
 
 mod chessy;
 
+mod live_wallpaper_light_sources;
 mod live_wallpaper_pulse_edges;
 
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
