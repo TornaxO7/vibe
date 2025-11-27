@@ -84,3 +84,48 @@ pub const fn sampler(binding: u32, visibility: wgpu::ShaderStages) -> wgpu::Bind
         count: None,
     }
 }
+
+pub fn load_img_to_texture(
+    device: &wgpu::Device,
+    queue: &wgpu::Queue,
+    img: &image::DynamicImage,
+) -> wgpu::Texture {
+    let rgba8 = img.to_rgba8();
+
+    let format = wgpu::TextureFormat::Rgba8Unorm;
+
+    let texture = device.create_texture(&wgpu::TextureDescriptor {
+        label: Some("Image texture"),
+        size: wgpu::Extent3d {
+            width: rgba8.width(),
+            height: rgba8.height(),
+            depth_or_array_layers: 1,
+        },
+        mip_level_count: 1,
+        sample_count: 1,
+        dimension: wgpu::TextureDimension::D2,
+        format,
+        usage: wgpu::TextureUsages::TEXTURE_BINDING
+            | wgpu::TextureUsages::STORAGE_BINDING
+            | wgpu::TextureUsages::COPY_DST,
+        view_formats: &[],
+    });
+
+    queue.write_texture(
+        texture.as_image_copy(),
+        rgba8.as_raw(),
+        wgpu::TexelCopyBufferLayout {
+            offset: 0,
+            bytes_per_row: Some(
+                format
+                    .block_copy_size(Some(wgpu::TextureAspect::All))
+                    .unwrap()
+                    * texture.width(),
+            ),
+            rows_per_image: Some(rgba8.height()),
+        },
+        texture.size(),
+    );
+
+    texture
+}

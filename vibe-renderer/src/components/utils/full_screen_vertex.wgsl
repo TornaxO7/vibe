@@ -4,6 +4,9 @@ const VERTICES: array<vec2f, 3> = array(
     vec2f(1., 3.) // top right
 );
 
+// IDEA: Also return the relative position for the fragment shader to avoid the computation
+//       to get the normalized coordinates
+
 @vertex
 fn main(@builtin(vertex_index) idx: u32) -> @builtin(position) vec4f {
     return vec4f(VERTICES[idx], 0., 1.);
