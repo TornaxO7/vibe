@@ -1,14 +1,8 @@
-use std::sync::{Arc, Mutex};
-
-use cpal::{
-    traits::{DeviceTrait, StreamTrait},
-    SupportedStreamConfigRange,
-};
-use tracing::{debug, instrument};
-
-use crate::DEFAULT_SAMPLE_RATE;
-
 use super::{Fetcher, SampleBuffer};
+use crate::DEFAULT_SAMPLE_RATE;
+use cpal::traits::{DeviceTrait, StreamTrait};
+use std::sync::{Arc, Mutex};
+use tracing::debug;
 
 /// Errors which can occur while creating [crate::fetcher::SystemAudioFetcher].
 #[derive(thiserror::Error, Debug)]
@@ -140,22 +134,22 @@ impl Fetcher for SystemAudio {
     }
 }
 
-#[instrument(skip_all)]
-fn default_output_config(
-    device: &cpal::Device,
-) -> Result<SupportedStreamConfigRange, SystemAudioError> {
-    let mut matching_configs: Vec<_> = device
-        .supported_output_configs()
-        .expect(concat![
-            "Eh... somehow `shady-audio` couldn't get any supported output configs of your audio device.\n",
-            "Could it be that you are running \"pure\" pulseaudio?\n",
-            "Only ALSA and JACK are supported for audio processing :("
-        ])
-        .collect();
+// #[instrument(skip_all)]
+// fn default_output_config(
+//     device: &cpal::Device,
+// ) -> Result<SupportedStreamConfigRange, SystemAudioError> {
+//     let mut matching_configs: Vec<_> = device
+//         .supported_output_configs()
+//         .expect(concat![
+//             "Eh... somehow `shady-audio` couldn't get any supported output configs of your audio device.\n",
+//             "Could it be that you are running \"pure\" pulseaudio?\n",
+//             "Only ALSA and JACK are supported for audio processing :("
+//         ])
+//         .collect();
 
-    matching_configs.sort_by(|a, b| a.cmp_default_heuristics(b));
-    matching_configs
-        .into_iter()
-        .next()
-        .ok_or(SystemAudioError::NoAvailableOutputConfigs)
-}
+//     matching_configs.sort_by(|a, b| a.cmp_default_heuristics(b));
+//     matching_configs
+//         .into_iter()
+//         .next()
+//         .ok_or(SystemAudioError::NoAvailableOutputConfigs)
+// }

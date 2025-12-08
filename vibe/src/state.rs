@@ -1,8 +1,15 @@
+use crate::{
+    config::ConfigError,
+    output::{
+        config::{component::ComponentConfig, OutputConfig},
+        OutputCtx,
+    },
+    types::size::Size,
+};
+use anyhow::Context;
 use raw_window_handle::{
     RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle,
 };
-
-use anyhow::Context;
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState},
     delegate_compositor, delegate_layer, delegate_output, delegate_pointer, delegate_registry,
@@ -29,14 +36,10 @@ use wayland_client::{
     Connection, Proxy, QueueHandle,
 };
 
-use crate::{
-    config::ConfigError,
-    output::{config::OutputConfig, OutputCtx},
-    types::size::Size,
-};
-
 pub struct State {
     pub run: bool,
+
+    default_component: ComponentConfig,
 
     output_state: OutputState,
     registry_state: RegistryState,
@@ -110,7 +113,7 @@ impl State {
         let sample_processor = vibe_config.sample_processor()?;
 
         let renderer = Renderer::new(&vibe_renderer::RendererDescriptor::from(
-            vibe_config.graphics_config,
+            &vibe_config.graphics_config,
         ));
 
         Ok(Self {
@@ -128,6 +131,8 @@ impl State {
             sample_processor,
 
             outputs: HashMap::new(),
+
+            default_component: vibe_config.default_component.unwrap_or_default(),
         })
     }
 
@@ -198,7 +203,7 @@ impl OutputHandler for State {
                     return;
                 }
             },
-            None => match OutputConfig::new(&info) {
+            None => match OutputConfig::new(&info, self.default_component.clone()) {
                 Ok(config) => {
                     info!("Created new default config file for output: '{}'", name);
                     config
