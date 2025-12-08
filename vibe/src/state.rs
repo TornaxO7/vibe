@@ -132,9 +132,7 @@ impl State {
 
             outputs: HashMap::new(),
 
-            default_component: vibe_config
-                .default_component
-                .unwrap_or(ComponentConfig::default()),
+            default_component: vibe_config.default_component.unwrap_or_default(),
         })
     }
 
