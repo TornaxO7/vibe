@@ -7,6 +7,8 @@ use vibe_audio::{
 };
 use vibe_renderer::RendererDescriptor;
 
+use crate::output::config::component::ComponentConfig;
+
 const STEREO_AUDIO: u16 = 2;
 
 #[derive(thiserror::Error, Debug)]
@@ -35,13 +37,13 @@ impl Default for GraphicsConfig {
     }
 }
 
-impl From<GraphicsConfig> for RendererDescriptor {
-    fn from(conf: GraphicsConfig) -> Self {
+impl From<&GraphicsConfig> for RendererDescriptor {
+    fn from(conf: &GraphicsConfig) -> Self {
         Self {
             power_preference: conf.power_preference,
             backend: conf.backend,
             fallback_to_software_rendering: false,
-            adapter_name: conf.gpu_name,
+            adapter_name: conf.gpu_name.clone(),
         }
     }
 }
@@ -55,6 +57,7 @@ pub struct AudioConfig {
 pub struct Config {
     pub graphics_config: GraphicsConfig,
     pub audio_config: Option<AudioConfig>,
+    pub default_component: Option<ComponentConfig>,
 }
 
 impl Config {

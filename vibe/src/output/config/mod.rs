@@ -14,12 +14,12 @@ pub struct OutputConfig {
 }
 
 impl OutputConfig {
-    pub fn new(info: &OutputInfo) -> anyhow::Result<Self> {
+    pub fn new(info: &OutputInfo, default_component: ComponentConfig) -> anyhow::Result<Self> {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {
             enable: true,
-            components: vec![ComponentConfig::default()],
+            components: vec![default_component],
         };
 
         new.save(name)?;

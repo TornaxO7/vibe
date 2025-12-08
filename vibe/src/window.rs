@@ -125,7 +125,7 @@ impl OutputRenderer<'_> {
     pub fn new(output_name: String) -> anyhow::Result<Self> {
         let config = crate::config::load()?;
 
-        let renderer = Renderer::new(&RendererDescriptor::from(config.graphics_config.clone()));
+        let renderer = Renderer::new(&RendererDescriptor::from(&config.graphics_config));
         let processor = config.sample_processor()?;
 
         let (output_config_path, output_config) = {
