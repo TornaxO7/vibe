@@ -12,10 +12,15 @@
    4. Select the audio source (often "Monitor _bla_ Built-in Audio _bla_")
 6. (optional) [Configure](https://github.com/TornaxO7/vibe/wiki/Config) `vibe`!
 
-# Dependencies
+# Package manager / Distribution
 
 Here's a list of package manager commands which you can copy+paste to install the required dependencies.
 If your package manager isn't listed here, feel free to create a PR!
+
+## `pacman` (AUR)
+
+There's an AUR package for `vibe`: https://aur.archlinux.org/packages/vibe-audio-visualizer-git
+See the [ArchWiki](https://wiki.archlinux.org/title/Arch_User_Repository) to learn [how to install packages from the AUR](https://wiki.archlinux.org/title/Arch_User_Repository#Installing_and_upgrading_packages).
 
 ## `apt`
 
