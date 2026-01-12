@@ -99,7 +99,7 @@ impl TextureComponent {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Texture component: Pipeline layout"),
                 bind_group_layouts: &[&bind_group0_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             device.create_render_pipeline(&vibe_renderer::util::simple_pipeline_descriptor(

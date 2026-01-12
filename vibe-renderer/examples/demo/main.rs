@@ -1,7 +1,7 @@
 mod cli;
 mod texture_component;
 
-use std::{num::NonZero, sync::Arc, time::Instant};
+use std::{num::NonZero, str::FromStr, sync::Arc, time::Instant};
 
 use anyhow::bail;
 use cgmath::Deg;
@@ -10,6 +10,7 @@ use cli::ComponentName;
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 use vibe_audio::{
+    cpal::DeviceId,
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
     BarProcessorConfig, SampleProcessor,
@@ -434,14 +435,11 @@ struct App<'a> {
 }
 
 impl<'a> App<'a> {
-    pub fn new<S: AsRef<str>>(
-        variant: ComponentName,
-        output_device_name: Option<S>,
-    ) -> anyhow::Result<Self> {
+    pub fn new(variant: ComponentName, device_id: Option<DeviceId>) -> anyhow::Result<Self> {
         let sample_processor = {
-            let device = match output_device_name {
-                Some(device_name) => {
-                    match vibe_audio::util::get_device(device_name.as_ref(), DeviceType::Output)? {
+            let device = match device_id {
+                Some(device_id) => {
+                    match vibe_audio::util::get_device(device_id.clone(), DeviceType::Output)? {
                         Some(device) => device,
                         None => {
                             bail!(
@@ -450,8 +448,8 @@ impl<'a> App<'a> {
                                     "\nThere's no output device called \"{}\".\n",
                                     "Please choose one from the list.\n",
                                 ],
-                                vibe_audio::util::get_device_names(DeviceType::Output)?,
-                                device_name.as_ref()
+                                vibe_audio::util::get_device_ids(DeviceType::Output)?,
+                                device_id.to_string()
                             )
                         }
                     }
@@ -465,7 +463,7 @@ impl<'a> App<'a> {
                                 "\nCoudn't find the default output device on your system.\n",
                                 "Please choose one from the list and add it explicitly to the cli invocation.\n"
                             ],
-                            vibe_audio::util::get_device_names(DeviceType::Output)?,
+                            vibe_audio::util::get_device_ids(DeviceType::Output)?,
                         )
                     }
                 },
@@ -534,7 +532,7 @@ fn main() -> anyhow::Result<()> {
     if cli.show_output_devices {
         println!(
             "\nAvailable output devices:\n\n{:#?}\n",
-            vibe_audio::util::get_device_names(vibe_audio::util::DeviceType::Output)?
+            vibe_audio::util::get_device_ids(vibe_audio::util::DeviceType::Output)?
         );
         return Ok(());
     }
@@ -543,7 +541,11 @@ fn main() -> anyhow::Result<()> {
         let event_loop = EventLoop::new()?;
 
         event_loop.set_control_flow(winit::event_loop::ControlFlow::Wait);
-        let mut app = App::new(component, cli.output_device_name)?;
+        let mut app = App::new(
+            component,
+            cli.output_device_id
+                .map(|id| DeviceId::from_str(&id).unwrap()),
+        )?;
         event_loop.run_app(&mut app).unwrap();
     }
 

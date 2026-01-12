@@ -26,10 +26,12 @@ fn main() -> anyhow::Result<()> {
 
     let args = cli::Args::parse();
     if args.show_output_devices {
-        info!(
-            concat!["Available output devices:\n\n", "{:#?}\n"],
-            vibe_audio::util::get_device_names(vibe_audio::util::DeviceType::Output)?
-        );
+        let device_ids = vibe_audio::util::get_device_ids(vibe_audio::util::DeviceType::Output)?
+            .iter()
+            .map(|id| id.to_string())
+            .collect::<Vec<String>>();
+
+        info!("Available output devices:\n\n{:#?}\n", device_ids);
         return Ok(());
     }
 

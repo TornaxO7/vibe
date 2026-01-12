@@ -1,4 +1,7 @@
-use cpal::traits::{DeviceTrait, HostTrait};
+use cpal::{
+    traits::{DeviceTrait, HostTrait},
+    DeviceId,
+};
 
 type Devices = std::iter::Filter<cpal::Devices, for<'a> fn(&'a cpal::Device) -> bool>;
 
@@ -11,22 +14,18 @@ pub enum DeviceType {
     Output,
 }
 
-/// Returns the given output/input device with the given name.
-/// You can retrieve a list of available names by using the [`get_device_names`] function.
+/// Returns the given output/input device of the given id.
+/// You can retrieve a list of available ids by using the [`get_device_names`] function.
 ///
 /// Returns `Err` if there's a problem retrieving an output/input device.
 /// Returns `Ok(None)` if retrieveing the output/input devices worked find but it couldn't find a device with the given name.
-pub fn get_device<S: AsRef<str>>(
-    name: S,
+pub fn get_device(
+    device_id: DeviceId,
     device_type: DeviceType,
 ) -> Result<Option<cpal::Device>, cpal::DevicesError> {
     let mut devices = get_devices(device_type)?;
 
-    Ok(devices.find(|d| {
-        d.name()
-            .map(|d_name| d_name.as_str() == name.as_ref())
-            .unwrap_or(false)
-    }))
+    Ok(devices.find(|dev| dev.id().map(|id| id == device_id).unwrap_or(false)))
 }
 
 /// Returns the default device of he given device type (if available).
@@ -48,10 +47,8 @@ fn get_devices(device_type: DeviceType) -> Result<Devices, cpal::DevicesError> {
     }
 }
 
-/// Returns a list of device names which you can use for [`get_device`].
-/// Retunrs `Err` if there's a problem retrieving an output/input device.
-pub fn get_device_names(device_type: DeviceType) -> Result<Vec<String>, cpal::DevicesError> {
-    let devices = get_devices(device_type)?;
-
-    Ok(devices.filter_map(|d| d.name().ok()).collect())
+/// Returns a list of device ids which you can use for [`get_device`].
+/// Returns `Err` if there's a problem retrieving an output/input device.
+pub fn get_device_ids(device_type: DeviceType) -> Result<Vec<DeviceId>, cpal::DevicesError> {
+    get_devices(device_type).map(|devices| devices.filter_map(|d| d.id().ok()).collect())
 }

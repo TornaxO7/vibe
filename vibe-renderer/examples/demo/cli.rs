@@ -38,7 +38,7 @@ pub struct Cli {
     #[arg(long)]
     pub show_output_devices: bool,
 
-    /// Set the name of the output device for the demo.
+    /// Set the id of the output device for the demo.
     #[arg(long)]
-    pub output_device_name: Option<String>,
+    pub output_device_id: Option<String>,
 }

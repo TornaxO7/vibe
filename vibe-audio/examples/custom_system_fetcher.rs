@@ -6,14 +6,14 @@ use vibe_audio::{
 
 fn main() {
     // get a list of all available devices
-    let available_output_devices = vibe_audio::util::get_device_names(DeviceType::Output)
+    let available_output_devices = vibe_audio::util::get_device_ids(DeviceType::Output)
         .expect("Output devices exists for the given host");
 
     println!("{:#?}", available_output_devices);
 
     // choose one
     let device = vibe_audio::util::get_device(
-        available_output_devices.first().unwrap(),
+        available_output_devices.first().unwrap().clone(),
         DeviceType::Output,
     )
     .unwrap()
