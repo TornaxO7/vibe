@@ -228,7 +228,7 @@ impl OutputHandler for State {
             let layer_surface = self.layer_shell.create_layer_surface(
                 qh,
                 wl_surface,
-                Layer::Bottom,
+                Layer::Background,
                 Some(format!("{} background", crate::APP_NAME)),
                 Some(&output),
             );
