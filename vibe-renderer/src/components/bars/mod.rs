@@ -399,13 +399,13 @@ impl Bars {
                         }
                     };
 
-                    device.push_error_scope(wgpu::ErrorFilter::Validation);
+                    let err_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
                     let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                         label: Some("Fragment canvas fragment module"),
                         source: shader_source,
                     });
 
-                    if let Some(err) = device.pop_error_scope().block_on() {
+                    if let Some(err) = err_scope.pop().block_on() {
                         return Err(ShaderCodeError::ParseError(err));
                     }
 
@@ -429,7 +429,7 @@ impl Bars {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Bars: Pipeline layout left"),
                 bind_group_layouts: &[&bind_group0_layout, &bind_group1_left_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             let entry_point = match desc.format {
@@ -478,7 +478,7 @@ impl Bars {
                     device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                         label: Some("Bars: Pipeline layout right"),
                         bind_group_layouts: &[&bind_group0_layout, &bind_group1_right_layout],
-                        push_constant_ranges: &[],
+                        ..Default::default()
                     });
 
                 let entry_point = match f {

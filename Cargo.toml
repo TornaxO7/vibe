@@ -4,7 +4,7 @@ resolver = "2"
 
 [workspace.dependencies]
 anyhow = "1"
-wgpu = { version = "27.0", default-features = false, features = [
+wgpu = { version = "28.0", default-features = false, features = [
   # from the default features
   "gles",
   "parking_lot",

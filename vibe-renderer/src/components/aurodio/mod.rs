@@ -213,7 +213,7 @@ impl Aurodio {
                 address_mode_u: wgpu::AddressMode::MirrorRepeat,
                 address_mode_v: wgpu::AddressMode::MirrorRepeat,
                 address_mode_w: wgpu::AddressMode::MirrorRepeat,
-                mipmap_filter: wgpu::FilterMode::Linear,
+                mipmap_filter: wgpu::MipmapFilterMode::Linear,
                 min_filter: wgpu::FilterMode::Linear,
                 mag_filter: wgpu::FilterMode::Linear,
                 ..Default::default()
@@ -249,7 +249,7 @@ impl Aurodio {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Aurodio: Pipeline layout"),
                 bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(

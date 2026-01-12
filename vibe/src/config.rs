@@ -1,6 +1,8 @@
+use anyhow::anyhow;
 use serde::{Deserialize, Serialize};
-use std::io;
+use std::{io, str::FromStr};
 use vibe_audio::{
+    cpal::DeviceId,
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
     SampleProcessor,
@@ -50,7 +52,7 @@ impl From<&GraphicsConfig> for RendererDescriptor {
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct AudioConfig {
-    pub output_device_name: Option<String>,
+    pub output_device_id: Option<String>,
 }
 
 #[derive(Default, Clone, Debug, Serialize, Deserialize)]
@@ -70,22 +72,30 @@ impl Config {
             .audio_config
             .clone()
             .unwrap_or_default()
-            .output_device_name
+            .output_device_id
         {
-            Some(device_name) => {
-                match vibe_audio::util::get_device(&device_name, DeviceType::Output)? {
+            Some(output_device_id) => {
+                let device_id = DeviceId::from_str(&output_device_id).map_err(|err| {
+                    anyhow!(
+                        "Couldn't parse the device id from your config file (in '{}'):\n{}",
+                        crate::get_config_path().to_string_lossy(),
+                        err
+                    )
+                })?;
+
+                match vibe_audio::util::get_device(device_id, DeviceType::Output)? {
                     Some(device) => device,
                     None => {
                         anyhow::bail!(
-                            concat![
-                                "Available output devices:\n\n{:#?}\n",
-                                "\nThere's no output device called \"{}\" as you've set in \"{}\"\n",
-                                "Please choose one from the list and add it to your config."
-                            ],
-                            vibe_audio::util::get_device_names(DeviceType::Output)?,
-                            &device_name,
-                            crate::get_config_path().to_string_lossy()
-                        );
+                        concat![
+                            "Available output devices:\n\n{:#?}\n",
+                            "\nThere's no output device with the id \"{}\" as you've set in \"{}\"\n",
+                            "Please choose one from the list and add it to your config."
+                        ],
+                        vibe_audio::util::get_device_ids(DeviceType::Output)?,
+                        &output_device_id,
+                        crate::get_config_path().to_string_lossy()
+                    );
                     }
                 }
             }
@@ -98,7 +108,7 @@ impl Config {
                             "\nCouldn't find the default output device on your system.\n",
                             "Please choose one from the list and add it to your config in \"{}\"."
                         ],
-                        vibe_audio::util::get_device_names(DeviceType::Output)?,
+                        vibe_audio::util::get_device_ids(DeviceType::Output)?,
                         crate::get_config_path().to_string_lossy()
                     );
                 }

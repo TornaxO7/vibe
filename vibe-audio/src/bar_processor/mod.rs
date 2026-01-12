@@ -73,7 +73,7 @@ impl InterpolatorCtx {
         debug!("Weights: {:?}", weights);
 
         let amount_bins = {
-            let freq_resolution = sample_rate.0 as f32 / sample_len as f32;
+            let freq_resolution = sample_rate as f32 / sample_len as f32;
             debug!("Freq resolution: {}", freq_resolution);
 
             // the relevant index range of the fft output which we should use for the bars

@@ -206,7 +206,7 @@ impl Circle {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Circle: Pipeline layout"),
                 bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             let vertex_module =

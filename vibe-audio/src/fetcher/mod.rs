@@ -32,17 +32,17 @@ impl SampleBuffer {
     /// Create a new instance for the given sample rate.
     pub fn new(sample_rate: SampleRate) -> Self {
         // props to cava for this heuristic.
-        let factor = if sample_rate.0 < 8_125 {
+        let factor = if sample_rate < 8_125 {
             1
-        } else if sample_rate.0 <= 16_250 {
+        } else if sample_rate <= 16_250 {
             2
-        } else if sample_rate.0 <= 32_500 {
+        } else if sample_rate <= 32_500 {
             4
-        } else if sample_rate.0 <= 75_000 {
+        } else if sample_rate <= 75_000 {
             8
-        } else if sample_rate.0 <= 150_000 {
+        } else if sample_rate <= 150_000 {
             16
-        } else if sample_rate.0 <= 300_000 {
+        } else if sample_rate <= 300_000 {
             32
         } else {
             64
@@ -96,7 +96,7 @@ mod tests {
         #[test]
         fn push_more_than_capacity() {
             // buffer should have length of `1` * `128`
-            let mut sample_buffer = SampleBuffer::new(SampleRate(1));
+            let mut sample_buffer = SampleBuffer::new(1);
             sample_buffer.push_before(&[1f32; 129]);
 
             assert_eq!(sample_buffer.buffer.len(), 128);
@@ -105,7 +105,7 @@ mod tests {
 
         #[test]
         fn new_values_are_moved_to_the_beginning() {
-            let mut sample_buffer = SampleBuffer::new(SampleRate(1));
+            let mut sample_buffer = SampleBuffer::new(1);
             sample_buffer.push_before(&[69f32]);
 
             assert_eq!(sample_buffer.buffer.len(), 128);
@@ -115,7 +115,7 @@ mod tests {
 
         #[test]
         fn no_values_pushed() {
-            let mut sample_buffer = SampleBuffer::new(SampleRate(1));
+            let mut sample_buffer = SampleBuffer::new(1);
             sample_buffer.push_before(&[]);
 
             assert_eq!(sample_buffer.buffer.len(), 128);
