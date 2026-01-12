@@ -1,7 +1,5 @@
 use std::sync::{Arc, Mutex};
 
-use cpal::SampleRate;
-
 use super::{Fetcher, SampleBuffer};
 
 /// A dummy fetcher which does... nothing.
@@ -16,7 +14,7 @@ impl DummyFetcher {
     /// Creates a new instance of this struct.
     pub fn new(amount_channels: u16) -> Self {
         Self {
-            sample_buffer: Arc::new(Mutex::new(SampleBuffer::new(SampleRate(44_100)))),
+            sample_buffer: Arc::new(Mutex::new(SampleBuffer::new(44_100))),
             amount_channels,
         }
     }

@@ -97,7 +97,7 @@ impl Renderer {
         );
 
         let adapter = if let Some(adapter_name) = &desc.adapter_name {
-            let adapters = instance.enumerate_adapters(desc.backend);
+            let adapters = instance.enumerate_adapters(desc.backend).block_on();
 
             let adapter_names: Vec<String> = adapters
                 .iter()

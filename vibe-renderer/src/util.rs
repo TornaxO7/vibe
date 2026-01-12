@@ -4,7 +4,7 @@ pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDes
     address_mode_u: wgpu::AddressMode::MirrorRepeat,
     address_mode_v: wgpu::AddressMode::MirrorRepeat,
     address_mode_w: wgpu::AddressMode::MirrorRepeat,
-    mipmap_filter: wgpu::FilterMode::Linear,
+    mipmap_filter: wgpu::MipmapFilterMode::Linear,
     min_filter: wgpu::FilterMode::Linear,
     mag_filter: wgpu::FilterMode::Linear,
     lod_min_clamp: 0.0,
@@ -40,7 +40,7 @@ pub fn simple_pipeline_descriptor(
         depth_stencil: None,
         multisample: wgpu::MultisampleState::default(),
         fragment: Some(desc.fragment.clone()),
-        multiview: None,
+        multiview_mask: None,
         cache: None,
     }
 }

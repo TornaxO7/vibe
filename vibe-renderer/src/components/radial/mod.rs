@@ -271,7 +271,7 @@ impl Radial {
         let left_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
             label: Some("Radial: `left` pipeline layout"),
             bind_group_layouts: &[&bind_group0_layout, &left_bind_group1_layout],
-            push_constant_ranges: &[],
+            ..Default::default()
         });
 
         let left_pipeline_descriptor =
@@ -370,7 +370,7 @@ impl Radial {
                     device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                         label: Some("Radial: `right` pipeline layout"),
                         bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                        push_constant_ranges: &[],
+                        ..Default::default()
                     });
 
                 let pipeline_descriptor = wgpu::RenderPipelineDescriptor {

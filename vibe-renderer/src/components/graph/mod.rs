@@ -275,7 +275,7 @@ impl Graph {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Grgaph: Left pipeline layout"),
                 bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             let pipeline = device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
@@ -338,7 +338,7 @@ impl Graph {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Graph: Right pipeline layout"),
                 bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             let pipeline = device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(

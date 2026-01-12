@@ -121,7 +121,7 @@ impl FragmentCanvas {
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas pipeline layout"),
                 bind_group_layouts: &[&bind_group0_layout],
-                push_constant_ranges: &[],
+                ..Default::default()
             });
 
             let vertex_module =
@@ -147,13 +147,13 @@ impl FragmentCanvas {
                     }
                 };
 
-                device.push_error_scope(wgpu::ErrorFilter::Validation);
+                let err_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
                 let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
                     label: Some("Fragment canvas fragment module"),
                     source: shader_source,
                 });
 
-                if let Some(err) = device.pop_error_scope().block_on() {
+                if let Some(err) = err_scope.pop().block_on() {
                     return Err(ShaderCodeError::ParseError(err));
                 }
 

@@ -115,4 +115,4 @@ pub const MAX_HUMAN_FREQUENCY: Hz = 20_000;
 
 /// The default sample rate for a fetcher.
 /// Fetchers are allowed to use this for orientation.
-pub const DEFAULT_SAMPLE_RATE: SampleRate = SampleRate(44_100);
+pub const DEFAULT_SAMPLE_RATE: SampleRate = 44_100;
