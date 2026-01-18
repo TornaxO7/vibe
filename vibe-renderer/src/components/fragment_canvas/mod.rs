@@ -1,45 +1,14 @@
-use std::borrow::Cow;
-
+use super::{Component, ShaderCode, ShaderCodeError};
+use crate::Renderable;
 use pollster::FutureExt;
+use std::borrow::Cow;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, BarProcessorConfig, SampleProcessor,
 };
 use wgpu::include_wgsl;
 
-use crate::{resource_manager::ResourceManager, Renderable};
-
-use super::{Component, ShaderCode, ShaderCodeError};
-
 const ENTRYPOINT: &str = "main";
-
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const RESOLUTION: u32 = 0;
-    pub const FREQS: u32 = 1;
-    pub const TIME: u32 = 2;
-    pub const MOUSE: u32 = 3;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
-            (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Mouse, crate::util::buffer(MOUSE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    Resolution,
-    Freqs,
-    Time,
-    Mouse,
-}
 
 pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
     pub sample_processor: &'a SampleProcessor<F>,
@@ -54,7 +23,10 @@ pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
 pub struct FragmentCanvas {
     bar_processor: BarProcessor,
 
-    resource_manager: ResourceManager<ResourceID>,
+    iresolution: wgpu::Buffer,
+    freqs: wgpu::Buffer,
+    itime: wgpu::Buffer,
+    imouse: wgpu::Buffer,
 
     bind_group0: wgpu::BindGroup,
 
@@ -66,64 +38,83 @@ impl FragmentCanvas {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        let mut resource_manager = ResourceManager::new();
+        let iresolution = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iResolution` buffer"),
+            size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        let bind_group0_mapping = bindings0::init_mapping();
+        let freqs = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `freqs` buffer"),
+            size: (std::mem::size_of::<f32>() * usize::from(u16::from(desc.audio_conf.amount_bars)))
+                as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        resource_manager.extend_buffers([
-            (
-                ResourceID::Resolution,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iResolution` buffer"),
-                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Freqs,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>()
-                        * usize::from(u16::from(desc.audio_conf.amount_bars)))
-                        as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Time,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iTime` buffer"),
-                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Mouse,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iMouse` buffer"),
-                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-        ]);
+        let itime = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iTime` buffer"),
+            size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
-            "Fragment canvas: Bind group 0",
-            device,
-            &bind_group0_mapping,
-        );
+        let imouse = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iMouse` buffer"),
+            size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        let pipeline = {
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Fragment canvas pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout],
-                ..Default::default()
+        let bind_group0_layout =
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fragment canvas: Bind group 0 layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 3,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
             });
 
+        let pipeline = {
             let vertex_module =
                 device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
 
@@ -160,6 +151,12 @@ impl FragmentCanvas {
                 module
             };
 
+            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Fragment canvas: Pipeline layout"),
+                bind_group_layouts: &[&bind_group0_layout],
+                ..Default::default()
+            });
+
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Fragment canvas render pipeline",
@@ -184,10 +181,36 @@ impl FragmentCanvas {
             ))
         };
 
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Fragment canvas: Bind group 0"),
+            layout: &bind_group0_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: iresolution.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: freqs.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: itime.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: imouse.as_entire_binding(),
+                },
+            ],
+        });
+
         Ok(Self {
             bar_processor,
 
-            resource_manager,
+            iresolution,
+            freqs,
+            itime,
+            imouse,
 
             bind_group0,
 
@@ -208,13 +231,8 @@ impl Component for FragmentCanvas {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::Resolution)
-            .unwrap();
-
         queue.write_buffer(
-            buffer,
+            &self.iresolution,
             0,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
@@ -227,18 +245,18 @@ impl Component for FragmentCanvas {
     ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
-        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        queue.write_buffer(&self.freqs, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
+        queue.write_buffer(&self.itime, 0, bytemuck::bytes_of(&new_time));
     }
 
     fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32)) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Mouse).unwrap();
-
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[new_pos.0, new_pos.1]));
+        queue.write_buffer(
+            &self.imouse,
+            0,
+            bytemuck::cast_slice(&[new_pos.0, new_pos.1]),
+        );
     }
 }
