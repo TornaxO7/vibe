@@ -11,7 +11,7 @@ mod radial;
 use image::ImageReader;
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, path::PathBuf};
-use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
         live_wallpaper::{
@@ -65,6 +65,12 @@ pub enum ConfigError {
 
     #[error(transparent)]
     Image(#[from] image::error::ImageError),
+
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    #[error("It looks like as if you've tried to access `iSampler` or `iTexture` but didn't specify a path to the texture in the config.")]
+    MissingTexture,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -80,7 +86,7 @@ pub enum ComponentConfig {
         audio_conf: FragmentCanvasAudioConfig,
         fragment_code: ShaderCode,
 
-        img_path: Option<PathBuf>,
+        texture_path: Option<PathBuf>,
     },
     Aurodio {
         base_color: Rgb,
@@ -158,10 +164,10 @@ impl Default for ComponentConfig {
 }
 
 impl ComponentConfig {
-    pub fn to_component(
+    pub fn to_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
-        processor: &SampleProcessor<SystemAudioFetcher>,
+        processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn Component>, ConfigError> {
         match self {
@@ -212,9 +218,9 @@ impl ComponentConfig {
             Self::FragmentCanvas {
                 audio_conf,
                 fragment_code,
-                img_path,
+                texture_path,
             } => {
-                let img = match img_path {
+                let img = match texture_path {
                     Some(path) => Some(
                         ImageReader::open(path)
                             .map_err(|err| ConfigError::OpenFile {
@@ -226,7 +232,13 @@ impl ComponentConfig {
                     None => None,
                 };
 
-                // TODO: Raise error/warning if `iTexture`/`iSampler` are used in the code but `img_path` is `None`
+                // Check: Is `texture_path` set if it's used in the shader-code?
+                {
+                    let code = fragment_code.source()?;
+                    if (code.contains("iSampler") || code.contains("iTexture")) && img.is_none() {
+                        return Err(ConfigError::MissingTexture);
+                    }
+                }
 
                 let fragment_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
                     sample_processor: processor,
@@ -478,5 +490,71 @@ impl Rgb {
         }
 
         rgba_f32
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use vibe_audio::fetcher::DummyFetcher;
+    use vibe_renderer::components::{ShaderLanguage, ShaderSource};
+
+    #[test]
+    fn fragment_canvas_wgsl_with_missing_texture_path() {
+        let renderer = Renderer::default();
+        let processor = SampleProcessor::new(DummyFetcher::new(1));
+
+        let config = ComponentConfig::FragmentCanvas {
+            audio_conf: FragmentCanvasAudioConfig {
+                amount_bars: NonZero::new(10).unwrap(),
+                freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                sensitivity: 4.0,
+            },
+            fragment_code: ShaderCode {
+                language: ShaderLanguage::Wgsl,
+                source: ShaderSource::Code("@fragment\nfn main(@builtin(position) pos: vec4f) -> @location(0) { return textureSample(iTexture, iSampler, pos.xy/iResolution.xy); }".to_string()),
+            },
+            texture_path: None,
+        };
+
+        let err = config
+            .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
+            .err()
+            .unwrap();
+
+        match err {
+            ConfigError::MissingTexture => {}
+            _ => unreachable!("Weird: {}", err),
+        }
+    }
+
+    #[test]
+    fn fragment_canvas_glsl_with_missing_texture_path() {
+        let renderer = Renderer::default();
+        let processor = SampleProcessor::new(DummyFetcher::new(1));
+
+        let config = ComponentConfig::FragmentCanvas {
+            audio_conf: FragmentCanvasAudioConfig {
+                amount_bars: NonZero::new(10).unwrap(),
+                freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                sensitivity: 4.0,
+            },
+            fragment_code: ShaderCode {
+                language: ShaderLanguage::Glsl,
+                source: ShaderSource::Code("void main() { fragColor = texture(sampler2D(iTexture, iSampler), gl_FragCoord.xy/iResolution.xy); }".to_string()),
+            },
+            texture_path: None,
+        };
+
+        let err = config
+            .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
+            .err()
+            .unwrap();
+
+        match err {
+            ConfigError::MissingTexture => {}
+            _ => unreachable!("Weird: {}", err),
+        }
     }
 }

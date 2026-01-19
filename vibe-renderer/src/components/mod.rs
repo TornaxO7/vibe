@@ -82,7 +82,7 @@ pub struct ShaderCode {
 }
 
 impl ShaderCode {
-    fn source(&self) -> std::io::Result<String> {
+    pub fn source(&self) -> std::io::Result<String> {
         match self.source.clone() {
             ShaderSource::Code(code) => Ok(code),
             ShaderSource::Path(path) => std::fs::read_to_string(path),
