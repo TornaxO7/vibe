@@ -56,11 +56,19 @@ impl OutputConfig {
                         paths.push(path.clone());
                     }
                 }
-                ComponentConfig::FragmentCanvas { fragment_code, .. } => {
+                ComponentConfig::FragmentCanvas {
+                    fragment_code,
+                    img_path,
+                    ..
+                } => {
                     if let vibe_renderer::components::ShaderSource::Path(path) =
                         &fragment_code.source
                     {
                         paths.push(path.clone());
+                    }
+
+                    if let Some(img_path) = img_path {
+                        paths.push(img_path.clone());
                     }
                 }
                 _ => {}
@@ -89,6 +97,8 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashSet;
+
     use component::BarsAudioConfig;
     use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
@@ -101,6 +111,7 @@ mod tests {
             components: vec![
                 ComponentConfig::FragmentCanvas {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
+                    img_path: Some("/dir/img".into()),
                     fragment_code: ShaderCode {
                         language: ShaderLanguage::Wgsl,
                         source: ShaderSource::Path("/dir/file1".into()),
@@ -119,10 +130,15 @@ mod tests {
             ],
         };
 
-        assert_eq!(
-            output_config.external_paths(),
-            vec![PathBuf::from("/dir/file1"), PathBuf::from("/dir/file2")]
-        );
+        let expected = HashSet::from([
+            PathBuf::from("/dir/img"),
+            PathBuf::from("/dir/file1"),
+            PathBuf::from("/dir/file2"),
+        ]);
+
+        let current: HashSet<PathBuf> = output_config.external_paths().into_iter().collect();
+
+        assert_eq!(expected, current);
     }
 
     #[test]
