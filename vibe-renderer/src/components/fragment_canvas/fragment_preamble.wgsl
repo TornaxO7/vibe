@@ -23,3 +23,9 @@ var<uniform> iTime: f32;
 //   - (1, 1) => bottom right corner
 @group(0) @binding(3)
 var<uniform> iMouse: vec2f;
+
+@group(0) @binding(4)
+var iSampler: sampler;
+
+@group(0) @binding(5)
+var iTexture: texture_2d<f32>;

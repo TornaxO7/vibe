@@ -79,6 +79,8 @@ pub enum ComponentConfig {
     FragmentCanvas {
         audio_conf: FragmentCanvasAudioConfig,
         fragment_code: ShaderCode,
+
+        img_path: Option<PathBuf>,
     },
     Aurodio {
         base_color: Rgb,
@@ -210,13 +212,29 @@ impl ComponentConfig {
             Self::FragmentCanvas {
                 audio_conf,
                 fragment_code,
+                img_path,
             } => {
+                let img = match img_path {
+                    Some(path) => Some(
+                        ImageReader::open(path)
+                            .map_err(|err| ConfigError::OpenFile {
+                                path: path.to_string_lossy().to_string(),
+                                reason: err,
+                            })?
+                            .decode()?,
+                    ),
+                    None => None,
+                };
+
+                // TODO: Raise error/warning if `iTexture`/`iSampler` are used in the code but `img_path` is `None`
+
                 let fragment_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
                     sample_processor: processor,
                     audio_conf: vibe_audio::BarProcessorConfig::from(audio_conf),
-                    device: renderer.device(),
+                    renderer,
                     format: texture_format,
                     fragment_code: fragment_code.clone(),
+                    img,
                 })?;
 
                 Ok(Box::new(fragment_canvas) as Box<dyn Component>)

@@ -1,5 +1,5 @@
 use super::{Component, ShaderCode, ShaderCodeError};
-use crate::Renderable;
+use crate::{Renderable, Renderer};
 use pollster::FutureExt;
 use std::borrow::Cow;
 use vibe_audio::{
@@ -13,11 +13,18 @@ const ENTRYPOINT: &str = "main";
 pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
     pub sample_processor: &'a SampleProcessor<F>,
     pub audio_conf: BarProcessorConfig,
-    pub device: &'a wgpu::Device,
+    pub renderer: &'a Renderer,
     pub format: wgpu::TextureFormat,
 
     // fragment shader relevant stuff
     pub fragment_code: ShaderCode,
+    pub img: Option<image::DynamicImage>,
+}
+
+struct TextureCtx {
+    sampler: wgpu::Sampler,
+    _texture: wgpu::Texture,
+    tv: wgpu::TextureView,
 }
 
 pub struct FragmentCanvas {
@@ -27,6 +34,7 @@ pub struct FragmentCanvas {
     freqs: wgpu::Buffer,
     itime: wgpu::Buffer,
     imouse: wgpu::Buffer,
+    _itexture: Option<TextureCtx>,
 
     bind_group0: wgpu::BindGroup,
 
@@ -35,7 +43,8 @@ pub struct FragmentCanvas {
 
 impl FragmentCanvas {
     pub fn new<F: Fetcher>(desc: &FragmentCanvasDescriptor<F>) -> Result<Self, ShaderCodeError> {
-        let device = desc.device;
+        let device = desc.renderer.device();
+        let queue = desc.renderer.queue();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
         let iresolution = device.create_buffer(&wgpu::BufferDescriptor {
@@ -67,52 +76,88 @@ impl FragmentCanvas {
             mapped_at_creation: false,
         });
 
-        let bind_group0_layout =
+        let itexture = desc.img.as_ref().map(|img| {
+            let sampler = device.create_sampler(&crate::util::DEFAULT_SAMPLER_DESCRIPTOR);
+            let texture = crate::util::load_img_to_texture(device, queue, img);
+            let tv = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+            TextureCtx {
+                sampler,
+                _texture: texture,
+                tv,
+            }
+        });
+
+        let bind_group0_layout = {
+            let mut entries = vec![
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ];
+
+            if let Some(_texture) = &itexture {
+                entries.extend_from_slice(&[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                ]);
+            }
+
             device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
                 label: Some("Fragment canvas: Bind group 0 layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Storage { read_only: true },
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 2,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 3,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            });
+                entries: &entries,
+            })
+        };
 
         let pipeline = {
             let vertex_module =
@@ -181,10 +226,8 @@ impl FragmentCanvas {
             ))
         };
 
-        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("Fragment canvas: Bind group 0"),
-            layout: &bind_group0_layout,
-            entries: &[
+        let bind_group0 = {
+            let mut entries = vec![
                 wgpu::BindGroupEntry {
                     binding: 0,
                     resource: iresolution.as_entire_binding(),
@@ -201,8 +244,27 @@ impl FragmentCanvas {
                     binding: 3,
                     resource: imouse.as_entire_binding(),
                 },
-            ],
-        });
+            ];
+
+            if let Some(texture) = &itexture {
+                entries.extend_from_slice(&[
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: wgpu::BindingResource::TextureView(&texture.tv),
+                    },
+                ]);
+            }
+
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Fragment canvas: Bind group 0"),
+                layout: &bind_group0_layout,
+                entries: &entries,
+            })
+        };
 
         Ok(Self {
             bar_processor,
@@ -211,6 +273,7 @@ impl FragmentCanvas {
             freqs,
             itime,
             imouse,
+            _itexture: itexture,
 
             bind_group0,
 
