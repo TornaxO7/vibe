@@ -209,8 +209,10 @@ impl<'a> State<'a> {
                 FragmentCanvas::new(&FragmentCanvasDescriptor {
                     sample_processor: &processor,
                     audio_conf: vibe_audio::BarProcessorConfig::default(),
-                    device: renderer.device(),
+                    renderer: &renderer,
                     format: surface_config.format,
+
+                    img: None,
                     fragment_code: fragment_source,
                 })
                 .map(|canvas| Box::new(canvas) as Box<dyn Component>)

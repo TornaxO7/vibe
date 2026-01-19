@@ -23,3 +23,14 @@ var<uniform> iTime: f32;
 //   - (1, 1) => bottom right corner
 @group(0) @binding(3)
 var<uniform> iMouse: vec2f;
+
+// The sampler for `iTexture`
+@group(0) @binding(4)
+var iSampler: sampler;
+
+// The texture which contains the image you set.
+// Usage (example):
+//
+// `let col = textureSample(iTexture, iSampler, uv).rgb;`
+@group(0) @binding(5)
+var iTexture: texture_2d<f32>;
