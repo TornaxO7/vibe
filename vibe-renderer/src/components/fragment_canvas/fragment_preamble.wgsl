@@ -23,3 +23,9 @@ var<uniform> iTime: f32;
 //   - (1, 1) => bottom right corner
 @group(0) @binding(3)
 var<uniform> iMouse: vec2f;
+
+// Contains the detected BPM (beats per minute) of the audio.
+// Typically in the range 60-200 for most music.
+// Use this to sync animations to the music tempo.
+@group(0) @binding(4)
+var<uniform> iBPM: f32;

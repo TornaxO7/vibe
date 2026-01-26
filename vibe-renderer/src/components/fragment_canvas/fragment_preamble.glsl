@@ -22,6 +22,11 @@ layout(set = 0, binding = 2) uniform float iTime;
 //   - (1, 1) => bottom right corner
 layout(set = 0, binding = 3) uniform vec2 iMouse;
 
+// Contains the detected BPM (beats per minute) of the audio.
+// Typically in the range 60-200 for most music.
+// Use this to sync animations to the music tempo.
+layout(set = 0, binding = 4) uniform float iBPM;
+
 // The color for the fragment/pixel.
 // Needs to be set in your shader (like in shadertoy).
 layout(location = 0) out vec4 fragColor;

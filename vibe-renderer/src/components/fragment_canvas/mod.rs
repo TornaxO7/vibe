@@ -3,7 +3,7 @@ use std::borrow::Cow;
 use pollster::FutureExt;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig, SampleProcessor,
+    BarProcessor, BarProcessorConfig, BpmDetector, BpmDetectorConfig, SampleProcessor,
 };
 use wgpu::include_wgsl;
 
@@ -21,6 +21,7 @@ mod bindings0 {
     pub const FREQS: u32 = 1;
     pub const TIME: u32 = 2;
     pub const MOUSE: u32 = 3;
+    pub const BPM: u32 = 4;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
@@ -29,6 +30,7 @@ mod bindings0 {
             (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
             (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::Mouse, crate::util::buffer(MOUSE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Bpm, crate::util::buffer(BPM, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -39,6 +41,7 @@ enum ResourceID {
     Freqs,
     Time,
     Mouse,
+    Bpm,
 }
 
 pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
@@ -53,6 +56,7 @@ pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
 
 pub struct FragmentCanvas {
     bar_processor: BarProcessor,
+    bpm_detector: BpmDetector,
 
     resource_manager: ResourceManager<ResourceID>,
 
@@ -65,6 +69,7 @@ impl FragmentCanvas {
     pub fn new<F: Fetcher>(desc: &FragmentCanvasDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.device;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let bpm_detector = BpmDetector::new(desc.sample_processor, BpmDetectorConfig::default());
 
         let mut resource_manager = ResourceManager::new();
 
@@ -105,6 +110,15 @@ impl FragmentCanvas {
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Fragment canvas: `iMouse` buffer"),
                     size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            (
+                ResourceID::Bpm,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Fragment canvas: `iBPM` buffer"),
+                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
@@ -186,6 +200,7 @@ impl FragmentCanvas {
 
         Ok(Self {
             bar_processor,
+            bpm_detector,
 
             resource_manager,
 
@@ -225,10 +240,15 @@ impl Component for FragmentCanvas {
         queue: &wgpu::Queue,
         processor: &SampleProcessor<SystemAudioFetcher>,
     ) {
+        // Update frequency bars
         let bar_values = self.bar_processor.process_bars(processor);
-
         let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
         queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+
+        // Update BPM
+        let bpm = self.bpm_detector.process(processor);
+        let buffer = self.resource_manager.get_buffer(ResourceID::Bpm).unwrap();
+        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&bpm));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
