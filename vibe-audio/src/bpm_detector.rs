@@ -3,23 +3,24 @@ use crate::{fetcher::Fetcher, SampleProcessor};
 /// Configuration for the BPM detector.
 #[derive(Debug, Clone)]
 pub struct BpmDetectorConfig {
-    /// Size of the onset history buffer in seconds (default: 6.0)
+    /// Size of the onset history buffer in seconds (default: 15.0)
     pub history_seconds: f32,
     /// Minimum BPM to detect (default: 60)
     pub min_bpm: f32,
     /// Maximum BPM to detect (default: 200)
     pub max_bpm: f32,
-    /// Minimum BPM change required to update (default: 5.0)
-    pub min_change_threshold: f32,
+    /// Number of BPM estimates to keep for median calculation (default: 60)
+    /// At 15-second intervals, 60 estimates = 15 minutes of history
+    pub estimate_history_size: usize,
 }
 
 impl Default for BpmDetectorConfig {
     fn default() -> Self {
         Self {
-            history_seconds: 15.0,  // 15 seconds of audio history
+            history_seconds: 15.0,  // 15 seconds of audio history per estimate
             min_bpm: 60.0,
             max_bpm: 200.0,
-            min_change_threshold: 5.0,  // Only update if BPM changes by more than 5
+            estimate_history_size: 60,  // 60 estimates * 15 seconds = 15 minutes
         }
     }
 }
@@ -28,7 +29,8 @@ impl Default for BpmDetectorConfig {
 ///
 /// The detector analyzes bass frequencies (20-200 Hz) to find onsets,
 /// then uses autocorrelation to find the periodic tempo pattern.
-/// BPM is only updated periodically and when a significant change is detected.
+/// BPM is computed as the median of multiple estimates over time,
+/// providing stability against transient percussion.
 pub struct BpmDetector {
     config: BpmDetectorConfig,
 
@@ -37,7 +39,8 @@ pub struct BpmDetector {
     onset_history: Box<[f32]>,
     onset_write_idx: usize,
 
-    // BPM state
+    // BPM estimate history for median calculation
+    bpm_estimates: Vec<f32>,
     current_bpm: f32,
     frames_per_second: f32,
 
@@ -77,6 +80,7 @@ impl BpmDetector {
             prev_bass_energy: 0.0,
             onset_history,
             onset_write_idx: 0,
+            bpm_estimates: Vec::with_capacity(60),
             current_bpm: 120.0, // Default starting BPM
             frames_per_second,
             frame_count: 0,
@@ -127,10 +131,19 @@ impl BpmDetector {
 
             let detected_bpm = self.compute_bpm_from_autocorrelation();
 
-            // Only update if change is significant (hysteresis)
-            if (detected_bpm - self.current_bpm).abs() > self.config.min_change_threshold {
-                // Snap to detected BPM
-                self.current_bpm = detected_bpm;
+            // Add to estimate history
+            if detected_bpm >= self.config.min_bpm && detected_bpm <= self.config.max_bpm {
+                self.bpm_estimates.push(detected_bpm);
+
+                // Keep only the most recent estimates
+                if self.bpm_estimates.len() > self.config.estimate_history_size {
+                    self.bpm_estimates.remove(0);
+                }
+            }
+
+            // Update current BPM to median of estimates
+            if !self.bpm_estimates.is_empty() {
+                self.current_bpm = self.compute_median_bpm();
             }
         }
 
@@ -140,6 +153,25 @@ impl BpmDetector {
     /// Returns the current smoothed BPM estimate.
     pub fn bpm(&self) -> f32 {
         self.current_bpm
+    }
+
+    /// Compute the median of all BPM estimates.
+    fn compute_median_bpm(&self) -> f32 {
+        if self.bpm_estimates.is_empty() {
+            return self.current_bpm;
+        }
+
+        let mut sorted: Vec<f32> = self.bpm_estimates.clone();
+        sorted.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
+
+        let mid = sorted.len() / 2;
+        if sorted.len() % 2 == 0 {
+            // Even number of elements: average the two middle values
+            (sorted[mid - 1] + sorted[mid]) / 2.0
+        } else {
+            // Odd number of elements: take the middle value
+            sorted[mid]
+        }
     }
 
     /// Compute BPM by finding the strongest periodic pattern in onset history.
@@ -205,9 +237,9 @@ mod tests {
     #[test]
     fn test_config_default() {
         let config = BpmDetectorConfig::default();
-        assert_eq!(config.history_seconds, 6.0);
+        assert_eq!(config.history_seconds, 15.0);
         assert_eq!(config.min_bpm, 60.0);
         assert_eq!(config.max_bpm, 200.0);
-        assert_eq!(config.min_change_threshold, 5.0);
+        assert_eq!(config.estimate_history_size, 60);
     }
 }

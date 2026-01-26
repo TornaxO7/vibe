@@ -1,4 +1,5 @@
 use std::borrow::Cow;
+use std::io::Write;
 
 use pollster::FutureExt;
 use vibe_audio::{
@@ -249,6 +250,11 @@ impl Component for FragmentCanvas {
         let bpm = self.bpm_detector.process(processor);
         let buffer = self.resource_manager.get_buffer(ResourceID::Bpm).unwrap();
         queue.write_buffer(buffer, 0, bytemuck::bytes_of(&bpm));
+
+        // Write BPM to file for external tools (waybar, etc.)
+        if let Ok(mut file) = std::fs::File::create("/tmp/vibe-bpm") {
+            let _ = writeln!(file, "{:.0}", bpm);
+        }
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
