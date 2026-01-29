@@ -69,7 +69,7 @@ pub enum ConfigError {
     #[error(transparent)]
     IO(#[from] std::io::Error),
 
-    #[error("It looks like as if you've tried to access `iSampler` or `iTexture` but didn't specify a path to the texture in the config.")]
+    #[error("It looks like as if you've tried to access `iSampler` or `iTexture` in your shader code but you didn't set `texture_path` in the 'FragmentCanvas' config.")]
     MissingTexture,
 }
 
