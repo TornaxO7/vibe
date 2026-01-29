@@ -28,7 +28,7 @@ layout(set = 0, binding = 4) uniform sampler iSampler;
 // The texture which contains the image you set.
 // Usage (example):
 //
-// `vec4 texel = texture(sampler2D(iTexture, iSampler), vec2(.0, .5)).rgb;`
+// `vec3 texel = texture(sampler2D(iTexture, iSampler), vec2(.0, .5)).rgb;`
 layout(set = 0, binding = 5) uniform texture2D iTexture;
 
 // The color for the fragment/pixel.
