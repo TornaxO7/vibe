@@ -1,7 +1,32 @@
-use std::{num::NonZero, ops::Range};
+use std::{num::NonZero, ops::Range, path::PathBuf};
 
+use image::{DynamicImage, ImageReader};
 use serde::{Deserialize, Serialize};
 use vibe_audio::BarProcessorConfig;
+
+#[derive(thiserror::Error, Debug)]
+pub enum FragmentCanvasLoadTexture {
+    #[error(transparent)]
+    IO(#[from] std::io::Error),
+
+    /// Error which occured from `image` crate while trying to decode the image.
+    #[error(transparent)]
+    Decode(#[from] image::error::ImageError),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct FragmentCanvasTexture {
+    pub path: PathBuf,
+}
+
+impl FragmentCanvasTexture {
+    pub fn load(&self) -> Result<DynamicImage, FragmentCanvasLoadTexture> {
+        ImageReader::open(&self.path)
+            .map_err(FragmentCanvasLoadTexture::IO)?
+            .decode()
+            .map_err(FragmentCanvasLoadTexture::Decode)
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FragmentCanvasAudioConfig {

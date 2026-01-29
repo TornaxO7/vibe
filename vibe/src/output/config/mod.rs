@@ -58,7 +58,7 @@ impl OutputConfig {
                 }
                 ComponentConfig::FragmentCanvas {
                     fragment_code,
-                    texture_path,
+                    texture,
                     ..
                 } => {
                     if let vibe_renderer::components::ShaderSource::Path(path) =
@@ -67,8 +67,8 @@ impl OutputConfig {
                         paths.push(path.clone());
                     }
 
-                    if let Some(img_path) = texture_path {
-                        paths.push(img_path.clone());
+                    if let Some(t) = texture {
+                        paths.push(t.path.clone());
                     }
                 }
                 _ => {}
@@ -102,6 +102,8 @@ mod tests {
     use component::BarsAudioConfig;
     use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
+    use crate::output::config::component::FragmentCanvasTexture;
+
     use super::*;
 
     #[test]
@@ -111,7 +113,9 @@ mod tests {
             components: vec![
                 ComponentConfig::FragmentCanvas {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
-                    texture_path: Some("/dir/img".into()),
+                    texture: Some(FragmentCanvasTexture {
+                        path: "/dir/img".into(),
+                    }),
                     fragment_code: ShaderCode {
                         language: ShaderLanguage::Wgsl,
                         source: ShaderSource::Path("/dir/file1".into()),

@@ -33,11 +33,13 @@ pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVaria
 pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
 pub use encrust_wallpaper::WallpaperPulseEdgeAudioConfig;
-pub use fragment_canvas::FragmentCanvasAudioConfig;
+pub use fragment_canvas::{FragmentCanvasAudioConfig, FragmentCanvasTexture};
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
-use crate::output::config::component::light_sources::LightSourcesError;
+use crate::output::config::component::{
+    fragment_canvas::FragmentCanvasLoadTexture, light_sources::LightSourcesError,
+};
 
 use {
     encrust_wallpaper::{WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds},
@@ -86,7 +88,7 @@ pub enum ComponentConfig {
         audio_conf: FragmentCanvasAudioConfig,
         fragment_code: ShaderCode,
 
-        texture_path: Option<PathBuf>,
+        texture: Option<FragmentCanvasTexture>,
     },
     Aurodio {
         base_color: Rgb,
@@ -218,17 +220,21 @@ impl ComponentConfig {
             Self::FragmentCanvas {
                 audio_conf,
                 fragment_code,
-                texture_path,
+                texture,
             } => {
-                let img = match texture_path {
-                    Some(path) => Some(
-                        ImageReader::open(path)
-                            .map_err(|err| ConfigError::OpenFile {
-                                path: path.to_string_lossy().to_string(),
+                let img = match texture {
+                    Some(texture) => match texture.load() {
+                        Ok(img) => Some(img),
+                        Err(FragmentCanvasLoadTexture::IO(err)) => {
+                            return Err(ConfigError::OpenFile {
+                                path: texture.path.to_string_lossy().to_string(),
                                 reason: err,
-                            })?
-                            .decode()?,
-                    ),
+                            })
+                        }
+                        Err(FragmentCanvasLoadTexture::Decode(err)) => {
+                            return Err(ConfigError::Image(err))
+                        }
+                    },
                     None => None,
                 };
 
@@ -515,7 +521,7 @@ mod tests {
                 language: ShaderLanguage::Wgsl,
                 source: ShaderSource::Code("@fragment\nfn main(@builtin(position) pos: vec4f) -> @location(0) { return textureSample(iTexture, iSampler, pos.xy/iResolution.xy); }".to_string()),
             },
-            texture_path: None,
+            texture: None,
         };
 
         let err = config
@@ -544,7 +550,7 @@ mod tests {
                 language: ShaderLanguage::Glsl,
                 source: ShaderSource::Code("void main() { fragColor = texture(sampler2D(iTexture, iSampler), gl_FragCoord.xy/iResolution.xy); }".to_string()),
             },
-            texture_path: None,
+            texture: None,
         };
 
         let err = config
