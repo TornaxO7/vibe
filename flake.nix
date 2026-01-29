@@ -40,6 +40,7 @@
                   packages = with pkgs; [
                     cargo-flamegraph
                     cargo-release
+                    cargo-dist
                     git-cliff
                   ] ++ [ rust-toolchain ];
 

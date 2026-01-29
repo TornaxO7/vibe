@@ -8,6 +8,9 @@ license = "GPL-2.0"
 repository = "https://github.com/TornaxO7/vibe"
 publish = false
 
+[package.metadata.dist]
+dist = true
+
 [dependencies]
 anyhow.workspace = true
 cgmath.workspace = true
