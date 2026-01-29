@@ -22,6 +22,15 @@ layout(set = 0, binding = 2) uniform float iTime;
 //   - (1, 1) => bottom right corner
 layout(set = 0, binding = 3) uniform vec2 iMouse;
 
+// The sampler for `iTexture`
+layout(set = 0, binding = 4) uniform sampler iSampler;
+
+// The texture which contains the image you set.
+// Usage (example):
+//
+// `vec3 texel = texture(sampler2D(iTexture, iSampler), vec2(.0, .5)).rgb;`
+layout(set = 0, binding = 5) uniform texture2D iTexture;
+
 // The color for the fragment/pixel.
 // Needs to be set in your shader (like in shadertoy).
 layout(location = 0) out vec4 fragColor;
