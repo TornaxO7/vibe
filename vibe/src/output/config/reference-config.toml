@@ -173,8 +173,33 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 }
 """
 
+## Fragment canvas - Wgsl - With image
+[[components]]
+[components.FragmentCanvas]
+texture_path = "/tmp/img.png"
+[components.FragmentCanvas.audio_conf]
+amount_bars = 60
+sensitivity = 4.5
+freq_range = { start = 50, end = 10000 }
+[components.FragmentCanvas.fragment_code]
+language = "Wgsl"
+path = "/tmp/fragment_code.wgsl"
+
+
 ## Fragment canvas - Glsl - Path
 [[components]]
+[components.FragmentCanvas.audio_conf]
+amount_bars = 60
+sensitivity = 1.0
+freq_range = { start = 50, end = 10000 }
+[components.FragmentCanvas.fragment_code]
+language = "Glsl"
+path = "/tmp/fragment_code.wgsl"
+
+## Fragment canvas - Glsl - With image
+[[components]]
+[components.FragmentCanvas]
+texture_path = "/tmp/img.png"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 1.0
