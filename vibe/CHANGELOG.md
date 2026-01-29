@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 2.5.0 - 2026-01-29
 
-[e279be1](e279be1b21f8cc07b55acbac2e23c79177b253d8)...[333b9d0](333b9d0884ec4bfa26d4f8798e2d155555e1f4a3)
+[e279be1](e279be1b21f8cc07b55acbac2e23c79177b253d8)...[4322b16](4322b165d3e444c775fede2b902b3526e4fec43e)
 
 ### Features
 
@@ -25,6 +25,7 @@ All notable changes to this project will be documented in this file.
 ### Build
 
 - Trying out `cargo-dist` ([333b9d0](333b9d0884ec4bfa26d4f8798e2d155555e1f4a3))
+- Setup cargo dist ([4322b16](4322b165d3e444c775fede2b902b3526e4fec43e))
 
 ## ibe-v2.4.0 - 2026-01-02
 
