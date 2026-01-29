@@ -7,6 +7,7 @@ description = "An audio library for visualizers"
 license = "GPL-3.0-or-later"
 homepage = "https://github.com/TornaxO7/vibe/vibe-audio"
 repository = "https://github.com/TornaxO7/vibe/tree/main/vibe-audio"
+publish = false
 
 [dependencies]
 tracing.workspace = true
