@@ -1,25 +1,38 @@
+struct Data {
+    resolution: vec2f,
+    position_offset: vec2f,
+    color: vec4f,
+    rotation: mat2x2f,
+    radius: f32,
+    spike_sensitivity: f32,
+    freq_radiant_step: f32,
+}
+
 @group(0) @binding(0)
-var<uniform> iResolution: vec2f;
+var<uniform> data: Data;
+
+// @group(0) @binding(0)
+// var<uniform> iResolution: vec2f;
+
+// @group(0) @binding(1)
+// var<uniform> radius: f32;
+
+// @group(0) @binding(2)
+// var<uniform> rotation: mat2x2f;
+
+// @group(0) @binding(3)
+// var<uniform> spike_sensitivity: f32;
+
+// @group(0) @binding(4)
+// var<uniform> freq_radiant_step: f32;
+
+// @group(0) @binding(5)
+// var<uniform> color: vec4f;
+
+// @group(0) @binding(6)
+// var<uniform> position_offset: vec2f;
 
 @group(0) @binding(1)
-var<uniform> radius: f32;
-
-@group(0) @binding(2)
-var<uniform> rotation: mat2x2f;
-
-@group(0) @binding(3)
-var<uniform> spike_sensitivity: f32;
-
-@group(0) @binding(4)
-var<uniform> freq_radiant_step: f32;
-
-@group(0) @binding(5)
-var<uniform> color: vec4f;
-
-@group(0) @binding(6)
-var<uniform> position_offset: vec2f;
-
-@group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
 
 const PI: f32 = 3.1415926535;
@@ -29,9 +42,9 @@ fn rotate(r: f32) -> mat2x2f {
 }
 
 fn get_uv(pos: vec2f) -> vec2f {
-    var uv = pos.xy / iResolution.xy - position_offset;
-    uv.x *= iResolution.x / iResolution.y;
-    return rotation * uv;
+    var uv = pos.xy / data.resolution.xy - data.position_offset;
+    uv.x *= data.resolution.x / data.resolution.y;
+    return data.rotation * uv;
 }
 
 @fragment
@@ -43,7 +56,7 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
     
     // Calculate the position of the uv. `floor`ing it, will return the index
     // of the lower frequency spike.
-    let uv_freq_pos: f32 = radiant / freq_radiant_step;
+    let uv_freq_pos: f32 = radiant / data.freq_radiant_step;
     let prev_freq_idx: u32 = u32(floor(uv_freq_pos));
     let next_freq_idx: u32 = u32(ceil(uv_freq_pos));
     let normalized_uv_freq_pos: f32 = smoothstep(0., 1., fract(uv_freq_pos));
@@ -72,7 +85,7 @@ fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
 
     }
 
-    let x = abs(length(uv) - (radius + radius_offset * spike_sensitivity));
+    let x = abs(length(uv) - (data.radius + radius_offset * data.spike_sensitivity));
     let y = smoothstep(radius_offset * .01 + .005, .0, abs(x));
-    return color * y;
+    return data.color * y;
 }
