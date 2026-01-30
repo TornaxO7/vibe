@@ -76,6 +76,12 @@ impl State {
                 {
                     match io_err.kind() {
                         std::io::ErrorKind::NotFound => {
+                            warn!(concat![
+                                "Looks like you are starting `vibe` for the first time.\n",
+                                "\tPlease see the 5th point here: <https://github.com/TornaxO7/vibe/blob/main/USAGE.md>\n",
+                                "\tto check if `vibe` is listenting to the correct source."
+                            ]);
+
                             if let Err(err) = default_config.save() {
                                 warn!("Couldn't save default config file: {:?}", err);
                             }
