@@ -11,31 +11,10 @@ struct Data {
 @group(0) @binding(0)
 var<uniform> data: Data;
 
-// @group(0) @binding(0)
-// var<uniform> iResolution: vec2f;
-
-// @group(0) @binding(1)
-// var<uniform> radius: f32;
-
-// @group(0) @binding(2)
-// var<uniform> rotation: mat2x2f;
-
-// @group(0) @binding(3)
-// var<uniform> spike_sensitivity: f32;
-
-// @group(0) @binding(4)
-// var<uniform> freq_radiant_step: f32;
-
-// @group(0) @binding(5)
-// var<uniform> color: vec4f;
-
-// @group(0) @binding(6)
-// var<uniform> position_offset: vec2f;
-
 @group(0) @binding(1)
 var<storage, read> freqs: array<f32>;
 
-const PI: f32 = 3.1415926535;
+const PI: f32 = acos(-1.);
 
 fn rotate(r: f32) -> mat2x2f {
     return mat2x2f(cos(r), -sin(r), sin(r), cos(r));
