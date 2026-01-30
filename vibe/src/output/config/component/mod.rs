@@ -10,7 +10,7 @@ mod radial;
 
 use image::ImageReader;
 use serde::{Deserialize, Serialize};
-use std::{num::NonZero, path::PathBuf};
+use std::{num::NonZero, ops::Range, path::PathBuf};
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{
     components::{
@@ -47,6 +47,25 @@ use {
 };
 
 const GAMMA: f32 = 2.2;
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum FreqRange {
+    Bass,
+    Mid,
+    Treble,
+    Custom(Range<NonZero<u16>>),
+}
+
+impl FreqRange {
+    pub fn range(&self) -> Range<NonZero<u16>> {
+        match self {
+            Self::Bass => NonZero::new(20).unwrap()..NonZero::new(150).unwrap(),
+            Self::Mid => NonZero::new(500).unwrap()..NonZero::new(2_000).unwrap(),
+            Self::Treble => NonZero::new(6_000).unwrap()..NonZero::new(20_000).unwrap(),
+            Self::Custom(range) => range.clone(),
+        }
+    }
+}
 
 #[derive(thiserror::Error, Debug)]
 pub enum ConfigError {
@@ -154,7 +173,9 @@ impl Default for ComponentConfig {
         Self::Bars {
             audio_conf: BarsAudioConfig {
                 amount_bars: NonZero::new(60).unwrap(),
-                freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                freq_range: FreqRange::Custom(
+                    NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                ),
                 sensitivity: 4.0,
             },
             max_height: 0.75,
@@ -266,7 +287,7 @@ impl ComponentConfig {
                 let layers: Vec<AurodioLayerDescriptor> = layers
                     .iter()
                     .map(|layer| AurodioLayerDescriptor {
-                        freq_range: layer.freq_range.clone(),
+                        freq_range: layer.freq_range.range(),
                         zoom_factor: layer.zoom_factor,
                     })
                     .collect();
@@ -405,7 +426,7 @@ impl ComponentConfig {
                         texture_format,
 
                         img,
-                        freq_range: audio_conf.freq_range.clone(),
+                        freq_range: audio_conf.freq_range.range(),
                         audio_sensitivity: audio_conf.sensitivity,
                         high_threshold_ratio,
                         low_threshold_ratio,
@@ -506,15 +527,18 @@ mod tests {
     use vibe_audio::fetcher::DummyFetcher;
     use vibe_renderer::components::{ShaderLanguage, ShaderSource};
 
-    #[test]
-    fn fragment_canvas_wgsl_with_missing_texture_path() {
-        let renderer = Renderer::default();
-        let processor = SampleProcessor::new(DummyFetcher::new(1));
+    mod fragment_canvas_texture_path {
+        use super::*;
 
-        let config = ComponentConfig::FragmentCanvas {
+        #[test]
+        fn fragment_canvas_wgsl_with_missing_texture_path() {
+            let renderer = Renderer::default();
+            let processor = SampleProcessor::new(DummyFetcher::new(1));
+
+            let config = ComponentConfig::FragmentCanvas {
             audio_conf: FragmentCanvasAudioConfig {
                 amount_bars: NonZero::new(10).unwrap(),
-                freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
                 sensitivity: 4.0,
             },
             fragment_code: ShaderCode {
@@ -524,26 +548,26 @@ mod tests {
             texture: None,
         };
 
-        let err = config
-            .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
-            .err()
-            .unwrap();
+            let err = config
+                .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
+                .err()
+                .unwrap();
 
-        match err {
-            ConfigError::MissingTexture => {}
-            _ => unreachable!("Weird: {}", err),
+            match err {
+                ConfigError::MissingTexture => {}
+                _ => unreachable!("Weird: {}", err),
+            }
         }
-    }
 
-    #[test]
-    fn fragment_canvas_glsl_with_missing_texture_path() {
-        let renderer = Renderer::default();
-        let processor = SampleProcessor::new(DummyFetcher::new(1));
+        #[test]
+        fn fragment_canvas_glsl_with_missing_texture_path() {
+            let renderer = Renderer::default();
+            let processor = SampleProcessor::new(DummyFetcher::new(1));
 
-        let config = ComponentConfig::FragmentCanvas {
+            let config = ComponentConfig::FragmentCanvas {
             audio_conf: FragmentCanvasAudioConfig {
                 amount_bars: NonZero::new(10).unwrap(),
-                freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
                 sensitivity: 4.0,
             },
             fragment_code: ShaderCode {
@@ -553,14 +577,15 @@ mod tests {
             texture: None,
         };
 
-        let err = config
-            .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
-            .err()
-            .unwrap();
+            let err = config
+                .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
+                .err()
+                .unwrap();
 
-        match err {
-            ConfigError::MissingTexture => {}
-            _ => unreachable!("Weird: {}", err),
+            match err {
+                ConfigError::MissingTexture => {}
+                _ => unreachable!("Weird: {}", err),
+            }
         }
     }
 }
