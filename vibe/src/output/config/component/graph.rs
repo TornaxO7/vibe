@@ -1,21 +1,19 @@
-use std::{num::NonZero, ops::Range};
-
+use super::{FreqRange, Rgba};
 use cgmath::Deg;
 use serde::{Deserialize, Serialize};
+use std::num::NonZero;
 use vibe_renderer::components::{GraphFormat, GraphPlacement, GraphVariant};
-
-use super::Rgba;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphAudioConfig {
-    pub freq_range: Range<NonZero<u16>>,
+    pub freq_range: FreqRange,
     pub sensitivity: f32,
 }
 
 impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
         Self {
-            freq_range: conf.freq_range,
+            freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
 
             ..Default::default()

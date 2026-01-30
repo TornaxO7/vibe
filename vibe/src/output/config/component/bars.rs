@@ -1,14 +1,12 @@
-use std::{num::NonZero, ops::Range};
-
+use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
+use std::num::NonZero;
 use vibe_renderer::components::{BarsFormat, BarsPlacement, Pixels};
-
-use super::Rgba;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarsAudioConfig {
     pub amount_bars: NonZero<u16>,
-    pub freq_range: Range<NonZero<u16>>,
+    pub freq_range: FreqRange,
     pub sensitivity: f32,
 }
 
@@ -16,7 +14,7 @@ impl Default for BarsAudioConfig {
     fn default() -> Self {
         Self {
             amount_bars: NonZero::new(60).unwrap(),
-            freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+            freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
             sensitivity: 0.2,
         }
     }
@@ -26,7 +24,7 @@ impl From<BarsAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: BarsAudioConfig) -> Self {
         Self {
             amount_bars: conf.amount_bars,
-            freq_range: conf.freq_range,
+            freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
 
             ..Default::default()
@@ -121,5 +119,47 @@ impl From<BarsFormatConfig> for BarsFormat {
 impl From<&BarsFormatConfig> for BarsFormat {
     fn from(config: &BarsFormatConfig) -> Self {
         Self::from(config.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod audio_config {
+        use super::*;
+
+        mod freq_range {
+            use super::*;
+
+            #[test]
+            fn with_preset() {
+                let conf = "
+                    amount_bars = 10
+                    freq_range = \"Bass\"
+                    sensitivity = 4.0
+                ";
+
+                let current: BarsAudioConfig = toml::from_str(conf).unwrap();
+
+                assert_eq!(current.freq_range, FreqRange::Bass);
+            }
+
+            #[test]
+            fn with_custom() {
+                let conf = "
+                    amount_bars = 42
+                    freq_range.Custom = { start = 250, end = 1000 }
+                    sensitivity = 4.0
+                ";
+
+                let current: BarsAudioConfig = toml::from_str(conf).unwrap();
+
+                assert_eq!(
+                    current.freq_range,
+                    FreqRange::Custom(NonZero::new(250).unwrap()..NonZero::new(1_000).unwrap())
+                );
+            }
+        }
     }
 }
