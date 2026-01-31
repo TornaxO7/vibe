@@ -254,46 +254,45 @@ impl Bars {
             ],
         });
 
-        let right = {
-            let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-                label: Some("Bars: Right freq buffer"),
-                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                    as wgpu::BufferAddress,
-                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            });
+        // TODO: Use the same approach as in radial. Looks cleaner
+        let right = match &desc.format {
+            BarsFormat::TrebleBass | BarsFormat::BassTreble => None,
+            f @ (BarsFormat::TrebleBassTreble | BarsFormat::BassTrebleBass) => {
+                let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Bars: Right freq buffer"),
+                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                        as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
 
-            match &desc.format {
-                BarsFormat::TrebleBass | BarsFormat::BassTreble => None,
-                f @ (BarsFormat::TrebleBassTreble | BarsFormat::BassTrebleBass) => {
-                    let entry_point = match f {
-                        BarsFormat::TrebleBassTreble => "bass_treble",
-                        BarsFormat::BassTrebleBass => "treble_bass",
-                        _ => unreachable!(),
-                    };
+                let entry_point = match f {
+                    BarsFormat::TrebleBassTreble => "bass_treble",
+                    BarsFormat::BassTrebleBass => "treble_bass",
+                    _ => unreachable!(),
+                };
 
-                    let pipeline = create_pipeline(
-                        device,
-                        desc.texture_format,
-                        entry_point,
-                        fragment_entrypoint,
-                    );
+                let pipeline = create_pipeline(
+                    device,
+                    desc.texture_format,
+                    entry_point,
+                    fragment_entrypoint,
+                );
 
-                    let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
-                        label: Some("Bars: Right bind group 1"),
-                        layout: &pipeline.get_bind_group_layout(1),
-                        entries: &[wgpu::BindGroupEntry {
-                            binding: 0,
-                            resource: freq_buffer.as_entire_binding(),
-                        }],
-                    });
+                let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Bars: Right bind group 1"),
+                    layout: &pipeline.get_bind_group_layout(1),
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: freq_buffer.as_entire_binding(),
+                    }],
+                });
 
-                    Some(RenderCtx {
-                        freq_buffer,
-                        bind_group1,
-                        pipeline,
-                    })
-                }
+                Some(RenderCtx {
+                    freq_buffer,
+                    bind_group1,
+                    pipeline,
+                })
             }
         };
 
