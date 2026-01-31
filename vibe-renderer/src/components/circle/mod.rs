@@ -4,69 +4,30 @@ pub use descriptor::*;
 use vibe_audio::fetcher::{Fetcher, SystemAudioFetcher};
 
 use super::Component;
-use crate::{resource_manager::ResourceManager, util::SimpleRenderPipelineDescriptor, Renderable};
+use crate::{util::SimpleRenderPipelineDescriptor, Renderable};
 use cgmath::Matrix2;
 use wgpu::{include_wgsl, util::DeviceExt};
 
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const RESOLUTION: u32 = 0;
-    pub const CIRCLE_RADIUS: u32 = 1;
-    pub const ROTATION: u32 = 2;
-    pub const SPIKE_SENSITIVITY: u32 = 3;
-
-    // The radiant distance between two frequency spikes.
-    // `0.9` instead of `1.0` due to floating point errors
-    pub const FREQ_RADIANT_STEP: u32 = 4;
-    pub const WAVE_COLOR: u32 = 5;
-    pub const POSITION_OFFSET: u32 = 6;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::CircleRadius, crate::util::buffer(CIRCLE_RADIUS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Rotation, crate::util::buffer(ROTATION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::FreqRadiantStep, crate::util::buffer(FREQ_RADIANT_STEP, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::PositionOffset, crate::util::buffer(POSITION_OFFSET, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-mod bindings1 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const FREQS: u32 = 0;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    Resolution,
-    CircleRadius,
-    Rotation,
-    SpikeSensitivity,
-    FreqRadiantStep,
-    WaveColor,
-    PositionOffset,
-    Freqs,
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct Data {
+    resolution: [f32; 2],
+    position_offset: [f32; 2],
+    color: super::Rgba,
+    rotation: [[f32; 2]; 2],
+    radius: f32,
+    spike_sensitivity: f32,
+    freq_radiant_step: f32,
+    _padding: f32,
 }
 
 pub struct Circle {
     bar_processor: vibe_audio::BarProcessor,
 
-    resource_manager: ResourceManager<ResourceID>,
+    data_buffer: wgpu::Buffer,
+    freq_buffer: wgpu::Buffer,
+
     bind_group0: wgpu::BindGroup,
-    bind_group1: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
 }
@@ -77,137 +38,51 @@ impl Circle {
         let bar_processor =
             vibe_audio::BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 
-        let mut resource_manager = ResourceManager::new();
+        let data = {
+            let (spike_sensitivity, color) = match &desc.variant {
+                CircleVariant::Graph {
+                    spike_sensitivity,
+                    color,
+                } => (*spike_sensitivity, *color),
+            };
 
-        let mut bind_group0_mapping = bindings0::init_mapping();
-        let bind_group1_mapping = bindings1::init_mapping();
-
-        resource_manager.extend_buffers([
-            (
-                ResourceID::Resolution,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Circle: `iResolution` buffer"),
-                    size: (std::mem::size_of::<f32>() * 2) as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::CircleRadius,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Circle: `circle_radius` buffer"),
-                    contents: bytemuck::bytes_of(&desc.radius),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            {
-                let rotation: [[f32; 2]; 2] = Matrix2::from_angle(desc.rotation).into();
-
-                (
-                    ResourceID::Rotation,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Circle: `rotation` buffer"),
-                        contents: bytemuck::cast_slice(&rotation),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                )
-            },
-            (
-                ResourceID::FreqRadiantStep,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Circle: `freq_radiant_step` buffer"),
-                    contents: bytemuck::bytes_of(
-                        &(std::f32::consts::PI
-                            / (u16::from(desc.audio_conf.amount_bars) as f32 + 0.99)),
-                    ),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            {
+            let position_offset = {
                 let rel_x_offset = desc.position.0.clamp(0., 1.);
                 let rel_y_offset = desc.position.1.clamp(0., 1.);
 
-                (
-                    ResourceID::PositionOffset,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Circle: `position_offset` buffer"),
-                        contents: bytemuck::cast_slice(&[rel_x_offset, rel_y_offset]),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    }),
-                )
-            },
-            (
-                ResourceID::Freqs,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Circle: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>()
-                        * u16::from(desc.audio_conf.amount_bars) as usize)
-                        as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-        ]);
+                [rel_x_offset, rel_y_offset]
+            };
 
-        let fragment_module = match &desc.variant {
-            CircleVariant::Graph {
-                spike_sensitivity: max_radius,
+            Data {
+                radius: desc.radius,
+                spike_sensitivity,
+                freq_radiant_step: std::f32::consts::PI
+                    / (u16::from(desc.audio_conf.amount_bars) as f32 + 0.99),
+                resolution: [0f32; 2],
+                position_offset,
                 color,
-            } => {
-                resource_manager.extend_buffers([
-                    (
-                        ResourceID::SpikeSensitivity,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Circle: `spike-sensitivity` buffer"),
-                            contents: bytemuck::bytes_of(max_radius),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                    (
-                        ResourceID::WaveColor,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Circle: `wave: color` buffer"),
-                            contents: bytemuck::cast_slice(color),
-                            usage: wgpu::BufferUsages::UNIFORM,
-                        }),
-                    ),
-                ]);
-
-                bind_group0_mapping.extend([
-                    (
-                        ResourceID::SpikeSensitivity,
-                        crate::util::buffer(
-                            bindings0::SPIKE_SENSITIVITY,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                    (
-                        ResourceID::WaveColor,
-                        crate::util::buffer(
-                            bindings0::WAVE_COLOR,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    ),
-                ]);
-
-                device.create_shader_module(include_wgsl!("./fragment_graph.wgsl"))
+                rotation: Matrix2::from_angle(desc.rotation).into(),
+                ..Default::default()
             }
         };
 
-        let (bind_group0, bind_group0_layout) =
-            resource_manager.build_bind_group("Circle: Bind group 0", device, &bind_group0_mapping);
+        let data_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Circle: `data` buffer"),
+            contents: bytemuck::bytes_of(&data),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
 
-        let (bind_group1, bind_group1_layout) =
-            resource_manager.build_bind_group("Circle: Bind group 1", device, &bind_group1_mapping);
+        let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Circle: `freqs` buffer"),
+            size: (std::mem::size_of::<f32>() * desc.audio_conf.amount_bars.get() as usize)
+                as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
         let pipeline = {
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Circle: Pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                ..Default::default()
-            });
+            let fragment_module =
+                device.create_shader_module(include_wgsl!("./fragment_graph.wgsl"));
 
             let vertex_module =
                 device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
@@ -215,35 +90,49 @@ impl Circle {
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 SimpleRenderPipelineDescriptor {
                     label: "Circle: Render pipeline",
-                    layout: Some(&pipeline_layout),
+                    layout: None,
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
                         entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         buffers: &[],
                     },
-                    fragment: (wgpu::FragmentState {
+                    fragment: wgpu::FragmentState {
                         module: &fragment_module,
                         entry_point: None,
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         targets: &[Some(wgpu::ColorTargetState {
                             format: desc.texture_format,
-                            blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                            blend: None,
                             write_mask: wgpu::ColorWrites::all(),
                         })],
-                    }),
+                    },
                 },
             ))
         };
 
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Circle: Bind group 0"),
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: data_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: freq_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
         Self {
             bar_processor,
 
-            resource_manager,
+            freq_buffer,
+            data_buffer,
 
             bind_group0,
-            bind_group1,
-
             pipeline,
         }
     }
@@ -252,7 +141,6 @@ impl Circle {
 impl Renderable for Circle {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        pass.set_bind_group(1, &self.bind_group1, &[]);
 
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..3, 0..1);
@@ -267,8 +155,7 @@ impl Component for Circle {
     ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
-        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        queue.write_buffer(&self.freq_buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
@@ -276,13 +163,8 @@ impl Component for Circle {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::Resolution)
-            .unwrap();
-
         queue.write_buffer(
-            buffer,
+            &self.data_buffer,
             0,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );

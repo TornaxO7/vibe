@@ -1,10 +1,11 @@
-mod resource_manager;
-
 pub mod cache;
 pub mod components;
 pub mod texture_generation;
 pub mod util;
 
+pub use components::Component;
+
+use crate::texture_generation::TextureGenerator;
 use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
 use std::{
@@ -14,11 +15,6 @@ use std::{
 };
 use tracing::{error, info};
 use xdg::BaseDirectories;
-
-pub use components::Component;
-pub use resource_manager::ResourceManager;
-
-use crate::texture_generation::TextureGenerator;
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
