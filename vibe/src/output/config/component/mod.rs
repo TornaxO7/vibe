@@ -32,18 +32,16 @@ pub use aurodio::{AurodioAudioConfig, AurodioLayerConfig};
 pub use bars::{BarsAudioConfig, BarsFormatConfig, BarsPlacementConfig, BarsVariantConfig};
 pub use chessy::ChessyAudioConfig;
 pub use circle::{CircleAudioConfig, CircleVariantConfig};
-pub use encrust_wallpaper::WallpaperPulseEdgeAudioConfig;
+pub use encrust_wallpaper::{
+    WallpaperPulseEdgeAudioConfig, WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds,
+};
 pub use fragment_canvas::{FragmentCanvasAudioConfig, FragmentCanvasTexture};
 pub use graph::{GraphAudioConfig, GraphFormatConfig, GraphPlacementConfig, GraphVariantConfig};
+pub use light_sources::{LightSourcesAudioConfig, LightSourcesSource};
 pub use radial::{RadialAudioConfig, RadialFormatConfig, RadialVariantConfig};
 
 use crate::output::config::component::{
     fragment_canvas::FragmentCanvasLoadTexture, light_sources::LightSourcesError,
-};
-
-use {
-    encrust_wallpaper::{WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds},
-    light_sources::{LightSourcesAudioConfig, LightSourcesSource},
 };
 
 const GAMMA: f32 = 2.2;
@@ -201,7 +199,6 @@ impl ComponentConfig {
                             bottom: bottom.as_f32(),
                         }
                     }
-                    BarsVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
                 };
 
                 let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {

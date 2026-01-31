@@ -1,7 +1,7 @@
 use std::{num::NonZero, ops::Range};
 
 use serde::{Deserialize, Serialize};
-use vibe_renderer::components::{BarsFormat, BarsPlacement, Pixels, ShaderCode};
+use vibe_renderer::components::{BarsFormat, BarsPlacement, Pixels};
 
 use super::Rgba;
 
@@ -47,7 +47,6 @@ pub enum BarsVariantConfig {
         high_presence: Rgba,
         low_presence: Rgba,
     },
-    FragmentCode(ShaderCode),
     HorizontalGradient {
         left: Rgba,
         right: Rgba,

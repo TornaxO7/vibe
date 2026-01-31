@@ -4,7 +4,6 @@ use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
 mod aurodio;
 
 mod bar_color_variant;
-mod bar_fragment_code_variant;
 mod bar_presence_gradient_variant;
 
 mod fragment_canvas;

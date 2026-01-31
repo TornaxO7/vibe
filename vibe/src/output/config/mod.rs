@@ -48,14 +48,6 @@ impl OutputConfig {
 
         for component in self.components.iter() {
             match component {
-                ComponentConfig::Bars {
-                    variant: component::BarsVariantConfig::FragmentCode(code),
-                    ..
-                } => {
-                    if let vibe_renderer::components::ShaderSource::Path(path) = &code.source {
-                        paths.push(path.clone());
-                    }
-                }
                 ComponentConfig::FragmentCanvas {
                     fragment_code,
                     texture,
@@ -70,6 +62,12 @@ impl OutputConfig {
                     if let Some(t) = texture {
                         paths.push(t.path.clone());
                     }
+                }
+                ComponentConfig::WallpaperPulseEdges { wallpaper_path, .. } => {
+                    paths.push(wallpaper_path.clone());
+                }
+                ComponentConfig::WallpaperLightSources { wallpaper_path, .. } => {
+                    paths.push(wallpaper_path.clone());
                 }
                 _ => {}
             };
@@ -97,14 +95,13 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
-    use component::BarsAudioConfig;
-    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
-
-    use crate::output::config::component::FragmentCanvasTexture;
-
     use super::*;
+    use crate::output::config::component::{
+        FragmentCanvasTexture, WallpaperPulseEdgeAudioConfig, WallpaperPulseEdgeGaussianBlur,
+        WallpaperPulseEdgeThresholds,
+    };
+    use std::{collections::HashSet, num::NonZero};
+    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
     #[test]
     fn external_paths() {
@@ -114,30 +111,49 @@ mod tests {
                 ComponentConfig::FragmentCanvas {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
                     texture: Some(FragmentCanvasTexture {
-                        path: "/dir/img".into(),
+                        path: "/dir/fragment_canvas_img.png".into(),
                     }),
                     fragment_code: ShaderCode {
                         language: ShaderLanguage::Wgsl,
-                        source: ShaderSource::Path("/dir/file1".into()),
+                        source: ShaderSource::Path("/dir/fragment_canvas_code.wgsl".into()),
                     },
                 },
-                ComponentConfig::Bars {
-                    audio_conf: BarsAudioConfig::default(),
-                    max_height: 0.69,
-                    variant: component::BarsVariantConfig::FragmentCode(ShaderCode {
-                        language: ShaderLanguage::Glsl,
-                        source: ShaderSource::Path("/dir/file2".into()),
-                    }),
-                    placement: component::BarsPlacementConfig::Bottom,
-                    format: component::BarsFormatConfig::BassTreble,
+                ComponentConfig::WallpaperPulseEdges {
+                    wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
+                    audio_conf: WallpaperPulseEdgeAudioConfig {
+                        sensitivity: 4.,
+                        freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                    },
+                    thresholds: WallpaperPulseEdgeThresholds {
+                        high: 0.2,
+                        low: 0.8,
+                    },
+                    wallpaper_brightness: 0.5,
+                    edge_width: 0.2,
+                    pulse_brightness: 0.5,
+                    gaussian_blur: WallpaperPulseEdgeGaussianBlur {
+                        sigma: 0.5,
+                        kernel_size: 3,
+                    },
+                },
+                ComponentConfig::WallpaperLightSources {
+                    wallpaper_path: "/tmp/wallpaper_light_sources.png".into(),
+                    audio_conf: component::LightSourcesAudioConfig {
+                        freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                        sensitivity: 0.5,
+                    },
+                    sources: vec![],
+                    uniform_pulse: true,
+                    debug_sources: false,
                 },
             ],
         };
 
         let expected = HashSet::from([
-            PathBuf::from("/dir/img"),
-            PathBuf::from("/dir/file1"),
-            PathBuf::from("/dir/file2"),
+            "/dir/fragment_canvas_img.png".into(),
+            "/dir/fragment_canvas_code.wgsl".into(),
+            "/tmp/wallpaper_palse_edges.png".into(),
+            "/tmp/wallpaper_light_sources.png".into(),
         ]);
 
         let current: HashSet<PathBuf> = output_config.external_paths().into_iter().collect();
