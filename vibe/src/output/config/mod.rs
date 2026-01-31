@@ -47,15 +47,9 @@ impl OutputConfig {
         let mut paths = Vec::new();
 
         for component in self.components.iter() {
+            // TODO: Add the paths of other components again
+            #[allow(clippy::single_match)]
             match component {
-                ComponentConfig::Bars {
-                    variant: component::BarsVariantConfig::FragmentCode(code),
-                    ..
-                } => {
-                    if let vibe_renderer::components::ShaderSource::Path(path) = &code.source {
-                        paths.push(path.clone());
-                    }
-                }
                 ComponentConfig::FragmentCanvas {
                     fragment_code,
                     texture,
@@ -97,48 +91,28 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 
 #[cfg(test)]
 mod tests {
-    use std::collections::HashSet;
-
-    use component::BarsAudioConfig;
-    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
-
-    use crate::output::config::component::FragmentCanvasTexture;
-
     use super::*;
+    use crate::output::config::component::FragmentCanvasTexture;
+    use std::collections::HashSet;
+    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
     #[test]
     fn external_paths() {
         let output_config = OutputConfig {
             enable: true,
-            components: vec![
-                ComponentConfig::FragmentCanvas {
-                    audio_conf: component::FragmentCanvasAudioConfig::default(),
-                    texture: Some(FragmentCanvasTexture {
-                        path: "/dir/img".into(),
-                    }),
-                    fragment_code: ShaderCode {
-                        language: ShaderLanguage::Wgsl,
-                        source: ShaderSource::Path("/dir/file1".into()),
-                    },
+            components: vec![ComponentConfig::FragmentCanvas {
+                audio_conf: component::FragmentCanvasAudioConfig::default(),
+                texture: Some(FragmentCanvasTexture {
+                    path: "/dir/img".into(),
+                }),
+                fragment_code: ShaderCode {
+                    language: ShaderLanguage::Wgsl,
+                    source: ShaderSource::Path("/dir/file1".into()),
                 },
-                ComponentConfig::Bars {
-                    audio_conf: BarsAudioConfig::default(),
-                    max_height: 0.69,
-                    variant: component::BarsVariantConfig::FragmentCode(ShaderCode {
-                        language: ShaderLanguage::Glsl,
-                        source: ShaderSource::Path("/dir/file2".into()),
-                    }),
-                    placement: component::BarsPlacementConfig::Bottom,
-                    format: component::BarsFormatConfig::BassTreble,
-                },
-            ],
+            }],
         };
 
-        let expected = HashSet::from([
-            PathBuf::from("/dir/img"),
-            PathBuf::from("/dir/file1"),
-            PathBuf::from("/dir/file2"),
-        ]);
+        let expected = HashSet::from([PathBuf::from("/dir/img"), PathBuf::from("/dir/file1")]);
 
         let current: HashSet<PathBuf> = output_config.external_paths().into_iter().collect();
 

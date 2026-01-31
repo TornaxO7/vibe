@@ -201,7 +201,6 @@ impl ComponentConfig {
                             bottom: bottom.as_f32(),
                         }
                     }
-                    BarsVariantConfig::FragmentCode(code) => BarVariant::FragmentCode(code.clone()),
                 };
 
                 let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {

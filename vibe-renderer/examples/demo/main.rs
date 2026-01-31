@@ -125,32 +125,6 @@ impl<'a> State<'a> {
                 format: BarsFormat::BassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
-            ComponentName::BarsFragmentCodeVariant => Bars::new(&BarsDescriptor {
-                device: renderer.device(),
-                sample_processor: &processor,
-                audio_conf: BarProcessorConfig::default(),
-                texture_format: surface_config.format,
-                max_height: 0.75,
-                placement: vibe_renderer::components::BarsPlacement::Top,
-                variant: BarVariant::FragmentCode(ShaderCode {
-                    language: vibe_renderer::components::ShaderLanguage::Wgsl,
-                    source: vibe_renderer::components::ShaderSource::Code(
-                        "
-                        @fragment
-                        fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                            var uv = (2. * pos.xy - iResolution.xy) / iResolution.y;
-                            uv.y *= -1.;
-
-                            let col: vec3<f32> = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
-                            return vec4<f32>(col, uv.y);
-                        }
-                        "
-                        .into(),
-                    ),
-                }),
-                format: BarsFormat::BassTreble,
-            })
-            .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
                 device: renderer.device(),
                 sample_processor: &processor,

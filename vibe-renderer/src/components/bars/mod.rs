@@ -9,8 +9,7 @@ use crate::{
     Renderable,
 };
 use cgmath::{Deg, Matrix2, Vector2};
-use pollster::FutureExt;
-use std::{borrow::Cow, num::NonZero};
+use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, SampleProcessor,
@@ -60,7 +59,6 @@ impl FragmentParams {
 enum FragmentEntrypoint {
     Color,
     Presence,
-    CustomFragmentShader,
     HorizontalGradient,
     VerticalGradient,
 }
@@ -70,7 +68,6 @@ impl FragmentEntrypoint {
         match self {
             FragmentEntrypoint::Color => "fs_color",
             FragmentEntrypoint::Presence => "fs_presence",
-            FragmentEntrypoint::CustomFragmentShader => "main",
             FragmentEntrypoint::HorizontalGradient => "fs_horizontal_gradient",
             FragmentEntrypoint::VerticalGradient => "fs_vertical_gradient",
         }
@@ -83,8 +80,6 @@ mod bindings0 {
 
     pub const VERTEX_PARAMS: u32 = 0;
     pub const FRAGMENT_PARAMS: u32 = 1;
-
-    pub const RESOLUTION: u32 = 6;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
@@ -99,7 +94,6 @@ mod bindings1 {
     use std::collections::HashMap;
 
     pub const FREQS: u32 = 0;
-    pub const TIME: u32 = 1;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
@@ -205,7 +199,7 @@ impl Bars {
         let mut resource_manager = ResourceManager::new();
 
         let mut bind_group0_mapping = bindings0::init_mapping();
-        let mut bind_group1_mapping = bindings1::init_mapping();
+        let bind_group1_mapping = bindings1::init_mapping();
 
         resource_manager.extend_buffers([
             (
@@ -227,12 +221,7 @@ impl Bars {
             ),
         ]);
 
-        let main_shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-            label: Some("Bar: `main` module"),
-            source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
-        });
-
-        let (fragment_module, fragment_entrypoint) = match &desc.variant {
+        let fragment_entrypoint = match &desc.variant {
             BarVariant::Color(rgba) => {
                 resource_manager.insert_buffer(ResourceID::FragmentParams, {
                     let fragment_params = FragmentParams {
@@ -256,7 +245,7 @@ impl Bars {
                     ),
                 );
 
-                (main_shader_module, FragmentEntrypoint::Color)
+                FragmentEntrypoint::Color
             }
             BarVariant::PresenceGradient { high, low } => {
                 resource_manager.insert_buffer(ResourceID::FragmentParams, {
@@ -281,7 +270,7 @@ impl Bars {
                     ),
                 );
 
-                (main_shader_module, FragmentEntrypoint::Presence)
+                FragmentEntrypoint::Presence
             }
 
             BarVariant::HorizontalGradient { left, right } => {
@@ -307,7 +296,7 @@ impl Bars {
                     ),
                 );
 
-                (main_shader_module, FragmentEntrypoint::HorizontalGradient)
+                FragmentEntrypoint::HorizontalGradient
             }
             BarVariant::VerticalGradient { top, bottom } => {
                 resource_manager.insert_buffer(ResourceID::FragmentParams, {
@@ -332,87 +321,7 @@ impl Bars {
                     ),
                 );
 
-                (main_shader_module, FragmentEntrypoint::VerticalGradient)
-            }
-            BarVariant::FragmentCode(code) => {
-                {
-                    resource_manager.insert_buffer(
-                        ResourceID::Resolution,
-                        device.create_buffer(&wgpu::BufferDescriptor {
-                            label: Some("Bar: iResolution buffer"),
-                            size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                            mapped_at_creation: false,
-                        }),
-                    );
-
-                    bind_group0_mapping.extend([(
-                        ResourceID::Resolution,
-                        crate::util::buffer(
-                            bindings0::RESOLUTION,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    )]);
-                }
-
-                {
-                    resource_manager.insert_buffer(
-                        ResourceID::Time,
-                        device.create_buffer(&wgpu::BufferDescriptor {
-                            label: Some("Bar: iTime buffer"),
-                            size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                            mapped_at_creation: false,
-                        }),
-                    );
-
-                    bind_group1_mapping.extend([(
-                        ResourceID::Time,
-                        crate::util::buffer(
-                            bindings1::TIME,
-                            wgpu::ShaderStages::FRAGMENT,
-                            wgpu::BufferBindingType::Uniform,
-                        ),
-                    )]);
-                }
-
-                let fragment_module = {
-                    let source = code.source().map_err(ShaderCodeError::from)?;
-
-                    let shader_source = match code.language {
-                        super::ShaderLanguage::Wgsl => {
-                            const PREAMBLE: &str =
-                                include_str!("./shaders/fragment_code_preamble.wgsl");
-                            let full_code = format!("{}\n{}", PREAMBLE, &source);
-                            wgpu::ShaderSource::Wgsl(Cow::Owned(full_code))
-                        }
-                        super::ShaderLanguage::Glsl => {
-                            const PREAMBLE: &str =
-                                include_str!("./shaders/fragment_code_preamble.glsl");
-                            let full_code = format!("{}\n{}", PREAMBLE, &source);
-                            wgpu::ShaderSource::Glsl {
-                                shader: Cow::Owned(full_code),
-                                stage: wgpu::naga::ShaderStage::Fragment,
-                                defines: &[],
-                            }
-                        }
-                    };
-
-                    let err_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
-                    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                        label: Some("Fragment canvas fragment module"),
-                        source: shader_source,
-                    });
-
-                    if let Some(err) = err_scope.pop().block_on() {
-                        return Err(ShaderCodeError::ParseError(err));
-                    }
-
-                    module
-                };
-
-                (fragment_module, FragmentEntrypoint::CustomFragmentShader)
+                FragmentEntrypoint::VerticalGradient
             }
         };
 
@@ -442,7 +351,6 @@ impl Bars {
                 desc.texture_format,
                 pipeline_layout,
                 entry_point,
-                fragment_module.clone(),
                 fragment_entrypoint,
             )
         };
@@ -492,7 +400,6 @@ impl Bars {
                     desc.texture_format,
                     pipeline_layout,
                     entry_point,
-                    fragment_module,
                     fragment_entrypoint,
                 );
 
@@ -614,11 +521,15 @@ fn create_pipeline(
     texture_format: wgpu::TextureFormat,
     pipeline_layout: wgpu::PipelineLayout,
     vertex_entrypoint: &'static str,
-    fragment_module: wgpu::ShaderModule,
     fragment_entrypoint: FragmentEntrypoint,
 ) -> wgpu::RenderPipeline {
     let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
         label: Some("Bar vertex module"),
+        source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
+    });
+
+    let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+        label: Some("Bar: `main` module"),
         source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
     });
 

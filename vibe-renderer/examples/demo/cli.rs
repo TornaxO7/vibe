@@ -5,7 +5,6 @@ pub enum ComponentName {
     Aurodio,
 
     BarsColorVariant,
-    BarsFragmentCodeVariant,
     BarsPresenceGradientVariant,
 
     CircleCurvedVariant,
