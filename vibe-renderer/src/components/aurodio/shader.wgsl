@@ -1,34 +1,30 @@
+struct FragmentParams {
+    base_color: vec3f,
+    time: f32,
+    resolution: vec2f,
+    movement_speed: f32,
+    points_width: u32,
+}
+
 @group(0) @binding(0)
-var<uniform> iResolution: vec2<f32>;
+var<uniform> fp: FragmentParams;
 
 @group(0) @binding(1)
 var<storage, read> points: array<vec2<f32>>;
 
 @group(0) @binding(2)
-var<uniform> points_width: u32;
-
-@group(0) @binding(3)
 var<storage, read> zoom_factors: array<f32>;
 
-@group(0) @binding(4)
+@group(0) @binding(3)
 var<storage, read> random_seeds: array<f32>;
 
-@group(0) @binding(5)
-var<uniform> base_color: vec3<f32>;
-
-@group(0) @binding(6)
+@group(0) @binding(4)
 var value_noise_texture: texture_2d<f32>;
 
-@group(0) @binding(7)
+@group(0) @binding(5)
 var value_noise_sampler: sampler;
 
-@group(0) @binding(8)
-var<uniform> movement_speed: f32;
-
-@group(1) @binding(0)
-var<uniform> iTime: f32;
-
-@group(1) @binding(1)
+@group(0) @binding(6)
 var<storage, read> freqs: array<f32>;
 
 const CELL_DIAG: f32 = sqrt(2.);
@@ -36,7 +32,7 @@ const CELL_DIAG: f32 = sqrt(2.);
 fn get_point(id: vec2<i32>) -> vec2<f32> {
     let points_len = i32(arrayLength(&points));
 
-    let idx = ((id.x + id.y * i32(points_width)) + points_len) % points_len;
+    let idx = ((id.x + id.y * i32(fp.points_width)) + points_len) % points_len;
 
     return points[idx];
 }
@@ -77,17 +73,17 @@ fn dust_layer(uv: vec2<f32>, color: vec3<f32>) -> vec4<f32> {
 
 @fragment
 fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-    let time = iTime;
+    let time = fp.time;
     var col: vec4<f32>;
-    var uv: vec2<f32> = (2. * pos.xy - iResolution.xy) / iResolution.y;
+    var uv: vec2<f32> = (2. * pos.xy - fp.resolution.xy) / fp.resolution.y;
 
-    let phase = time * movement_speed;
+    let phase = time * fp.movement_speed;
     uv += 10. * vec2f(cos(phase), sin(phase)) + 20.;
 
     var base_color2: vec3<f32>;
-    base_color2.r = cos(time + uv.x + base_color.r);
-    base_color2.g = sin(time + uv.y + base_color.g);
-    base_color2.b = sin(time * .5 + uv.x + uv.y + base_color.b);
+    base_color2.r = cos(time + uv.x + fp.base_color.r);
+    base_color2.g = sin(time + uv.y + fp.base_color.g);
+    base_color2.b = sin(time * .5 + uv.x + uv.y + fp.base_color.b);
     base_color2 = base_color2 * .1 + .5;
 
     let amount_layers = arrayLength(&zoom_factors);
