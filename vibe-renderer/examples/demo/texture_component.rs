@@ -1,38 +1,10 @@
-use vibe_renderer::{Component, Renderable, ResourceManager};
-use wgpu::util::DeviceExt;
+use vibe_renderer::{Component, Renderable};
+use wgpu::{include_wgsl, util::DeviceExt};
 
-type VertexPosition = [f32; 2];
-
-#[rustfmt::skip]
-const VERTICES: [VertexPosition; 3] = [
-    [-3., -1.], // bottom left
-    [1., -1.], // bottom right
-    [1., 3.] // top right
-];
-
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const RESOLUTION: u32 = 0;
-    pub const SAMPLER: u32 = 1;
-    pub const TEXTURE: u32 = 2;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Resolution, vibe_renderer::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Sampler, vibe_renderer::util::sampler(SAMPLER, wgpu::ShaderStages::FRAGMENT)),
-            (ResourceID::Texture, vibe_renderer::util::texture(TEXTURE, wgpu::ShaderStages::FRAGMENT)),
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    Resolution,
-    Sampler,
-    Texture,
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct FragmentParams {
+    resolution: [f32; 2],
 }
 
 pub struct TextureComponentDescriptor<'a> {
@@ -42,87 +14,53 @@ pub struct TextureComponentDescriptor<'a> {
 }
 
 pub struct TextureComponent {
-    resource_manager: ResourceManager<ResourceID>,
     bind_group0: wgpu::BindGroup,
+    fragment_params_buffer: wgpu::Buffer,
+    _sampler: wgpu::Sampler,
+    _texture: wgpu::Texture,
 
     pipeline: wgpu::RenderPipeline,
-    vbuffer: wgpu::Buffer,
 }
 
 impl TextureComponent {
     pub fn new(desc: &TextureComponentDescriptor) -> Self {
         let device = desc.device;
 
-        let mut resource_manager = ResourceManager::new();
-        let bind_group0_mapping = bindings0::init_mapping();
+        let fragment_params_buffer = {
+            let fragment_params = FragmentParams {
+                resolution: [0f32; 2],
+            };
 
-        resource_manager.extend_buffers([(
-            ResourceID::Resolution,
-            device.create_buffer(&wgpu::BufferDescriptor {
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Texture component: iResolution buffer"),
-                size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+                contents: bytemuck::bytes_of(&fragment_params),
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                mapped_at_creation: false,
-            }),
-        )]);
+            })
+        };
 
-        resource_manager.insert_sampler(
-            ResourceID::Sampler,
-            device.create_sampler(&wgpu::SamplerDescriptor {
-                label: Some("Texture component: Sampler"),
-                ..vibe_renderer::util::DEFAULT_SAMPLER_DESCRIPTOR
-            }),
-        );
-
-        resource_manager.insert_texture(ResourceID::Texture, desc.texture.clone());
-
-        let vbuffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-            label: Some("Texture component: vbuffer"),
-            contents: bytemuck::cast_slice(&VERTICES),
-            usage: wgpu::BufferUsages::VERTEX,
+        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Texture component: Sampler"),
+            ..vibe_renderer::util::DEFAULT_SAMPLER_DESCRIPTOR
         });
 
-        let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
-            "Texture component: Bind group 0",
-            device,
-            &bind_group0_mapping,
-        );
+        let texture = desc.texture.clone();
 
         let pipeline = {
-            let shader_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Texture component: Shader module"),
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("./texture_component_shader.wgsl").into(),
-                ),
-            });
-
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Texture component: Pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout],
-                ..Default::default()
-            });
+            let module =
+                device.create_shader_module(include_wgsl!("./texture_component_shader.wgsl"));
 
             device.create_render_pipeline(&vibe_renderer::util::simple_pipeline_descriptor(
                 vibe_renderer::util::SimpleRenderPipelineDescriptor {
                     label: "Texture component: Render pipeline",
-                    layout: Some(&pipeline_layout),
+                    layout: None,
                     vertex: wgpu::VertexState {
-                        module: &shader_module,
+                        module: &module,
                         entry_point: Some("main_vs"),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[wgpu::VertexBufferLayout {
-                            array_stride: std::mem::size_of::<VertexPosition>()
-                                as wgpu::BufferAddress,
-                            step_mode: wgpu::VertexStepMode::Vertex,
-                            attributes: &[wgpu::VertexAttribute {
-                                format: wgpu::VertexFormat::Float32x2,
-                                offset: 0,
-                                shader_location: 0,
-                            }],
-                        }],
+                        buffers: &[],
                     },
                     fragment: wgpu::FragmentState {
-                        module: &shader_module,
+                        module: &module,
                         entry_point: Some("main_fs"),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         targets: &[Some(wgpu::ColorTargetState {
@@ -135,12 +73,34 @@ impl TextureComponent {
             ))
         };
 
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Texture component: Bind group 0"),
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: fragment_params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::TextureView(
+                        &texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                    ),
+                },
+            ],
+        });
+
         Self {
-            resource_manager,
             bind_group0,
+            fragment_params_buffer,
+            _sampler: sampler,
+            _texture: texture,
 
             pipeline,
-            vbuffer,
         }
     }
 }
@@ -148,9 +108,8 @@ impl TextureComponent {
 impl Renderable for TextureComponent {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        pass.set_vertex_buffer(0, self.vbuffer.slice(..));
         pass.set_pipeline(&self.pipeline);
-        pass.draw(0..3, 0..1);
+        pass.draw(0..4, 0..1);
     }
 }
 
@@ -168,13 +127,8 @@ impl Component for TextureComponent {
         let queue = renderer.queue();
 
         {
-            let buffer = self
-                .resource_manager
-                .get_buffer(ResourceID::Resolution)
-                .unwrap();
-
             queue.write_buffer(
-                buffer,
+                &self.fragment_params_buffer,
                 0,
                 bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
             );

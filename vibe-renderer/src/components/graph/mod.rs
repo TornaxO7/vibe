@@ -151,7 +151,6 @@ impl Graph {
                 bottom_left_corner: Into::<[f32; 2]>::into(bottom_left_corner),
                 right: Into::<[f32; 2]>::into(right),
                 up: Into::<[f32; 2]>::into(up),
-                ..Default::default()
             };
 
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
