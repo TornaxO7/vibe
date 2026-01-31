@@ -1,82 +1,19 @@
 mod descriptor;
 
 pub use descriptor::*;
-use std::{collections::HashMap, num::NonZero};
 
+use super::Component;
+use crate::Renderable;
 use cgmath::{Deg, Matrix2, Rad, Vector2};
+use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, SampleProcessor,
 };
 use wgpu::{include_wgsl, util::DeviceExt};
 
-use crate::{resource_manager::ResourceManager, Renderable};
-
-use super::Component;
-
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const BAR_WIDTH: u32 = 0;
-    pub const CIRCLE_RADIUS: u32 = 1;
-    pub const ASPECT_RATIO: u32 = 2;
-    pub const BAR_HEIGHT_SENSITIVITY: u32 = 3;
-    pub const POSITION_OFFSET: u32 = 4;
-
-    pub const COLOR1: u32 = 5;
-    pub const COLOR2: u32 = 6;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::BarWidth, crate::util::buffer(BAR_WIDTH, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::CircleRadius, crate::util::buffer(CIRCLE_RADIUS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::AspectRatio, crate::util::buffer(ASPECT_RATIO, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::BarHeightSensitivity, crate::util::buffer(BAR_HEIGHT_SENSITIVITY, wgpu::ShaderStages::VERTEX_FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::PositionOffset, crate::util::buffer(POSITION_OFFSET, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-
-            (ResourceID::Color1, crate::util::buffer(COLOR1, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Color2, crate::util::buffer(COLOR2, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-mod bindings1 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const FREQS: u32 = 0;
-    pub const ROTATIONS: u32 = 1;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::LeftFreqs, crate::util::buffer( FREQS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
-            (ResourceID::LeftRotations, crate::util::buffer( ROTATIONS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true })),
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    BarWidth,
-    CircleRadius,
-    AspectRatio,
-    BarHeightSensitivity,
-    PositionOffset,
-
-    RightRotations,
-    RightFreqs,
-
-    LeftRotations,
-    LeftFreqs,
-
-    Color1,
-    Color2,
-}
-
 /// Entrypoints for the vertex shader
+#[derive(Clone, Copy)]
 enum VertexEntrypoint {
     BassTreble,
     TrebleBass,
@@ -91,6 +28,23 @@ impl VertexEntrypoint {
     }
 }
 
+/// Entrypoints for the fragment shader
+#[derive(Clone, Copy)]
+enum FragmentEntrypoint {
+    Color,
+    HeightGradient,
+}
+
+impl FragmentEntrypoint {
+    fn as_str(&self) -> &'static str {
+        match self {
+            Self::Color => "fs_color",
+            Self::HeightGradient => "fs_height_gradient",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 enum CirclePart {
     Half,
     Full,
@@ -105,17 +59,43 @@ impl CirclePart {
     }
 }
 
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct VertexParams {
+    position_offset: [f32; 2],
+    circle_radius: f32,
+    aspect_ratio: f32,
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct FragmentParams {
+    color1: [f32; 4],
+    color2: [f32; 4],
+}
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct VertexFragmentParams {
+    bar_width: f32,
+    bar_height_sensitivity: f32,
+}
+
 struct PipelineCtx {
     bind_group1: wgpu::BindGroup,
+    freq_buffer: wgpu::Buffer,
+    _rotations_buffer: wgpu::Buffer,
+
     pipeline: wgpu::RenderPipeline,
 }
 
 pub struct Radial {
     bar_processor: BarProcessor,
 
-    resource_manager: ResourceManager<ResourceID>,
-
     bind_group0: wgpu::BindGroup,
+    vertex_params_buffer: wgpu::Buffer,
+    _fragment_params_buffer: wgpu::Buffer,
+    _vertex_fragment_params_buffer: wgpu::Buffer,
 
     left: PipelineCtx,
     right: Option<PipelineCtx>,
@@ -129,52 +109,8 @@ impl Radial {
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.processor, desc.audio_conf.clone());
 
-        let mut resource_manager = ResourceManager::new();
-
-        let bind_group0_mapping = bindings0::init_mapping();
-
-        let (fragment_entrypoint, color1, color2) = match desc.variant {
-            RadialVariant::Color(rgba) => ("color_entrypoint", rgba, rgba),
-            RadialVariant::HeightGradient { inner, outer } => {
-                ("height_gradient_entrypoint", inner, outer)
-            }
-        };
-
-        resource_manager.extend_buffers([
-            (
-                ResourceID::BarWidth,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `bar_width` buffer"),
-                    contents: bytemuck::bytes_of(&desc.bar_width),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::CircleRadius,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `circle_radius` buffer"),
-                    contents: bytemuck::bytes_of(&desc.circle_radius),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::AspectRatio,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Radial: `aspect_ratio` buffer"),
-                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::BarHeightSensitivity,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `bar_height_sensitivity` buffer"),
-                    contents: bytemuck::bytes_of(&desc.bar_height_sensitivity),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (ResourceID::PositionOffset, {
+        let vertex_params_buffer = {
+            let position_offset: [f32; 2] = {
                 let x_factor = desc.position.0.clamp(0., 1.);
                 let y_factor = desc.position.1.clamp(0., 1.);
 
@@ -182,221 +118,216 @@ impl Radial {
                 let pos_offset =
                     coord_system_origin + Vector2::from((2. * x_factor, 2. * -y_factor));
 
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `position_offset` buffer"),
-                    contents: bytemuck::cast_slice(&[pos_offset.x, pos_offset.y]),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                })
-            }),
-            (
-                ResourceID::Color1,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `color1` buffer"),
-                    contents: bytemuck::cast_slice(&color1),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::Color2,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Radial: `color2` buffer"),
-                    contents: bytemuck::cast_slice(&color2),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-        ]);
+                pos_offset.into()
+            };
 
-        let shader = device.create_shader_module(include_wgsl!("./shader.wgsl"));
+            let vertex_params = VertexParams {
+                position_offset,
+                circle_radius: desc.circle_radius,
+                aspect_ratio: 0.,
+            };
 
-        let fragment_targets = [Some(wgpu::ColorTargetState {
-            format: desc.output_texture_format,
-            blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
-            write_mask: wgpu::ColorWrites::all(),
-        })];
-
-        let (bind_group0, bind_group0_layout) =
-            resource_manager.build_bind_group("Radial: Bind group 0", device, &bind_group0_mapping);
-
-        // left side of radial
-        let (left_entry_point, left_circle_part) = match desc.format {
-            RadialFormat::BassTreble => (VertexEntrypoint::BassTreble, CirclePart::Full),
-            RadialFormat::TrebleBass => (VertexEntrypoint::TrebleBass, CirclePart::Full),
-            // So, in the middle of the circle should be the treble.
-            // Regarding the left rotations: The first left rotation should is in the middle of the circle,
-            // so we need to start with `Treble` and keep rotating to the left (counter clock wise)
-            // which adds the bass bars.
-            RadialFormat::BassTrebleBass => (VertexEntrypoint::TrebleBass, CirclePart::Half),
-            // same as `RadialFormat::BassTrebleBass`
-            RadialFormat::TrebleBassTreble => (VertexEntrypoint::BassTreble, CirclePart::Half),
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Radial: Vertex params buffer"),
+                contents: bytemuck::bytes_of(&vertex_params),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
         };
 
-        resource_manager.extend_buffers([
-            (
-                ResourceID::LeftFreqs,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Radial: `left freqs` buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                        as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            {
-                let rotations = compute_rotations(
-                    left_circle_part,
-                    amount_bars,
-                    desc.init_rotation,
-                    Direction::Ccw,
-                );
+        let fragment_params_buffer = {
+            let (color1, color2) = match desc.variant {
+                RadialVariant::Color(rgba) => (rgba, rgba),
+                RadialVariant::HeightGradient { inner, outer } => (inner, outer),
+            };
 
-                (
-                    ResourceID::LeftRotations,
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Radial: `left rotations` buffer"),
-                        contents: bytemuck::cast_slice(&rotations),
-                        usage: wgpu::BufferUsages::STORAGE,
-                    }),
-                )
-            },
-        ]);
+            let fragment_params = FragmentParams { color1, color2 };
 
-        let left_bind_group_mapping = bindings1::init_mapping();
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Radial: Fragment params buffer"),
+                contents: bytemuck::bytes_of(&fragment_params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            })
+        };
 
-        let (left_bind_group1, left_bind_group1_layout) = resource_manager.build_bind_group(
-            "Radial: `left` bind group 1",
-            device,
-            &left_bind_group_mapping,
-        );
+        let vertex_fragment_params_buffer = {
+            let vertex_fragment_params = VertexFragmentParams {
+                bar_height_sensitivity: desc.bar_height_sensitivity,
+                bar_width: desc.bar_width,
+            };
 
-        let left_pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("Radial: `left` pipeline layout"),
-            bind_group_layouts: &[&bind_group0_layout, &left_bind_group1_layout],
-            ..Default::default()
-        });
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Radial: Vertex Fragment buffer"),
+                contents: bytemuck::bytes_of(&vertex_fragment_params),
+                usage: wgpu::BufferUsages::UNIFORM,
+            })
+        };
 
-        let left_pipeline_descriptor =
-            crate::util::simple_pipeline_descriptor(crate::util::SimpleRenderPipelineDescriptor {
-                label: "Radial: `left` render pipeline",
+        let fragment_entrypoint = match desc.variant {
+            RadialVariant::Color(_) => FragmentEntrypoint::Color,
+            RadialVariant::HeightGradient { .. } => FragmentEntrypoint::HeightGradient,
+        };
 
-                // Note:
-                // Because of this you can't move the whole logic which is relevant for the left side of the radial circle
-                // into a block because this layout needs to live until the right layout has been created (if needed)
-                layout: Some(&left_pipeline_layout),
-                vertex: wgpu::VertexState {
-                    module: &shader,
-                    entry_point: Some(left_entry_point.as_str()),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    buffers: &[],
-                },
-                fragment: wgpu::FragmentState {
-                    module: &shader,
-                    entry_point: Some(fragment_entrypoint),
-                    compilation_options: wgpu::PipelineCompilationOptions::default(),
-                    targets: &fragment_targets,
-                },
+        let circle_part = match desc.format {
+            RadialFormat::BassTreble | RadialFormat::TrebleBass => CirclePart::Full,
+            RadialFormat::TrebleBassTreble | RadialFormat::BassTrebleBass => CirclePart::Half,
+        };
+
+        let left = {
+            let vertex_entry_point = match desc.format {
+                RadialFormat::BassTreble => VertexEntrypoint::BassTreble,
+                RadialFormat::TrebleBass => VertexEntrypoint::TrebleBass,
+                // So, in the middle of the circle should be the treble.
+                // Regarding the left rotations: The first left rotation should is in the middle of the circle,
+                // so we need to start with `Treble` and keep rotating to the left (counter clock wise)
+                // which adds the bass bars.
+                RadialFormat::BassTrebleBass => VertexEntrypoint::TrebleBass,
+                // same as `RadialFormat::BassTrebleBass`
+                RadialFormat::TrebleBassTreble => VertexEntrypoint::BassTreble,
+            };
+
+            let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Radial: Left freq buffer"),
+                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                    as wgpu::BufferAddress,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             });
 
-        let (left, left_pipeline_descriptor) = (
+            let rotations_buffer = {
+                let rotations =
+                    compute_rotations(circle_part, amount_bars, desc.init_rotation, Direction::Ccw);
+
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Radial: `left rotations` buffer"),
+                    contents: bytemuck::cast_slice(&rotations),
+                    usage: wgpu::BufferUsages::STORAGE,
+                })
+            };
+
+            let pipeline = create_pipeline(
+                device,
+                desc.output_texture_format,
+                vertex_entry_point,
+                fragment_entrypoint,
+            );
+
+            let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Radial: Left bind group 1"),
+                layout: &pipeline.get_bind_group_layout(1),
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: freqs_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: rotations_buffer.as_entire_binding(),
+                    },
+                ],
+            });
+
             PipelineCtx {
-                bind_group1: left_bind_group1,
-                pipeline: device.create_render_pipeline(&left_pipeline_descriptor),
-            },
-            left_pipeline_descriptor,
-        );
+                bind_group1,
+                freq_buffer: freqs_buffer,
+                _rotations_buffer: rotations_buffer,
+                pipeline,
+            }
+        };
+
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Radial: Bind group 0"),
+            layout: &left.pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: vertex_params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: fragment_params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: vertex_fragment_params_buffer.as_entire_binding(),
+                },
+            ],
+        });
 
         // right half of radial
         let right = {
-            let entry_point = match desc.format {
+            let vertex_entry_point = match desc.format {
                 RadialFormat::BassTrebleBass => Some(VertexEntrypoint::TrebleBass),
                 RadialFormat::TrebleBassTreble => Some(VertexEntrypoint::BassTreble),
                 RadialFormat::BassTreble | RadialFormat::TrebleBass => None,
             };
 
-            entry_point.map(|entry_point| {
-                let rotations = compute_rotations(
-                    CirclePart::Half,
-                    amount_bars,
-                    desc.init_rotation,
-                    Direction::Cw,
-                );
+            vertex_entry_point.map(|vertex_entry_point| {
+                let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Radial: Right freq buffer"),
+                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                        as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                });
 
-                resource_manager.extend_buffers([
-                    (
-                        ResourceID::RightFreqs,
-                        device.create_buffer(&wgpu::BufferDescriptor {
-                            label: Some("Radial: `right freqs` buffer"),
-                            size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                                as wgpu::BufferAddress,
-                            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                            mapped_at_creation: false,
-                        }),
-                    ),
-                    (
-                        ResourceID::RightRotations,
-                        device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                            label: Some("Radial `right rotations` buffer"),
-                            contents: bytemuck::cast_slice(&rotations),
-                            usage: wgpu::BufferUsages::STORAGE,
-                        }),
-                    ),
+                debug_assert_eq!(circle_part, CirclePart::Half, concat![
+                    "`right`s only task is to render the second (circle) half if there needs to be two audio channels to be rendered!\n",
+                    "So `left` should also render half of the circle (which means `circle_part` should be `CirclePart::Half`)!"
                 ]);
+                let rotations_buffer = {
+                    let rotations = compute_rotations(
+                        circle_part,
+                        amount_bars,
+                        desc.init_rotation,
+                        Direction::Cw,
+                    );
 
-                let bind_group_mapping = HashMap::from([
-                    (
-                        ResourceID::RightFreqs,
-                        crate::util::buffer(
-                            bindings1::FREQS,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Storage { read_only: true },
-                        ),
-                    ),
-                    (
-                        ResourceID::RightRotations,
-                        crate::util::buffer(
-                            bindings1::ROTATIONS,
-                            wgpu::ShaderStages::VERTEX,
-                            wgpu::BufferBindingType::Storage { read_only: true },
-                        ),
-                    ),
-                ]);
-
-                let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
-                    "Radial: `right` bind group 1",
-                    device,
-                    &bind_group_mapping,
-                );
-
-                let pipeline_layout =
-                    device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                        label: Some("Radial: `right` pipeline layout"),
-                        bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                        ..Default::default()
-                    });
-
-                let pipeline_descriptor = wgpu::RenderPipelineDescriptor {
-                    label: Some("Radial: `right` render pipeline"),
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        entry_point: Some(entry_point.as_str()),
-                        ..left_pipeline_descriptor.vertex.clone()
-                    },
-                    ..left_pipeline_descriptor.clone()
+                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                        label: Some("Radial: `right rotations` buffer"),
+                        contents: bytemuck::cast_slice(&rotations),
+                        usage: wgpu::BufferUsages::STORAGE,
+                    })
                 };
 
-                let pipeline = device.create_render_pipeline(&pipeline_descriptor);
+                let pipeline = create_pipeline(
+                    device,
+                    desc.output_texture_format,
+                    vertex_entry_point,
+                    fragment_entrypoint,
+                );
+
+                let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Radial:Right bind group 1"),
+                    layout: &pipeline.get_bind_group_layout(1),
+                    entries: &[
+                        wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: freq_buffer.as_entire_binding(),
+                        },
+                        wgpu::BindGroupEntry {
+                            binding: 1,
+                            resource: rotations_buffer.as_entire_binding(),
+                        },
+                    ],
+                });
 
                 PipelineCtx {
                     pipeline,
+
                     bind_group1,
+                    freq_buffer,
+                    _rotations_buffer: rotations_buffer,
                 }
             })
         };
 
         Self {
             bar_processor,
-            resource_manager,
 
             bind_group0,
+            vertex_params_buffer,
+            _fragment_params_buffer: fragment_params_buffer,
+            _vertex_fragment_params_buffer: vertex_fragment_params_buffer,
 
             left,
             right,
@@ -432,17 +363,14 @@ impl Component for Radial {
     ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
-        {
-            let buffer = self
-                .resource_manager
-                .get_buffer(ResourceID::LeftFreqs)
-                .unwrap();
+        queue.write_buffer(
+            &self.left.freq_buffer,
+            0,
+            bytemuck::cast_slice(&bar_values[0]),
+        );
 
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
-        }
-
-        if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::RightFreqs) {
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[1]));
+        if let Some(right) = &self.right {
+            queue.write_buffer(&right.freq_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
 
@@ -452,13 +380,12 @@ impl Component for Radial {
         let queue = renderer.queue();
 
         {
-            let buffer = self
-                .resource_manager
-                .get_buffer(ResourceID::AspectRatio)
-                .unwrap();
-
             let aspect_ratio = new_resolution[0] as f32 / new_resolution[1] as f32;
-            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&aspect_ratio));
+            queue.write_buffer(
+                &self.vertex_params_buffer,
+                12,
+                bytemuck::bytes_of(&aspect_ratio),
+            );
         }
     }
 
@@ -505,4 +432,103 @@ fn compute_rotations(
     }
 
     rotations.into_boxed_slice()
+}
+
+fn create_pipeline(
+    device: &wgpu::Device,
+    texture_format: wgpu::TextureFormat,
+    vertex_entrypoint: VertexEntrypoint,
+    fragment_entrypoint: FragmentEntrypoint,
+) -> wgpu::RenderPipeline {
+    let module = device.create_shader_module(include_wgsl!("./shader.wgsl"));
+
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Bars: Pipeline layout"),
+        bind_group_layouts: &[
+            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bars: Bind group 0 layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 2,
+                        visibility: wgpu::ShaderStages::VERTEX_FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            }),
+            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bars: Bind group 1 layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            }),
+        ],
+        ..Default::default()
+    });
+
+    device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
+        crate::util::SimpleRenderPipelineDescriptor {
+            label: "Bar: Render pipeline",
+            layout: Some(&layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: Some(vertex_entrypoint.as_str()),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[],
+            },
+            fragment: wgpu::FragmentState {
+                module: &module,
+                entry_point: Some(fragment_entrypoint.as_str()),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: texture_format,
+                    blend: Some(wgpu::BlendState::PREMULTIPLIED_ALPHA_BLENDING),
+                    write_mask: wgpu::ColorWrites::all(),
+                })],
+            },
+        },
+    ))
 }
