@@ -1,22 +1,20 @@
+struct Data {
+    resolution: vec2f,
+    time: f32,
+    movement_speed: f32,
+    zoom_factor: f32,
+}
+
 @group(0) @binding(0)
-var<uniform> iResolution: vec2<f32>;
+var<uniform> data: Data;
 
 @group(0) @binding(1)
-var<uniform> movement_speed: f32;
-
-@group(0) @binding(2)
-var<uniform> zoom_factor: f32;
-
-@group(0) @binding(3)
 var grid_texture: texture_2d<f32>;
 
-@group(0) @binding(4)
+@group(0) @binding(2)
 var grid_sampler: sampler;
 
-@group(1) @binding(0)
-var<uniform> iTime: f32;
-
-@group(1) @binding(1)
+@group(0) @binding(3)
 var<storage, read> freqs: array<f32>;
 
 fn hash12(p: vec2f) -> f32
@@ -35,16 +33,16 @@ fn get_freq(hash: f32) -> f32 {
 
 @fragment
 fn main(@builtin(position) pos: vec4f) -> @location(0) vec4f {
-    var uv = (2. * pos.xy - iResolution.xy) / iResolution.y;
-    let phase = iTime * movement_speed;
+    var uv = (2. * pos.xy - data.resolution.xy) / data.resolution.y;
+    let phase = data.time * data.movement_speed;
     uv += 5. * vec2f(cos(phase), sin(phase));
 
-    let hash = hash12(floor(uv * zoom_factor));
+    let hash = hash12(floor(uv * data.zoom_factor));
     let freq = exp(get_freq(hash)) - 1.;
 
-    let cell_presence: f32 = textureSample(grid_texture, grid_sampler, fract(uv * zoom_factor)).r;
+    let cell_presence: f32 = textureSample(grid_texture, grid_sampler, fract(uv * data.zoom_factor)).r;
 
-    let base_color = sin(2. * vec3f(1., 2., 3.) + hash + iTime * .5) * .4 + .6;
+    let base_color = sin(2. * vec3f(1., 2., 3.) + hash + data.time * .5) * .4 + .6;
     let col = base_color * freq * cell_presence;
     return vec4f(col, 1.);
 }

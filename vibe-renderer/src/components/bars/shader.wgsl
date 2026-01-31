@@ -1,18 +1,28 @@
 struct VertexParams {
-    bottom_left_corner: vec2f,
-    // Normalized
-    up_direction: vec2f,
     // Not normalized.
     // Length equals a full column "slot" (with the direction to the next column)
     column_direction: vec2f,
+    bottom_left_corner: vec2f,
+    // Normalized
+    up_direction: vec2f,
     max_height: f32,
     height_mirrored: u32,
     amount_bars: u32,
 };
 
+struct FragmentParams {
+    color1: vec4f,
+    color2: vec4f,
+};
+
+
 @group(0) @binding(0)
 var<uniform> vp: VertexParams;
 
+@group(0) @binding(1)
+var<uniform> fp: FragmentParams;
+
+// In its own group, due to left (1st source) and right (2nd source) half of bars
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
 
@@ -99,13 +109,6 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
 }
 
 // == fragment ==
-struct FragmentParams {
-    color1: vec4f,
-    color2: vec4f,
-};
-
-@group(0) @binding(1)
-var<uniform> fp: FragmentParams;
 
 @fragment
 fn fs_color() -> @location(0) vec4f {

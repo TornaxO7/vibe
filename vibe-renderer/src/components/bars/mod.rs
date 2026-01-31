@@ -5,7 +5,6 @@ pub use descriptor::*;
 use super::{Component, ShaderCodeError};
 use crate::{
     components::{Pixels, Rgba},
-    resource_manager::ResourceManager,
     Renderable,
 };
 use cgmath::{Deg, Matrix2, Vector2};
@@ -14,7 +13,7 @@ use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, SampleProcessor,
 };
-use wgpu::util::DeviceExt;
+use wgpu::{include_wgsl, util::DeviceExt};
 
 /// The x coords goes from -1 to 1.
 const VERTEX_SURFACE_WIDTH: f32 = 2.;
@@ -31,12 +30,12 @@ type Vec2f = [f32; 2];
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 struct VertexParams {
+    column_direction: Vec2f,
     bottom_left_corner: Vec2f,
     up_direction: Vec2f,
-    column_direction: Vec2f,
     max_height: f32,
     // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
-    // So, it's meaning is: 1 = TRUE, 0 = False
+    // So, it's meaning is: 1 = True, 0 = False
     height_mirrored: u32,
     amount_bars: u32,
 
@@ -49,10 +48,6 @@ struct VertexParams {
 struct FragmentParams {
     color1: Rgba,
     color2: Rgba,
-}
-
-impl FragmentParams {
-    const LABEL: &str = "Bars: `fragment_params` buffer";
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -74,62 +69,28 @@ impl FragmentEntrypoint {
     }
 }
 
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
+// The render context to render the bars with the given format
+struct RenderCtx {
+    freq_buffer: wgpu::Buffer,
 
-    pub const VERTEX_PARAMS: u32 = 0;
-    pub const FRAGMENT_PARAMS: u32 = 1;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::VertexParams, crate::util::buffer(VERTEX_PARAMS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-mod bindings1 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const FREQS: u32 = 0;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Freqs1, crate::util::buffer( FREQS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Storage { read_only: true }, ))
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, Hash, Eq, PartialEq)]
-enum ResourceID {
-    VertexParams,
-    FragmentParams,
-
-    Freqs1,
-    Freqs2,
-
-    Resolution,
-    Time,
+    bind_group1: wgpu::BindGroup,
+    pipeline: wgpu::RenderPipeline,
 }
 
 pub struct Bars {
     amount_bars: NonZero<u16>,
     bar_processor: BarProcessor,
 
-    resource_manager: ResourceManager<ResourceID>,
-
+    // `left` and `right` share the same bind group 0
     bind_group0: wgpu::BindGroup,
-    bind_group1_left: wgpu::BindGroup,
-    pipeline: wgpu::RenderPipeline,
+    vertex_params_buffer: wgpu::Buffer,
+    _fragment_params_buffer: wgpu::Buffer,
 
-    // the bind group and render pipeline for the second audio channel
-    right: Option<(wgpu::RenderPipeline, wgpu::BindGroup)>,
+    left: RenderCtx,
+    // This is set if a second format should be displayed like `BassTrebleBass` => left `BassTreble`, right: `TrebleBass`
+    right: Option<RenderCtx>,
 
-    // thing we need to update the column-direction-vector
-    vparams: VertexParams,
+    // things we need to update the column-direction-vector
     angle: Deg<f32>,
     width: BarsWidth,
 }
@@ -195,215 +156,144 @@ impl Bars {
             }
         };
 
-        // == create buffers ==
-        let mut resource_manager = ResourceManager::new();
-
-        let mut bind_group0_mapping = bindings0::init_mapping();
-        let bind_group1_mapping = bindings1::init_mapping();
-
-        resource_manager.extend_buffers([
-            (
-                ResourceID::VertexParams,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some(FragmentParams::LABEL),
-                    contents: bytemuck::bytes_of(&vparams),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                }),
+        let (fragment_entrypoint, fragment_params) = match &desc.variant {
+            BarVariant::Color(rgba) => (
+                FragmentEntrypoint::Color,
+                FragmentParams {
+                    color1: *rgba,
+                    color2: *rgba,
+                },
             ),
-            (
-                ResourceID::Freqs1,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Bar: main `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>() * usize::from(amount_bars.get())) as u64,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
+            BarVariant::PresenceGradient { high, low } => (
+                FragmentEntrypoint::Presence,
+                FragmentParams {
+                    color1: *low,
+                    color2: *high,
+                },
             ),
-        ]);
 
-        let fragment_entrypoint = match &desc.variant {
-            BarVariant::Color(rgba) => {
-                resource_manager.insert_buffer(ResourceID::FragmentParams, {
-                    let fragment_params = FragmentParams {
-                        color1: *rgba,
-                        color2: *rgba,
-                    };
-
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some(FragmentParams::LABEL),
-                        contents: bytemuck::bytes_of(&fragment_params),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    })
-                });
-
-                bind_group0_mapping.insert(
-                    ResourceID::FragmentParams,
-                    crate::util::buffer(
-                        bindings0::FRAGMENT_PARAMS,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    ),
-                );
-
-                FragmentEntrypoint::Color
-            }
-            BarVariant::PresenceGradient { high, low } => {
-                resource_manager.insert_buffer(ResourceID::FragmentParams, {
-                    let fragment_params = FragmentParams {
-                        color1: *low,
-                        color2: *high,
-                    };
-
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some("Bar: `fragment_params` buffer"),
-                        contents: bytemuck::bytes_of(&fragment_params),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    })
-                });
-
-                bind_group0_mapping.insert(
-                    ResourceID::FragmentParams,
-                    crate::util::buffer(
-                        bindings0::FRAGMENT_PARAMS,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    ),
-                );
-
-                FragmentEntrypoint::Presence
-            }
-
-            BarVariant::HorizontalGradient { left, right } => {
-                resource_manager.insert_buffer(ResourceID::FragmentParams, {
-                    let fp = FragmentParams {
-                        color1: *left,
-                        color2: *right,
-                    };
-
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some(FragmentParams::LABEL),
-                        contents: bytemuck::bytes_of(&fp),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    })
-                });
-
-                bind_group0_mapping.insert(
-                    ResourceID::FragmentParams,
-                    crate::util::buffer(
-                        bindings0::FRAGMENT_PARAMS,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    ),
-                );
-
-                FragmentEntrypoint::HorizontalGradient
-            }
-            BarVariant::VerticalGradient { top, bottom } => {
-                resource_manager.insert_buffer(ResourceID::FragmentParams, {
-                    let fp = FragmentParams {
-                        color1: *bottom,
-                        color2: *top,
-                    };
-
-                    device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                        label: Some(FragmentParams::LABEL),
-                        contents: bytemuck::bytes_of(&fp),
-                        usage: wgpu::BufferUsages::UNIFORM,
-                    })
-                });
-
-                bind_group0_mapping.insert(
-                    ResourceID::FragmentParams,
-                    crate::util::buffer(
-                        bindings0::FRAGMENT_PARAMS,
-                        wgpu::ShaderStages::FRAGMENT,
-                        wgpu::BufferBindingType::Uniform,
-                    ),
-                );
-
-                FragmentEntrypoint::VerticalGradient
-            }
+            BarVariant::HorizontalGradient { left, right } => (
+                FragmentEntrypoint::HorizontalGradient,
+                FragmentParams {
+                    color1: *left,
+                    color2: *right,
+                },
+            ),
+            BarVariant::VerticalGradient { top, bottom } => (
+                FragmentEntrypoint::VerticalGradient,
+                FragmentParams {
+                    color1: *bottom,
+                    color2: *top,
+                },
+            ),
         };
 
-        let (bind_group0, bind_group0_layout) =
-            resource_manager.build_bind_group("Bars: Bind group 0", device, &bind_group0_mapping);
+        let vertex_params_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Bars: Vertex params buffer"),
+            contents: bytemuck::bytes_of(&vparams),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
 
-        let (bind_group1_left, bind_group1_left_layout) = resource_manager.build_bind_group(
-            "Bars: Bind group 1 - 1",
-            device,
-            &bind_group1_mapping,
-        );
+        let fragment_params_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Bars: Fragment params buffer"),
+            contents: bytemuck::bytes_of(&fragment_params),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
 
-        let pipeline = {
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Bars: Pipeline layout left"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_left_layout],
-                ..Default::default()
+        let left = {
+            let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Bars: Left freq buffer"),
+                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                    as wgpu::BufferAddress,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             });
 
-            let entry_point = match desc.format {
-                BarsFormat::BassTreble | BarsFormat::BassTrebleBass => "bass_treble",
-                BarsFormat::TrebleBass | BarsFormat::TrebleBassTreble => "treble_bass",
-            };
-
-            create_pipeline(
-                device,
-                desc.texture_format,
-                pipeline_layout,
-                entry_point,
-                fragment_entrypoint,
-            )
-        };
-
-        let right = match &desc.format {
-            BarsFormat::TrebleBass | BarsFormat::BassTreble => None,
-            f @ (BarsFormat::TrebleBassTreble | BarsFormat::BassTrebleBass) => {
-                resource_manager.insert_buffer(
-                    ResourceID::Freqs2,
-                    device.create_buffer(&wgpu::BufferDescriptor {
-                        label: Some("Bar: second `freqs` buffer"),
-                        size: (std::mem::size_of::<f32>() * usize::from(amount_bars.get())) as u64,
-                        usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                        mapped_at_creation: false,
-                    }),
-                );
-
-                let (bind_group1_right, bind_group1_right_layout) = {
-                    let mut right_bind_group1_mapping = bind_group1_mapping.clone();
-                    let buffer = right_bind_group1_mapping
-                        .remove(&ResourceID::Freqs1)
-                        .unwrap();
-                    right_bind_group1_mapping.insert(ResourceID::Freqs2, buffer);
-
-                    resource_manager.build_bind_group(
-                        "Bars: Bind group 1 - 2",
-                        device,
-                        &right_bind_group1_mapping,
-                    )
+            let pipeline = {
+                let entry_point = match desc.format {
+                    BarsFormat::BassTreble | BarsFormat::BassTrebleBass => "bass_treble",
+                    BarsFormat::TrebleBass | BarsFormat::TrebleBassTreble => "treble_bass",
                 };
 
-                let pipeline_layout =
-                    device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                        label: Some("Bars: Pipeline layout right"),
-                        bind_group_layouts: &[&bind_group0_layout, &bind_group1_right_layout],
-                        ..Default::default()
-                    });
-
-                let entry_point = match f {
-                    BarsFormat::TrebleBassTreble => "bass_treble",
-                    BarsFormat::BassTrebleBass => "treble_bass",
-                    _ => unreachable!(),
-                };
-
-                let pipeline = create_pipeline(
+                create_pipeline(
                     device,
                     desc.texture_format,
-                    pipeline_layout,
                     entry_point,
                     fragment_entrypoint,
-                );
+                )
+            };
 
-                Some((pipeline, bind_group1_right))
+            let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Bars: Left bind group 1"),
+                layout: &pipeline.get_bind_group_layout(1),
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: freq_buffer.as_entire_binding(),
+                }],
+            });
+
+            RenderCtx {
+                freq_buffer,
+                bind_group1,
+                pipeline,
+            }
+        };
+
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Bars: Bind group 0"),
+            layout: &left.pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: vertex_params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: fragment_params_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
+        let right = {
+            let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Bars: Right freq buffer"),
+                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                    as wgpu::BufferAddress,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
+            });
+
+            match &desc.format {
+                BarsFormat::TrebleBass | BarsFormat::BassTreble => None,
+                f @ (BarsFormat::TrebleBassTreble | BarsFormat::BassTrebleBass) => {
+                    let entry_point = match f {
+                        BarsFormat::TrebleBassTreble => "bass_treble",
+                        BarsFormat::BassTrebleBass => "treble_bass",
+                        _ => unreachable!(),
+                    };
+
+                    let pipeline = create_pipeline(
+                        device,
+                        desc.texture_format,
+                        entry_point,
+                        fragment_entrypoint,
+                    );
+
+                    let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                        label: Some("Bars: Right bind group 1"),
+                        layout: &pipeline.get_bind_group_layout(1),
+                        entries: &[wgpu::BindGroupEntry {
+                            binding: 0,
+                            resource: freq_buffer.as_entire_binding(),
+                        }],
+                    });
+
+                    Some(RenderCtx {
+                        freq_buffer,
+                        bind_group1,
+                        pipeline,
+                    })
+                }
             }
         };
 
@@ -411,16 +301,15 @@ impl Bars {
             amount_bars,
             bar_processor,
 
-            resource_manager,
-
             bind_group0,
-            bind_group1_left,
-            pipeline,
+            vertex_params_buffer,
+            _fragment_params_buffer: fragment_params_buffer,
 
-            vparams,
+            left,
+            right,
+
             angle,
             width,
-            right,
         })
     }
 }
@@ -430,13 +319,16 @@ impl Renderable for Bars {
         let amount_bars = self.amount_bars.get() as u32;
 
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        pass.set_bind_group(1, &self.bind_group1_left, &[]);
-        pass.set_pipeline(&self.pipeline);
+
+        // left half
+        pass.set_bind_group(1, &self.left.bind_group1, &[]);
+        pass.set_pipeline(&self.left.pipeline);
         pass.draw(0..4, 0..amount_bars);
 
-        if let Some((pipeline, bind_group)) = &self.right {
-            pass.set_bind_group(1, bind_group, &[]);
-            pass.set_pipeline(pipeline);
+        // right half (if it exists)
+        if let Some(right) = &self.right {
+            pass.set_bind_group(1, &right.bind_group1, &[]);
+            pass.set_pipeline(&right.pipeline);
             pass.draw(0..4, amount_bars..(2 * amount_bars));
         }
     }
@@ -450,22 +342,18 @@ impl Component for Bars {
     ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::Freqs1)
-            .unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        queue.write_buffer(
+            &self.left.freq_buffer,
+            0,
+            bytemuck::cast_slice(&bar_values[0]),
+        );
 
-        if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::Freqs2) {
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[1]));
+        if let Some(right) = &self.right {
+            queue.write_buffer(&right.freq_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
 
-    fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::Time) {
-            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
-        }
-    }
+    fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
@@ -473,17 +361,8 @@ impl Component for Bars {
         let new_width = new_resolution[0] as f32;
         let new_height = new_resolution[1] as f32;
 
-        if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::Resolution) {
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[new_width, new_height]));
-        }
-
         // update the column direction vector
         {
-            let buffer = self
-                .resource_manager
-                .get_buffer(ResourceID::VertexParams)
-                .unwrap();
-
             let rotation = Matrix2::from_angle(self.angle);
             let aspect_ratio = new_width / new_height;
 
@@ -494,22 +373,22 @@ impl Component for Bars {
             };
 
             let bar_len = component_width / self.amount_bars.get() as f32;
-            let mut dir = rotation * Vector2::unit_x();
+            let mut column_direction = rotation * Vector2::unit_x();
 
-            dir = bar_len * dir;
+            column_direction = bar_len * column_direction;
 
             let is_mono_channel = self.right.is_none();
             if is_mono_channel {
-                dir *= 2.;
+                column_direction *= 2.;
             }
 
             // apply aspect ratio
-            dir.y *= aspect_ratio;
-            dir /= new_width;
+            column_direction.y *= aspect_ratio;
+            column_direction /= new_width;
 
-            self.vparams.column_direction = dir.into();
+            let array: [f32; 2] = column_direction.into();
 
-            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&self.vparams));
+            queue.write_buffer(&self.vertex_params_buffer, 0, bytemuck::cast_slice(&array));
         }
     }
 
@@ -519,41 +398,75 @@ impl Component for Bars {
 fn create_pipeline(
     device: &wgpu::Device,
     texture_format: wgpu::TextureFormat,
-    pipeline_layout: wgpu::PipelineLayout,
     vertex_entrypoint: &'static str,
     fragment_entrypoint: FragmentEntrypoint,
 ) -> wgpu::RenderPipeline {
-    let vertex_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Bar vertex module"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
-    });
+    let module = device.create_shader_module(include_wgsl!("./shader.wgsl"));
 
-    let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-        label: Some("Bar: `main` module"),
-        source: wgpu::ShaderSource::Wgsl(include_str!("./shaders/main.wgsl").into()),
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Bars: Pipeline layout"),
+        bind_group_layouts: &[
+            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bars: Bind group 0 layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            }),
+            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bars: Bind group 1 layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::VERTEX,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            }),
+        ],
+        ..Default::default()
     });
-
-    let fragment_targets = [Some(wgpu::ColorTargetState {
-        format: texture_format,
-        blend: Some(wgpu::BlendState::ALPHA_BLENDING),
-        write_mask: wgpu::ColorWrites::all(),
-    })];
 
     device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
         crate::util::SimpleRenderPipelineDescriptor {
             label: "Bar: Render pipeline",
-            layout: Some(&pipeline_layout),
+            layout: Some(&layout),
             vertex: wgpu::VertexState {
-                module: &vertex_module,
+                module: &module,
                 entry_point: Some(vertex_entrypoint),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 buffers: &[],
             },
             fragment: wgpu::FragmentState {
-                module: &fragment_module,
+                module: &module,
                 entry_point: Some(fragment_entrypoint.as_str()),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
-                targets: &fragment_targets,
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: texture_format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::all(),
+                })],
             },
         },
     ))

@@ -4,79 +4,34 @@ pub use descriptor::*;
 
 use crate::{
     components::Component,
-    resource_manager::ResourceManager,
     texture_generation::{SdfMask, SdfPattern},
     Renderable,
 };
-use std::collections::HashMap;
 use vibe_audio::{fetcher::Fetcher, BarProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 // this texture size seems good enough for a 1920x1080 screen.
 const DEFAULT_SDF_TEXTURE_SIZE: u32 = 512;
 
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const RESOLUTION: u32 = 0;
-    pub const MOVEMENT_SPEED: u32 = 1;
-    pub const ZOOM_FACTOR: u32 = 2;
-
-    pub const GRID_TEXTURE: u32 = 3;
-    pub const GRID_SAMPLER: u32 = 4;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Resolution   , crate::util::buffer(RESOLUTION    , wgpu::ShaderStages::FRAGMENT  , wgpu::BufferBindingType::Uniform)),
-            (ResourceID::MovementSpeed, crate::util::buffer(MOVEMENT_SPEED, wgpu::ShaderStages::FRAGMENT  , wgpu::BufferBindingType::Uniform)),
-            (ResourceID::ZoomFactor   , crate::util::buffer(ZOOM_FACTOR   , wgpu::ShaderStages::FRAGMENT  , wgpu::BufferBindingType::Uniform)),
-
-            (ResourceID::GridTexture  , crate::util::texture(GRID_TEXTURE , wgpu::ShaderStages::FRAGMENT)),
-            (ResourceID::GridSampler  , crate::util::sampler(GRID_SAMPLER , wgpu::ShaderStages::FRAGMENT)),
-        ])
-    }
-}
-
-mod bindings1 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const TIME: u32 = 0;
-    pub const FREQS: u32 = 1;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Time , crate::util::buffer(TIME , wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform))                    ,
-            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    Resolution,
-    MovementSpeed,
-    ZoomFactor,
-    GridTexture,
-    GridSampler,
-
-    Time,
-    Freqs,
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Default)]
+struct Data {
+    resolution: [f32; 2],
+    time: f32,
+    movement_speed: f32,
+    zoom_factor: f32,
+    _padding: f32,
 }
 
 pub struct Chessy {
     bar_processor: BarProcessor,
 
-    resource_manager: ResourceManager<ResourceID>,
+    data_buffer: wgpu::Buffer,
+    freqs_buffer: wgpu::Buffer,
+    grid_texture: wgpu::Texture,
+    grid_sampler: wgpu::Sampler,
 
     bind_group0: wgpu::BindGroup,
-    bind_group1: wgpu::BindGroup,
-
-    bind_group0_mapping: HashMap<ResourceID, wgpu::BindGroupLayoutEntry>,
-
     pipeline: wgpu::RenderPipeline,
 
     // data to recreate the grid texture
@@ -89,108 +44,57 @@ impl Chessy {
         let device = renderer.device();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
 
-        let mut resource_manager = ResourceManager::new();
-        let bind_group0_mapping = bindings0::init_mapping();
-        let bind_group1_mapping = bindings1::init_mapping();
+        let data = Data {
+            resolution: [0f32; 2],
+            time: 0f32,
+            movement_speed: desc.movement_speed,
+            zoom_factor: desc.zoom_factor,
+            ..Default::default()
+        };
 
-        resource_manager.extend_buffers([
-            (
-                ResourceID::Resolution,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Chessy: `iResolution` buffer"),
-                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::MovementSpeed,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Chessy: `movement_speed` buffer"),
-                    contents: bytemuck::bytes_of(&desc.movement_speed),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::ZoomFactor,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Chessy: `zoom_factor` buffer"),
-                    contents: bytemuck::bytes_of(&desc.zoom_factor),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::Time,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Chessy: `iTime` buffer"),
-                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Freqs,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Chessy: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>()
-                        * desc.audio_config.amount_bars.get() as usize)
-                        as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-        ]);
+        let data_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Chessy: Data buffer"),
+            contents: bytemuck::bytes_of(&data),
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+        });
 
-        {
-            // arbitrary size for the beginning
-            let grid_texture = desc.renderer.generate(&SdfMask {
-                texture_size: 50,
-                pattern: desc.pattern,
-            });
+        let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Chessy: `freqs` buffer"),
+            size: (std::mem::size_of::<f32>() * desc.audio_config.amount_bars.get() as usize)
+                as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-            let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-                label: Some("Chessy: Grid texture sampler"),
+        // arbitrary size for the beginning
+        let grid_texture = desc.renderer.generate(&SdfMask {
+            texture_size: 50,
+            pattern: desc.pattern,
+        });
 
-                address_mode_u: wgpu::AddressMode::ClampToEdge,
-                address_mode_v: wgpu::AddressMode::ClampToEdge,
-                address_mode_w: wgpu::AddressMode::ClampToEdge,
-                mipmap_filter: wgpu::MipmapFilterMode::Linear,
-                min_filter: wgpu::FilterMode::Linear,
-                mag_filter: wgpu::FilterMode::Linear,
-                ..Default::default()
-            });
+        let grid_sampler = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Chessy: Grid texture sampler"),
 
-            resource_manager.insert_texture(ResourceID::GridTexture, grid_texture);
-            resource_manager.insert_sampler(ResourceID::GridSampler, sampler);
-        }
-
-        let (bind_group0, bind_group0_layout) =
-            resource_manager.build_bind_group("Chessy: Bind group 0", device, &bind_group0_mapping);
-
-        let (bind_group1, bind_group1_layout) =
-            resource_manager.build_bind_group("Chessy: Bind group 1", device, &bind_group1_mapping);
+            address_mode_u: wgpu::AddressMode::ClampToEdge,
+            address_mode_v: wgpu::AddressMode::ClampToEdge,
+            address_mode_w: wgpu::AddressMode::ClampToEdge,
+            mipmap_filter: wgpu::MipmapFilterMode::Linear,
+            min_filter: wgpu::FilterMode::Linear,
+            mag_filter: wgpu::FilterMode::Linear,
+            ..Default::default()
+        });
 
         let pipeline = {
             let vertex_module =
                 device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
 
-            let fragment_module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                label: Some("Chessy: Fragment shader"),
-                source: wgpu::ShaderSource::Wgsl(
-                    include_str!("./shaders/fragment_shader.wgsl").into(),
-                ),
-            });
-
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Chessy: Pipeline layout descriptor"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                ..Default::default()
-            });
+            let fragment_module =
+                device.create_shader_module(include_wgsl!("./shaders/fragment_shader.wgsl"));
 
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Chessy: Render pipeline",
-                    layout: Some(&pipeline_layout),
+                    layout: None,
                     vertex: wgpu::VertexState {
                         module: &vertex_module,
                         entry_point: None,
@@ -211,14 +115,40 @@ impl Chessy {
             ))
         };
 
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Chessy: Bind group 0"),
+            layout: &pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: data_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::TextureView(
+                        &grid_texture.create_view(&wgpu::TextureViewDescriptor::default()),
+                    ),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: wgpu::BindingResource::Sampler(&grid_sampler),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: freqs_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
         Self {
             bar_processor,
-            resource_manager,
+
+            data_buffer,
+            freqs_buffer,
+            grid_texture,
+            grid_sampler,
+
             bind_group0,
-            bind_group1,
-
-            bind_group0_mapping,
-
             pipeline,
 
             pattern: desc.pattern,
@@ -229,7 +159,6 @@ impl Chessy {
 impl Renderable for Chessy {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        pass.set_bind_group(1, &self.bind_group1, &[]);
 
         pass.set_pipeline(&self.pipeline);
         pass.draw(0..4, 0..1);
@@ -244,14 +173,17 @@ impl Component for Chessy {
     ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
-        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
-
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
+        let resolution_size = 8;
+
+        queue.write_buffer(
+            &self.data_buffer,
+            resolution_size,
+            bytemuck::bytes_of(&new_time),
+        );
     }
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
@@ -270,31 +202,41 @@ impl Component for Chessy {
             // ... so we double it ~~and give it to the next person~~
             let new_size = DEFAULT_SDF_TEXTURE_SIZE as f32 * factor;
 
-            let grid_texture = renderer.generate(&SdfMask {
+            self.grid_texture = renderer.generate(&SdfMask {
                 texture_size: new_size.ceil() as u32,
                 pattern: self.pattern,
             });
 
-            self.resource_manager
-                .replace_texture(ResourceID::GridTexture, grid_texture);
+            self.bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Chessy: Bind group 0"),
+                layout: &self.pipeline.get_bind_group_layout(0),
+                entries: &[
+                    wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: self.data_buffer.as_entire_binding(),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 1,
+                        resource: wgpu::BindingResource::TextureView(
+                            &self
+                                .grid_texture
+                                .create_view(&wgpu::TextureViewDescriptor::default()),
+                        ),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 2,
+                        resource: wgpu::BindingResource::Sampler(&self.grid_sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 3,
+                        resource: self.freqs_buffer.as_entire_binding(),
+                    },
+                ],
+            });
 
-            let (bind_group, _layout) = self.resource_manager.build_bind_group(
-                "Chessy: Bind group 0",
-                device,
-                &self.bind_group0_mapping,
-            );
-
-            self.bind_group0 = bind_group;
-        }
-
-        {
-            let buffer = self
-                .resource_manager
-                .get_buffer(ResourceID::Resolution)
-                .unwrap();
-
+            // update `resolution` values
             queue.write_buffer(
-                buffer,
+                &self.data_buffer,
                 0,
                 bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
             );
