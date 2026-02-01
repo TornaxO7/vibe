@@ -53,6 +53,21 @@ struct FragmentParams {
 }
 
 #[derive(Debug, Clone, Copy)]
+enum VertexEntrypoint {
+    BassTreble,
+    TrebleBass,
+}
+
+impl VertexEntrypoint {
+    fn as_str(&self) -> &'static str {
+        match self {
+            VertexEntrypoint::BassTreble => "bass_treble",
+            VertexEntrypoint::TrebleBass => "treble_bass",
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 enum FragmentEntrypoint {
     Color,
     Presence,
@@ -212,15 +227,19 @@ impl Bars {
             });
 
             let pipeline = {
-                let entry_point = match desc.format {
-                    BarsFormat::BassTreble | BarsFormat::BassTrebleBass => "bass_treble",
-                    BarsFormat::TrebleBass | BarsFormat::TrebleBassTreble => "treble_bass",
+                let vertex_entrypoint = match desc.format {
+                    BarsFormat::BassTreble | BarsFormat::BassTrebleBass => {
+                        VertexEntrypoint::BassTreble
+                    }
+                    BarsFormat::TrebleBass | BarsFormat::TrebleBassTreble => {
+                        VertexEntrypoint::TrebleBass
+                    }
                 };
 
                 create_pipeline(
                     device,
                     desc.texture_format,
-                    entry_point,
+                    vertex_entrypoint,
                     fragment_entrypoint,
                 )
             };
@@ -256,10 +275,14 @@ impl Bars {
             ],
         });
 
-        // TODO: Use the same approach as in radial. Looks cleaner
-        let right = match &desc.format {
-            BarsFormat::TrebleBass | BarsFormat::BassTreble => None,
-            f @ (BarsFormat::TrebleBassTreble | BarsFormat::BassTrebleBass) => {
+        let right = {
+            let vertex_entrypoint = match desc.format {
+                BarsFormat::BassTrebleBass => Some(VertexEntrypoint::TrebleBass),
+                BarsFormat::TrebleBassTreble => Some(VertexEntrypoint::BassTreble),
+                BarsFormat::BassTreble | BarsFormat::TrebleBass => None,
+            };
+
+            vertex_entrypoint.map(|vertex_entrypoint| {
                 let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Bars: Right freq buffer"),
                     size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
@@ -268,16 +291,10 @@ impl Bars {
                     mapped_at_creation: false,
                 });
 
-                let entry_point = match f {
-                    BarsFormat::TrebleBassTreble => "bass_treble",
-                    BarsFormat::BassTrebleBass => "treble_bass",
-                    _ => unreachable!(),
-                };
-
                 let pipeline = create_pipeline(
                     device,
                     desc.texture_format,
-                    entry_point,
+                    vertex_entrypoint,
                     fragment_entrypoint,
                 );
 
@@ -290,12 +307,12 @@ impl Bars {
                     }],
                 });
 
-                Some(RenderCtx {
+                RenderCtx {
                     freq_buffer,
                     bind_group1,
                     pipeline,
-                })
-            }
+                }
+            })
         };
 
         Ok(Self {
@@ -399,7 +416,7 @@ impl Component for Bars {
 fn create_pipeline(
     device: &wgpu::Device,
     texture_format: wgpu::TextureFormat,
-    vertex_entrypoint: &'static str,
+    vertex_entrypoint: VertexEntrypoint,
     fragment_entrypoint: FragmentEntrypoint,
 ) -> wgpu::RenderPipeline {
     let module = device.create_shader_module(include_wgsl!("./shader.wgsl"));
@@ -455,7 +472,7 @@ fn create_pipeline(
             layout: Some(&layout),
             vertex: wgpu::VertexState {
                 module: &module,
-                entry_point: Some(vertex_entrypoint),
+                entry_point: Some(vertex_entrypoint.as_str()),
                 compilation_options: wgpu::PipelineCompilationOptions::default(),
                 buffers: &[],
             },
