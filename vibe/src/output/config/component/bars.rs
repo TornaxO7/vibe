@@ -4,7 +4,9 @@ use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::fetcher::Fetcher;
-use vibe_renderer::components::{BarVariant, Bars, BarsFormat, BarsPlacement, Pixels};
+use vibe_renderer::components::{
+    BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement, Pixels,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarsConfig {
@@ -43,8 +45,8 @@ impl ComponentConfig for BarsConfig {
             },
         };
 
-        let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {
-            device: renderer.device(),
+        let bars = Bars::new(&BarsDescriptor {
+            renderer,
             sample_processor: processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             texture_format,

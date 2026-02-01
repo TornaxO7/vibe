@@ -114,7 +114,7 @@ pub struct Bars {
 
 impl Bars {
     pub fn new<F: Fetcher>(desc: &BarsDescriptor<F>) -> Result<Self, ShaderCodeError> {
-        let device = desc.device;
+        let device = desc.renderer.device();
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 

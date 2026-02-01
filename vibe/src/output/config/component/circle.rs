@@ -33,7 +33,7 @@ impl ComponentConfig for CircleConfig {
         };
 
         Ok(Box::new(Circle::new(&CircleDescriptor {
-            device: renderer.device(),
+            renderer,
             sample_processor: processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             texture_format,

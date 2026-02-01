@@ -29,7 +29,7 @@ impl ComponentConfig for GraphConfig {
         let placement = GraphPlacement::from(&self.placement);
 
         Ok(Box::new(Graph::new(&GraphDescriptor {
-            device: renderer.device(),
+            renderer,
             sample_processor: processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             output_texture_format: texture_format,

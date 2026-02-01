@@ -35,7 +35,7 @@ impl ComponentConfig for RadialConfig {
         };
 
         Ok(Box::new(Radial::new(&RadialDescriptor {
-            device: renderer.device(),
+            renderer,
             processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             output_texture_format: texture_format,
