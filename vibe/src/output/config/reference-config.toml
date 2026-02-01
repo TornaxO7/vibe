@@ -5,7 +5,57 @@ enable = true
 ## Bars - Color
 [[components]]
 [components.Bars]
+max_height = 1.0
 placement = "Bottom"
+format = "BassTreble"
+[components.Bars.audio_conf]
+amount_bars = 6
+sensitivity = 4.0
+freq_range.Custom = { start = 50, end = 10000 }
+[components.Bars.variant]
+Color = [0, 255, 255, 255]
+
+## Bars - Horizontal gradient
+[[components]]
+[components.Bars]
+max_height = 0.5
+placement = "Bottom"
+format = "BassTreble"
+[components.Bars.audio_conf]
+amount_bars = 6
+sensitivity = 4.0
+freq_range = "Bass"
+[components.Bars.variant.HorizontalGradient]
+left = [0, 0, 255, 255]
+right = [255, 0, 0, 255]
+
+## Bars - Vertical Gradient
+[[components]]
+[components.Bars]
+max_height = 0.75
+placement = "Bottom"
+format = "BassTreble"
+[components.Bars.audio_conf]
+amount_bars = 6
+sensitivity = 4.0
+freq_range = "Mid"
+[components.Bars.variant.VerticalGradient]
+top = [0, 0, 255, 255]
+bottom = [255, 0, 0, 255]
+
+## Bars - Presence gradient
+[[components]]
+[components.Bars]
+max_height = 0.1
+placement = "Bottom"
+format = "BassTreble"
+[components.Bars.audio_conf]
+amount_bars = 6
+sensitivity = 4.0
+freq_range = "Treble"
+[components.Bars.variant.PresenceGradient]
+high_presence = [0, 0, 255, 255]
+low_presence = [255, 0, 0, 255]
 
 # Fragment canvas
 
