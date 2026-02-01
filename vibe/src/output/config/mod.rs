@@ -48,26 +48,22 @@ impl OutputConfig {
 
         for component in self.components.iter() {
             match component {
-                ComponentConfig::FragmentCanvas {
-                    fragment_code,
-                    texture,
-                    ..
-                } => {
+                ComponentConfig::FragmentCanvas(config) => {
                     if let vibe_renderer::components::ShaderSource::Path(path) =
-                        &fragment_code.source
+                        &config.fragment_code.source
                     {
                         paths.push(path.clone());
                     }
 
-                    if let Some(t) = texture {
+                    if let Some(t) = &config.texture {
                         paths.push(t.path.clone());
                     }
                 }
-                ComponentConfig::WallpaperPulseEdges { wallpaper_path, .. } => {
-                    paths.push(wallpaper_path.clone());
+                ComponentConfig::WallpaperPulseEdges(config) => {
+                    paths.push(config.wallpaper_path.clone());
                 }
-                ComponentConfig::WallpaperLightSources { wallpaper_path, .. } => {
-                    paths.push(wallpaper_path.clone());
+                ComponentConfig::WallpaperLightSources(config) => {
+                    paths.push(config.wallpaper_path.clone());
                 }
                 _ => {}
             };
@@ -97,8 +93,9 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 mod tests {
     use super::*;
     use crate::output::config::component::{
-        FragmentCanvasTexture, FreqRange, WallpaperPulseEdgeAudioConfig,
-        WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds,
+        FragmentCanvasConfig, FragmentCanvasTexture, FreqRange, LightSourcesConfig,
+        WallpaperPulseEdgesAudioConfig, WallpaperPulseEdgesConfig, WallpaperPulseEdgesGaussianBlur,
+        WallpaperPulseEdgesThresholds,
     };
     use std::{collections::HashSet, num::NonZero};
     use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
@@ -108,7 +105,7 @@ mod tests {
         let output_config = OutputConfig {
             enable: true,
             components: vec![
-                ComponentConfig::FragmentCanvas {
+                ComponentConfig::FragmentCanvas(FragmentCanvasConfig {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
                     texture: Some(FragmentCanvasTexture {
                         path: "/dir/fragment_canvas_img.png".into(),
@@ -117,28 +114,28 @@ mod tests {
                         language: ShaderLanguage::Wgsl,
                         source: ShaderSource::Path("/dir/fragment_canvas_code.wgsl".into()),
                     },
-                },
-                ComponentConfig::WallpaperPulseEdges {
+                }),
+                ComponentConfig::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
                     wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
-                    audio_conf: WallpaperPulseEdgeAudioConfig {
+                    audio_conf: WallpaperPulseEdgesAudioConfig {
                         sensitivity: 4.,
                         freq_range: FreqRange::Custom(
                             NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
                         ),
                     },
-                    thresholds: WallpaperPulseEdgeThresholds {
+                    thresholds: WallpaperPulseEdgesThresholds {
                         high: 0.2,
                         low: 0.8,
                     },
                     wallpaper_brightness: 0.5,
                     edge_width: 0.2,
                     pulse_brightness: 0.5,
-                    gaussian_blur: WallpaperPulseEdgeGaussianBlur {
+                    gaussian_blur: WallpaperPulseEdgesGaussianBlur {
                         sigma: 0.5,
                         kernel_size: 3,
                     },
-                },
-                ComponentConfig::WallpaperLightSources {
+                }),
+                ComponentConfig::WallpaperLightSources(LightSourcesConfig {
                     wallpaper_path: "/tmp/wallpaper_light_sources.png".into(),
                     audio_conf: component::LightSourcesAudioConfig {
                         freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
@@ -147,7 +144,7 @@ mod tests {
                     sources: vec![],
                     uniform_pulse: true,
                     debug_sources: false,
-                },
+                }),
             ],
         };
 

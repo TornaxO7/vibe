@@ -1,7 +1,54 @@
+use crate::output::config::component::ToComponent;
+
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
-use vibe_renderer::components::RadialFormat;
+use vibe_audio::fetcher::Fetcher;
+use vibe_renderer::components::{Radial, RadialDescriptor, RadialFormat, RadialVariant};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RadialConfig {
+    pub audio_conf: RadialAudioConfig,
+    pub variant: RadialVariantConfig,
+    pub format: RadialFormatConfig,
+
+    pub init_rotation: cgmath::Deg<f32>,
+    pub circle_radius: f32,
+    pub bar_height_sensitivity: f32,
+    pub bar_width: f32,
+    pub position: (f32, f32),
+}
+
+impl<F: Fetcher> ToComponent<F> for RadialConfig {
+    fn to_component(
+        &self,
+        renderer: &vibe_renderer::Renderer,
+        processor: &vibe_audio::SampleProcessor<F>,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+        let variant = match &self.variant {
+            RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()),
+            RadialVariantConfig::HeightGradient { inner, outer } => RadialVariant::HeightGradient {
+                inner: inner.as_f32(),
+                outer: outer.as_f32(),
+            },
+        };
+
+        Ok(Box::new(Radial::new(&RadialDescriptor {
+            device: renderer.device(),
+            processor,
+            audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
+            output_texture_format: texture_format,
+            variant,
+            init_rotation: self.init_rotation,
+            circle_radius: self.circle_radius,
+            bar_height_sensitivity: self.bar_height_sensitivity,
+            bar_width: self.bar_width,
+            position: self.position,
+            format: RadialFormat::from(self.format.clone()),
+        })))
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RadialAudioConfig {
