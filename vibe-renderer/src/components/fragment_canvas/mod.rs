@@ -23,6 +23,7 @@ mod bindings0 {
     pub const TIME: u32 = 2;
     pub const MOUSE: u32 = 3;
     pub const BPM: u32 = 4;
+    pub const COLORS: u32 = 5;
 
     #[rustfmt::skip]
     pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
@@ -32,6 +33,7 @@ mod bindings0 {
             (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::Mouse, crate::util::buffer(MOUSE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
             (ResourceID::Bpm, crate::util::buffer(BPM, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
+            (ResourceID::Colors, crate::util::buffer(COLORS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
         ])
     }
 }
@@ -43,6 +45,7 @@ enum ResourceID {
     Time,
     Mouse,
     Bpm,
+    Colors,
 }
 
 pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
@@ -120,6 +123,16 @@ impl FragmentCanvas {
                 device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Fragment canvas: `iBPM` buffer"),
                     size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                    mapped_at_creation: false,
+                }),
+            ),
+            (
+                ResourceID::Colors,
+                device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Fragment canvas: `iColors` buffer"),
+                    // 4 colors as vec4f (vec4 for alignment, xyz = rgb, w = unused)
+                    size: (std::mem::size_of::<[f32; 4]>() * 4) as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 }),
@@ -266,5 +279,19 @@ impl Component for FragmentCanvas {
         let buffer = self.resource_manager.get_buffer(ResourceID::Mouse).unwrap();
 
         queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[new_pos.0, new_pos.1]));
+    }
+
+    fn update_colors(&mut self, queue: &wgpu::Queue, colors: &[[f32; 3]; 4]) {
+        let buffer = self.resource_manager.get_buffer(ResourceID::Colors).unwrap();
+
+        // Convert to vec4 format for GPU alignment (xyz = rgb, w = 1.0)
+        let colors_vec4: [[f32; 4]; 4] = [
+            [colors[0][0], colors[0][1], colors[0][2], 1.0],
+            [colors[1][0], colors[1][1], colors[1][2], 1.0],
+            [colors[2][0], colors[2][1], colors[2][2], 1.0],
+            [colors[3][0], colors[3][1], colors[3][2], 1.0],
+        ];
+
+        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&colors_vec4));
     }
 }
