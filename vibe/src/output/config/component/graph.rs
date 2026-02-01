@@ -1,8 +1,45 @@
+use crate::output::config::component::ToComponent;
+
 use super::{FreqRange, Rgba};
 use cgmath::Deg;
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
-use vibe_renderer::components::{GraphFormat, GraphPlacement, GraphVariant};
+use vibe_audio::fetcher::Fetcher;
+use vibe_renderer::components::{
+    Graph, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,
+};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphConfig {
+    audio_conf: GraphAudioConfig,
+    max_height: f32,
+    variant: GraphVariantConfig,
+    placement: GraphPlacementConfig,
+    format: GraphFormatConfig,
+}
+
+impl<F: Fetcher> ToComponent<F> for GraphConfig {
+    fn to_component(
+        &self,
+        renderer: &vibe_renderer::Renderer,
+        processor: &vibe_audio::SampleProcessor<F>,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+        let variant = GraphVariant::from(&self.variant);
+        let placement = GraphPlacement::from(&self.placement);
+
+        Ok(Box::new(Graph::new(&GraphDescriptor {
+            device: renderer.device(),
+            sample_processor: processor,
+            audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
+            output_texture_format: texture_format,
+            variant,
+            max_height: self.max_height,
+            placement,
+            format: self.format.clone().into(),
+        })))
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphAudioConfig {

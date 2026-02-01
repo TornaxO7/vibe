@@ -1,7 +1,40 @@
+use crate::output::config::component::ToComponent;
+
 use super::FreqRange;
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
-use vibe_audio::BarProcessorConfig;
+use vibe_audio::{fetcher::Fetcher, BarProcessorConfig};
+use vibe_renderer::{
+    components::{Chessy, ChessyDescriptor},
+    texture_generation::SdfPattern,
+};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ChessyConfig {
+    pub movement_speed: f32,
+    pub pattern: SdfPattern,
+    pub zoom_factor: f32,
+    pub audio_conf: ChessyAudioConfig,
+}
+
+impl<F: Fetcher> ToComponent<F> for ChessyConfig {
+    fn to_component(
+        &self,
+        renderer: &vibe_renderer::Renderer,
+        processor: &vibe_audio::SampleProcessor<F>,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+        Ok(Box::new(Chessy::new(&ChessyDescriptor {
+            renderer,
+            sample_processor: processor,
+            audio_config: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
+            texture_format,
+            movement_speed: self.movement_speed,
+            pattern: self.pattern,
+            zoom_factor: self.zoom_factor,
+        })))
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChessyAudioConfig {

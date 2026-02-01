@@ -1,7 +1,80 @@
+use crate::output::config::component::ToComponent;
+
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
-use vibe_renderer::components::{BarsFormat, BarsPlacement, Pixels};
+use vibe_audio::fetcher::Fetcher;
+use vibe_renderer::components::{BarVariant, Bars, BarsFormat, BarsPlacement, Pixels};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BarsConfig {
+    pub audio_conf: BarsAudioConfig,
+    pub max_height: f32,
+    pub variant: BarsVariantConfig,
+    pub placement: BarsPlacementConfig,
+    pub format: BarsFormatConfig,
+}
+
+impl<F: Fetcher> ToComponent<F> for BarsConfig {
+    fn to_component(
+        &self,
+        renderer: &vibe_renderer::Renderer,
+        processor: &vibe_audio::SampleProcessor<F>,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+        let variant = match &self.variant {
+            BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
+            BarsVariantConfig::PresenceGradient {
+                high_presence,
+                low_presence,
+            } => BarVariant::PresenceGradient {
+                high: high_presence.as_f32(),
+                low: low_presence.as_f32(),
+            },
+            BarsVariantConfig::HorizontalGradient { left, right } => {
+                BarVariant::HorizontalGradient {
+                    left: left.as_f32(),
+                    right: right.as_f32(),
+                }
+            }
+            BarsVariantConfig::VerticalGradient { bottom, top } => BarVariant::VerticalGradient {
+                top: top.as_f32(),
+                bottom: bottom.as_f32(),
+            },
+        };
+
+        let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {
+            device: renderer.device(),
+            sample_processor: processor,
+            audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
+            texture_format,
+            max_height: self.max_height,
+            variant,
+            placement: BarsPlacement::from(&self.placement),
+            format: BarsFormat::from(&self.format),
+        })?;
+
+        Ok(Box::new(bars))
+    }
+}
+
+impl Default for BarsConfig {
+    fn default() -> Self {
+        Self {
+            audio_conf: BarsAudioConfig {
+                amount_bars: NonZero::new(60).unwrap(),
+                freq_range: FreqRange::Custom(
+                    NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                ),
+                sensitivity: 4.0,
+            },
+            max_height: 0.75,
+            variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
+            placement: BarsPlacementConfig::Bottom,
+            format: BarsFormatConfig::BassTreble,
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarsAudioConfig {
