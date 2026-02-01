@@ -29,3 +29,16 @@ var<uniform> iMouse: vec2f;
 // Use this to sync animations to the music tempo.
 @group(0) @binding(4)
 var<uniform> iBPM: f32;
+
+// Color palette for shader customization.
+// Each color is a vec4 where xyz = RGB (0.0-1.0), w = 1.0.
+// Configure via ~/.config/vibe/colors.toml
+struct ColorPalette {
+    color1: vec4f,
+    color2: vec4f,
+    color3: vec4f,
+    color4: vec4f,
+}
+
+@group(0) @binding(5)
+var<uniform> iColors: ColorPalette;
