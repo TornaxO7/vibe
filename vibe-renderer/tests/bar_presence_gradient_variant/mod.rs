@@ -9,7 +9,7 @@ fn test() {
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let bars = Bars::new(&BarsDescriptor {
-        device: tester.renderer.device(),
+        renderer: &tester.renderer,
         sample_processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),

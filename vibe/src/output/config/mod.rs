@@ -75,7 +75,7 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 mod tests {
     use super::*;
     use crate::output::config::component::{
-        FragmentCanvasConfig, FragmentCanvasTexture, FreqRange, LightSourcesConfig,
+        self, FragmentCanvasConfig, FragmentCanvasTexture, FreqRange, LightSourcesConfig,
         WallpaperPulseEdgesAudioConfig, WallpaperPulseEdgesConfig, WallpaperPulseEdgesGaussianBlur,
         WallpaperPulseEdgesThresholds,
     };
@@ -87,7 +87,7 @@ mod tests {
         let output_config = OutputConfig {
             enable: true,
             components: vec![
-                Config::FragmentCanvas(FragmentCanvasConfig {
+                component::Config::FragmentCanvas(FragmentCanvasConfig {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
                     texture: Some(FragmentCanvasTexture {
                         path: "/dir/fragment_canvas_img.png".into(),
@@ -97,7 +97,7 @@ mod tests {
                         source: ShaderSource::Path("/dir/fragment_canvas_code.wgsl".into()),
                     },
                 }),
-                Config::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
+                component::Config::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
                     wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
                     audio_conf: WallpaperPulseEdgesAudioConfig {
                         sensitivity: 4.,
@@ -117,7 +117,7 @@ mod tests {
                         kernel_size: 3,
                     },
                 }),
-                Config::WallpaperLightSources(LightSourcesConfig {
+                component::Config::WallpaperLightSources(LightSourcesConfig {
                     wallpaper_path: "/tmp/wallpaper_light_sources.png".into(),
                     audio_conf: component::LightSourcesAudioConfig {
                         freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
