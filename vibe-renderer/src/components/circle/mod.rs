@@ -3,21 +3,29 @@ mod descriptor;
 pub use descriptor::*;
 use vibe_audio::fetcher::{Fetcher, SystemAudioFetcher};
 
-use super::Component;
+use super::{Component, Mat2x2, Rgba, Vec2f};
 use crate::{util::SimpleRenderPipelineDescriptor, Renderable};
 use cgmath::Matrix2;
 use wgpu::{include_wgsl, util::DeviceExt};
 
+type Resolution = Vec2f;
+type PositionOffset = Vec2f;
+type Color = Rgba;
+type Rotation = Mat2x2;
+type Radius = f32;
+type SpikeSensitivity = f32;
+type FreqRadiantStep = f32;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct Data {
-    resolution: [f32; 2],
-    position_offset: [f32; 2],
-    color: super::Rgba,
-    rotation: [[f32; 2]; 2],
-    radius: f32,
-    spike_sensitivity: f32,
-    freq_radiant_step: f32,
+    resolution: Resolution,
+    position_offset: PositionOffset,
+    color: Color,
+    rotation: Rotation,
+    radius: Radius,
+    spike_sensitivity: SpikeSensitivity,
+    freq_radiant_step: FreqRadiantStep,
     _padding: f32,
 }
 
@@ -50,7 +58,7 @@ impl Circle {
                 let rel_x_offset = desc.position.0.clamp(0., 1.);
                 let rel_y_offset = desc.position.1.clamp(0., 1.);
 
-                [rel_x_offset, rel_y_offset]
+                PositionOffset::from([rel_x_offset, rel_y_offset])
             };
 
             Data {
@@ -58,7 +66,7 @@ impl Circle {
                 spike_sensitivity,
                 freq_radiant_step: std::f32::consts::PI
                     / (u16::from(desc.audio_conf.amount_bars) as f32 + 0.99),
-                resolution: [0f32; 2],
+                resolution: Resolution::default(),
                 position_offset,
                 color,
                 rotation: Matrix2::from_angle(desc.rotation).into(),

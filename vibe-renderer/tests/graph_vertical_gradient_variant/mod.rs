@@ -1,7 +1,7 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
 
-use crate::Tester;
+use crate::{Tester, BLUE, RED};
 
 #[test]
 fn test() {
@@ -15,8 +15,8 @@ fn test() {
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: GraphVariant::VerticalGradient {
-            top: super::BLUE,
-            bottom: super::RED,
+            top: BLUE.into(),
+            bottom: RED.into(),
         },
         placement: vibe_renderer::components::GraphPlacement::Top,
         format: vibe_renderer::components::GraphFormat::TrebleBassTreble,
