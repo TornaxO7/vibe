@@ -3,18 +3,19 @@ pub mod component;
 use std::{ffi::OsStr, io, path::PathBuf};
 
 use anyhow::Context;
-use component::Config;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
+
+use crate::output::config::component::ComponentConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
     pub enable: bool,
-    pub components: Vec<Config>,
+    pub components: Vec<component::Config>,
 }
 
 impl OutputConfig {
-    pub fn new(info: &OutputInfo, default_component: Config) -> anyhow::Result<Self> {
+    pub fn new(info: &OutputInfo, default_component: component::Config) -> anyhow::Result<Self> {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {
@@ -47,26 +48,7 @@ impl OutputConfig {
         let mut paths = Vec::new();
 
         for component in self.components.iter() {
-            match component {
-                Config::FragmentCanvas(config) => {
-                    if let vibe_renderer::components::ShaderSource::Path(path) =
-                        &config.fragment_code.source
-                    {
-                        paths.push(path.clone());
-                    }
-
-                    if let Some(t) = &config.texture {
-                        paths.push(t.path.clone());
-                    }
-                }
-                Config::WallpaperPulseEdges(config) => {
-                    paths.push(config.wallpaper_path.clone());
-                }
-                Config::WallpaperLightSources(config) => {
-                    paths.push(config.wallpaper_path.clone());
-                }
-                _ => {}
-            };
+            paths.extend(component.external_paths());
         }
 
         paths

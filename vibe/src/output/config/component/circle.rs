@@ -15,8 +15,8 @@ pub struct CircleConfig {
     pub position: (f32, f32),
 }
 
-impl<F: Fetcher> ComponentConfig<F> for CircleConfig {
-    fn create_component(
+impl ComponentConfig for CircleConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -42,6 +42,10 @@ impl<F: Fetcher> ComponentConfig<F> for CircleConfig {
             rotation: self.rotation,
             position: self.position,
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

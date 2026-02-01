@@ -14,8 +14,8 @@ pub struct AurodioConfig {
     pub layers: Vec<AurodioLayerConfig>,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for AurodioConfig {
-    fn create_component(
+impl ComponentConfig for AurodioConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
@@ -39,6 +39,10 @@ impl<F: Fetcher> ComponentConfig<F> for AurodioConfig {
             sensitivity: self.audio_conf.sensitivity,
             layers: &layers,
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

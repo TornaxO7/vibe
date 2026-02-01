@@ -18,8 +18,8 @@ pub struct GraphConfig {
     format: GraphFormatConfig,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for GraphConfig {
-    fn create_component(
+impl ComponentConfig for GraphConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -38,6 +38,10 @@ impl<F: Fetcher> ComponentConfig<F> for GraphConfig {
             placement,
             format: self.format.clone().into(),
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

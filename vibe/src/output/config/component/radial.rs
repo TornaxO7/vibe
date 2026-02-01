@@ -19,8 +19,8 @@ pub struct RadialConfig {
     pub position: (f32, f32),
 }
 
-impl<F: Fetcher> ComponentConfig<F> for RadialConfig {
-    fn create_component(
+impl ComponentConfig for RadialConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -47,6 +47,10 @@ impl<F: Fetcher> ComponentConfig<F> for RadialConfig {
             position: self.position,
             format: RadialFormat::from(self.format.clone()),
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

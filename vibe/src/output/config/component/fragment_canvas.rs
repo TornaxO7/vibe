@@ -1,11 +1,13 @@
-use crate::output::config::component::{ConfigError, ComponentConfig};
+use crate::output::config::component::{ComponentConfig, ConfigError};
 
 use super::FreqRange;
 use image::{DynamicImage, ImageReader};
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, path::PathBuf};
 use vibe_audio::{fetcher::Fetcher, BarProcessorConfig};
-use vibe_renderer::components::{FragmentCanvas, FragmentCanvasDescriptor, ShaderCode};
+use vibe_renderer::components::{
+    FragmentCanvas, FragmentCanvasDescriptor, ShaderCode, ShaderSource,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum FragmentCanvasLoadTexture {
@@ -25,8 +27,8 @@ pub struct FragmentCanvasConfig {
     pub texture: Option<FragmentCanvasTexture>,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for FragmentCanvasConfig {
-    fn create_component(
+impl ComponentConfig for FragmentCanvasConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -64,6 +66,22 @@ impl<F: Fetcher> ComponentConfig<F> for FragmentCanvasConfig {
         })?;
 
         Ok(Box::new(fragment_canvas))
+    }
+
+    fn external_paths(&self) -> Vec<PathBuf> {
+        let mut paths = vec![];
+
+        let ShaderCode { source, .. } = &self.fragment_code;
+        match source {
+            ShaderSource::Path(path) => paths.push(path.clone()),
+            ShaderSource::Code(_) => {}
+        }
+
+        if let Some(texture) = &self.texture {
+            paths.push(texture.path.clone());
+        }
+
+        paths
     }
 }
 

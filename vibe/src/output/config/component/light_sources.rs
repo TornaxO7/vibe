@@ -26,8 +26,8 @@ pub struct LightSourcesConfig {
     pub debug_sources: bool,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for LightSourcesConfig {
-    fn create_component(
+impl ComponentConfig for LightSourcesConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -61,6 +61,10 @@ impl<F: Fetcher> ComponentConfig<F> for LightSourcesConfig {
         });
 
         Ok(Box::new(light_sources))
+    }
+
+    fn external_paths(&self) -> Vec<PathBuf> {
+        vec![self.wallpaper_path.clone()]
     }
 }
 

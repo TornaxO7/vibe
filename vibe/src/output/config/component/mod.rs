@@ -9,7 +9,7 @@ mod light_sources;
 mod radial;
 
 use serde::{Deserialize, Serialize};
-use std::{num::NonZero, ops::Range};
+use std::{num::NonZero, ops::Range, path::PathBuf};
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{components::Component, Renderer};
 
@@ -72,13 +72,22 @@ pub enum ConfigError {
     MissingTexture,
 }
 
-pub trait ComponentConfig<F: Fetcher> {
-    fn create_component(
+pub trait ComponentConfig {
+    /// Creates a component with the given config.
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn Component>, ConfigError>;
+
+    /// Returns a `vec` of paths which are stored in this component config.
+    ///
+    /// # Example
+    /// Each live-wallpaper config needs a path to an image which will be used as a base
+    /// to apply the effect on it.
+    /// The returned vector of this function will include this path to this image.
+    fn external_paths(&self) -> Vec<PathBuf>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -100,8 +109,8 @@ impl Default for Config {
     }
 }
 
-impl<F: Fetcher> ComponentConfig<F> for Config {
-    fn create_component(
+impl ComponentConfig for Config {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
@@ -127,6 +136,20 @@ impl<F: Fetcher> ComponentConfig<F> for Config {
             Self::WallpaperLightSources(config) => {
                 config.create_component(renderer, processor, texture_format)
             }
+        }
+    }
+
+    fn external_paths(&self) -> Vec<PathBuf> {
+        match self {
+            Config::Bars(config) => config.external_paths(),
+            Config::FragmentCanvas(config) => config.external_paths(),
+            Config::Aurodio(config) => config.external_paths(),
+            Config::Graph(config) => config.external_paths(),
+            Config::Circle(config) => config.external_paths(),
+            Config::Radial(config) => config.external_paths(),
+            Config::Chessy(config) => config.external_paths(),
+            Config::WallpaperPulseEdges(config) => config.external_paths(),
+            Config::WallpaperLightSources(config) => config.external_paths(),
         }
     }
 }

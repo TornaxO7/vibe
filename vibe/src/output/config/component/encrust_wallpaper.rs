@@ -21,8 +21,8 @@ pub struct WallpaperPulseEdgesConfig {
     pub gaussian_blur: WallpaperPulseEdgesGaussianBlur,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for WallpaperPulseEdgesConfig {
-    fn create_component(
+impl ComponentConfig for WallpaperPulseEdgesConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -59,6 +59,10 @@ impl<F: Fetcher> ComponentConfig<F> for WallpaperPulseEdgesConfig {
         )?;
 
         Ok(Box::new(pulse_edges))
+    }
+
+    fn external_paths(&self) -> Vec<PathBuf> {
+        vec![self.wallpaper_path.clone()]
     }
 }
 

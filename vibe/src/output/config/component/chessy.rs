@@ -17,8 +17,8 @@ pub struct ChessyConfig {
     pub audio_conf: ChessyAudioConfig,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for ChessyConfig {
-    fn create_component(
+impl ComponentConfig for ChessyConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -33,6 +33,10 @@ impl<F: Fetcher> ComponentConfig<F> for ChessyConfig {
             pattern: self.pattern,
             zoom_factor: self.zoom_factor,
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

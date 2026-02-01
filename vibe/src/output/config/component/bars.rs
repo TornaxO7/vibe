@@ -15,8 +15,8 @@ pub struct BarsConfig {
     pub format: BarsFormatConfig,
 }
 
-impl<F: Fetcher> ComponentConfig<F> for BarsConfig {
-    fn create_component(
+impl ComponentConfig for BarsConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -55,6 +55,10 @@ impl<F: Fetcher> ComponentConfig<F> for BarsConfig {
         })?;
 
         Ok(Box::new(bars))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 
