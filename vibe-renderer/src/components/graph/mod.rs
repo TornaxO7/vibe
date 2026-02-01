@@ -93,7 +93,7 @@ pub struct Graph {
 
 impl Graph {
     pub fn new<F: Fetcher>(desc: &GraphDescriptor<F>) -> Self {
-        let device = desc.device;
+        let device = desc.renderer.device();
 
         let amount_bars = match desc.placement {
             GraphPlacement::Bottom | GraphPlacement::Top => GraphAmountBars::ScreenWidth,

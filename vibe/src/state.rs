@@ -1,7 +1,7 @@
 use crate::{
     config::ConfigError,
     output::{
-        config::{component::ComponentConfig, OutputConfig},
+        config::{component::Config, OutputConfig},
         OutputCtx,
     },
     types::size::Size,
@@ -39,7 +39,7 @@ use wayland_client::{
 pub struct State {
     pub run: bool,
 
-    default_component: ComponentConfig,
+    default_component: Config,
 
     output_state: OutputState,
     registry_state: RegistryState,

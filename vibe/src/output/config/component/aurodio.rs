@@ -1,4 +1,4 @@
-use super::{FreqRange, Rgb, ToComponent};
+use super::{ComponentConfig, FreqRange, Rgb};
 use serde::{Deserialize, Serialize};
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{
@@ -14,8 +14,8 @@ pub struct AurodioConfig {
     pub layers: Vec<AurodioLayerConfig>,
 }
 
-impl<F: Fetcher> ToComponent<F> for AurodioConfig {
-    fn to_component(
+impl ComponentConfig for AurodioConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
@@ -39,6 +39,10 @@ impl<F: Fetcher> ToComponent<F> for AurodioConfig {
             sensitivity: self.audio_conf.sensitivity,
             layers: &layers,
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::FreqRange;
 use image::ImageReader;
@@ -21,8 +21,8 @@ pub struct WallpaperPulseEdgesConfig {
     pub gaussian_blur: WallpaperPulseEdgesGaussianBlur,
 }
 
-impl<F: Fetcher> ToComponent<F> for WallpaperPulseEdgesConfig {
-    fn to_component(
+impl ComponentConfig for WallpaperPulseEdgesConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -59,6 +59,10 @@ impl<F: Fetcher> ToComponent<F> for WallpaperPulseEdgesConfig {
         )?;
 
         Ok(Box::new(pulse_edges))
+    }
+
+    fn external_paths(&self) -> Vec<PathBuf> {
+        vec![self.wallpaper_path.clone()]
     }
 }
 

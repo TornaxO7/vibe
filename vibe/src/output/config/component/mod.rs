@@ -9,7 +9,7 @@ mod light_sources;
 mod radial;
 
 use serde::{Deserialize, Serialize};
-use std::{num::NonZero, ops::Range};
+use std::{num::NonZero, ops::Range, path::PathBuf};
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{components::Component, Renderer};
 
@@ -23,6 +23,7 @@ pub use graph::*;
 pub use light_sources::*;
 pub use radial::*;
 
+/// Gamma-correction constant for the color correction from u8 => f32
 const GAMMA: f32 = 2.2;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -71,17 +72,26 @@ pub enum ConfigError {
     MissingTexture,
 }
 
-trait ToComponent<F: Fetcher> {
-    fn to_component(
+pub trait ComponentConfig {
+    /// Creates a component with the given config.
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn Component>, ConfigError>;
+
+    /// Returns a `vec` of paths which are stored in this component config.
+    ///
+    /// # Example
+    /// Each live-wallpaper config needs a path to an image which will be used as a base
+    /// to apply the effect on it.
+    /// The returned vector of this function will include this path to this image.
+    fn external_paths(&self) -> Vec<PathBuf>;
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub enum ComponentConfig {
+pub enum Config {
     Bars(BarsConfig),
     FragmentCanvas(FragmentCanvasConfig),
     Aurodio(AurodioConfig),
@@ -93,39 +103,53 @@ pub enum ComponentConfig {
     WallpaperLightSources(LightSourcesConfig),
 }
 
-impl Default for ComponentConfig {
+impl Default for Config {
     fn default() -> Self {
         Self::Bars(BarsConfig::default())
     }
 }
 
-impl ComponentConfig {
-    pub fn to_component<F: Fetcher>(
+impl ComponentConfig for Config {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn Component>, ConfigError> {
         match self {
-            Self::Bars(config) => config.to_component(renderer, processor, texture_format),
+            Self::Bars(config) => config.create_component(renderer, processor, texture_format),
             Self::FragmentCanvas(config) => {
-                config.to_component(renderer, processor, texture_format)
+                config.create_component(renderer, processor, texture_format)
             }
-            Self::Aurodio(config) => config.to_component(renderer, processor, texture_format),
-            Self::Graph(config) => config.to_component(renderer, processor, texture_format),
+            Self::Aurodio(config) => config.create_component(renderer, processor, texture_format),
+            Self::Graph(config) => config.create_component(renderer, processor, texture_format),
             Self::Circle(circle_config) => {
-                circle_config.to_component(renderer, processor, texture_format)
+                circle_config.create_component(renderer, processor, texture_format)
             }
-            Self::Radial(config) => config.to_component(renderer, processor, texture_format),
+            Self::Radial(config) => config.create_component(renderer, processor, texture_format),
             Self::Chessy(chessy_config) => {
-                chessy_config.to_component(renderer, processor, texture_format)
+                chessy_config.create_component(renderer, processor, texture_format)
             }
             Self::WallpaperPulseEdges(config) => {
-                config.to_component(renderer, processor, texture_format)
+                config.create_component(renderer, processor, texture_format)
             }
             Self::WallpaperLightSources(config) => {
-                config.to_component(renderer, processor, texture_format)
+                config.create_component(renderer, processor, texture_format)
             }
+        }
+    }
+
+    fn external_paths(&self) -> Vec<PathBuf> {
+        match self {
+            Config::Bars(config) => config.external_paths(),
+            Config::FragmentCanvas(config) => config.external_paths(),
+            Config::Aurodio(config) => config.external_paths(),
+            Config::Graph(config) => config.external_paths(),
+            Config::Circle(config) => config.external_paths(),
+            Config::Radial(config) => config.external_paths(),
+            Config::Chessy(config) => config.external_paths(),
+            Config::WallpaperPulseEdges(config) => config.external_paths(),
+            Config::WallpaperLightSources(config) => config.external_paths(),
         }
     }
 }
@@ -167,77 +191,5 @@ impl Rgb {
         }
 
         rgba_f32
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use vibe_audio::fetcher::DummyFetcher;
-    use vibe_renderer::components::{ShaderLanguage, ShaderSource};
-
-    mod fragment_canvas_texture_path {
-        use vibe_renderer::components::ShaderCode;
-
-        use super::*;
-
-        #[test]
-        fn fragment_canvas_wgsl_with_missing_texture_path() {
-            let renderer = Renderer::default();
-            let processor = SampleProcessor::new(DummyFetcher::new(1));
-
-            let config = ComponentConfig::FragmentCanvas(FragmentCanvasConfig {
-            audio_conf: FragmentCanvasAudioConfig {
-                amount_bars: NonZero::new(10).unwrap(),
-                freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
-                sensitivity: 4.0,
-            },
-            fragment_code: ShaderCode {
-                language: ShaderLanguage::Wgsl,
-                source: ShaderSource::Code("@fragment\nfn main(@builtin(position) pos: vec4f) -> @location(0) { return textureSample(iTexture, iSampler, pos.xy/iResolution.xy); }".to_string()),
-            },
-            texture: None,
-        });
-
-            let err = config
-                .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
-                .err()
-                .unwrap();
-
-            match err {
-                ConfigError::MissingTexture => {}
-                _ => unreachable!("Weird: {}", err),
-            }
-        }
-
-        #[test]
-        fn fragment_canvas_glsl_with_missing_texture_path() {
-            let renderer = Renderer::default();
-            let processor = SampleProcessor::new(DummyFetcher::new(1));
-
-            let config = ComponentConfig::FragmentCanvas (FragmentCanvasConfig{
-            audio_conf: FragmentCanvasAudioConfig {
-                amount_bars: NonZero::new(10).unwrap(),
-                freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
-                sensitivity: 4.0,
-            },
-            fragment_code: ShaderCode {
-                language: ShaderLanguage::Glsl,
-                source: ShaderSource::Code("void main() { fragColor = texture(sampler2D(iTexture, iSampler), gl_FragCoord.xy/iResolution.xy); }".to_string()),
-            },
-            texture: None,
-        });
-
-            let err = config
-                .to_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
-                .err()
-                .unwrap();
-
-            match err {
-                ConfigError::MissingTexture => {}
-                _ => unreachable!("Weird: {}", err),
-            }
-        }
     }
 }

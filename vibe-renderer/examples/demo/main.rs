@@ -109,7 +109,7 @@ impl<'a> State<'a> {
                 sensitivity: 0.2,
             })) as Box<dyn Component>),
             ComponentName::BarsColorVariant => Bars::new(&BarsDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
                     amount_bars: std::num::NonZero::new(60).unwrap(),
@@ -129,7 +129,7 @@ impl<'a> State<'a> {
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
                     sensitivity: 4.,
@@ -152,7 +152,7 @@ impl<'a> State<'a> {
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: processor,
                 audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: std::num::NonZero::new(30).unwrap(),
@@ -195,7 +195,7 @@ impl<'a> State<'a> {
                 .map(|canvas| Box::new(canvas) as Box<dyn Component>)
             }
             ComponentName::GraphColorVariant => Ok(Box::new(Graph::new(&GraphDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: processor,
                 audio_conf: BarProcessorConfig::default(),
                 output_texture_format: surface_config.format,
@@ -211,7 +211,7 @@ impl<'a> State<'a> {
             })) as Box<dyn Component>),
             ComponentName::GraphHorizontalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
-                    device: renderer.device(),
+                    renderer: &renderer,
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
                         sensitivity: 4.0,
@@ -229,7 +229,7 @@ impl<'a> State<'a> {
             }
             ComponentName::GraphVerticalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
-                    device: renderer.device(),
+                    renderer: &renderer,
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
                         amount_bars: NonZero::new(256).unwrap(),
@@ -251,7 +251,7 @@ impl<'a> State<'a> {
                 })) as Box<dyn Component>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 processor,
                 audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: NonZero::new(60).unwrap(),
@@ -272,7 +272,7 @@ impl<'a> State<'a> {
 
             ComponentName::RadialHeightGradientVariant => {
                 Ok(Box::new(Radial::new(&RadialDescriptor {
-                    device: renderer.device(),
+                    renderer: &renderer,
                     processor,
                     audio_conf: vibe_audio::BarProcessorConfig {
                         amount_bars: NonZero::new(60).unwrap(),

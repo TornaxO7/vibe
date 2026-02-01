@@ -42,7 +42,7 @@ pub struct Circle {
 
 impl Circle {
     pub fn new<F: Fetcher>(desc: &CircleDescriptor<F>) -> Self {
-        let device = desc.device;
+        let device = desc.renderer.device();
         let bar_processor =
             vibe_audio::BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
 

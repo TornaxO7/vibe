@@ -1,4 +1,4 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
@@ -19,8 +19,8 @@ pub struct RadialConfig {
     pub position: (f32, f32),
 }
 
-impl<F: Fetcher> ToComponent<F> for RadialConfig {
-    fn to_component(
+impl ComponentConfig for RadialConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -35,7 +35,7 @@ impl<F: Fetcher> ToComponent<F> for RadialConfig {
         };
 
         Ok(Box::new(Radial::new(&RadialDescriptor {
-            device: renderer.device(),
+            renderer,
             processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             output_texture_format: texture_format,
@@ -47,6 +47,10 @@ impl<F: Fetcher> ToComponent<F> for RadialConfig {
             position: self.position,
             format: RadialFormat::from(self.format.clone()),
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

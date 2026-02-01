@@ -1,10 +1,12 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::fetcher::Fetcher;
-use vibe_renderer::components::{BarVariant, Bars, BarsFormat, BarsPlacement, Pixels};
+use vibe_renderer::components::{
+    BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement, Pixels,
+};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarsConfig {
@@ -15,8 +17,8 @@ pub struct BarsConfig {
     pub format: BarsFormatConfig,
 }
 
-impl<F: Fetcher> ToComponent<F> for BarsConfig {
-    fn to_component(
+impl ComponentConfig for BarsConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -43,8 +45,8 @@ impl<F: Fetcher> ToComponent<F> for BarsConfig {
             },
         };
 
-        let bars = Bars::new(&vibe_renderer::components::BarsDescriptor {
-            device: renderer.device(),
+        let bars = Bars::new(&BarsDescriptor {
+            renderer,
             sample_processor: processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             texture_format,
@@ -55,6 +57,10 @@ impl<F: Fetcher> ToComponent<F> for BarsConfig {
         })?;
 
         Ok(Box::new(bars))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

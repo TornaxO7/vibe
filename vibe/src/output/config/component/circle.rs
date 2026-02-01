@@ -1,4 +1,4 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
@@ -15,8 +15,8 @@ pub struct CircleConfig {
     pub position: (f32, f32),
 }
 
-impl<F: Fetcher> ToComponent<F> for CircleConfig {
-    fn to_component(
+impl ComponentConfig for CircleConfig {
+    fn create_component<F: Fetcher>(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
@@ -33,7 +33,7 @@ impl<F: Fetcher> ToComponent<F> for CircleConfig {
         };
 
         Ok(Box::new(Circle::new(&CircleDescriptor {
-            device: renderer.device(),
+            renderer,
             sample_processor: processor,
             audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
             texture_format,
@@ -42,6 +42,10 @@ impl<F: Fetcher> ToComponent<F> for CircleConfig {
             rotation: self.rotation,
             position: self.position,
         })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
     }
 }
 

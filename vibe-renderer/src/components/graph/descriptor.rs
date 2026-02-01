@@ -3,10 +3,10 @@ use std::num::NonZero;
 use cgmath::Deg;
 use vibe_audio::fetcher::Fetcher;
 
-use crate::components::Rgba;
+use crate::{components::Rgba, Renderer};
 
 pub struct GraphDescriptor<'a, F: Fetcher> {
-    pub device: &'a wgpu::Device,
+    pub renderer: &'a Renderer,
     pub sample_processor: &'a vibe_audio::SampleProcessor<F>,
     // NOTE: Maybe it's better to create a custom struct for the audio config
     // and remove the `amount_bars` from `audio_conf` since we only need it,

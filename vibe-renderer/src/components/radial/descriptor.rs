@@ -1,10 +1,10 @@
 use cgmath::Deg;
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
-use crate::components::Rgba;
+use crate::{components::Rgba, Renderer};
 
 pub struct RadialDescriptor<'a, F: Fetcher> {
-    pub device: &'a wgpu::Device,
+    pub renderer: &'a Renderer,
     pub processor: &'a SampleProcessor<F>,
     pub audio_conf: vibe_audio::BarProcessorConfig,
     pub output_texture_format: wgpu::TextureFormat,

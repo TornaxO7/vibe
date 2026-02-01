@@ -109,7 +109,7 @@ pub struct Radial {
 
 impl Radial {
     pub fn new<F: Fetcher>(desc: &RadialDescriptor<F>) -> Self {
-        let device = desc.device;
+        let device = desc.renderer.device();
         let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.processor, desc.audio_conf.clone());
 
