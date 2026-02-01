@@ -58,6 +58,7 @@ impl<F: Fetcher> SampleProcessor<F> {
     pub fn process_next_samples(&mut self) {
         let amount_channels = self.channels.len();
 
+        // fetch the latest data
         {
             let fft_input = self.sample_buffer.lock().unwrap();
 
