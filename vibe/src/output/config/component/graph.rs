@@ -1,4 +1,4 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::{FreqRange, Rgba};
 use cgmath::Deg;
@@ -18,8 +18,8 @@ pub struct GraphConfig {
     format: GraphFormatConfig,
 }
 
-impl<F: Fetcher> ToComponent<F> for GraphConfig {
-    fn to_component(
+impl<F: Fetcher> ComponentConfig<F> for GraphConfig {
+    fn create_component(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,

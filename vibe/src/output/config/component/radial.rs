@@ -1,4 +1,4 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
@@ -19,8 +19,8 @@ pub struct RadialConfig {
     pub position: (f32, f32),
 }
 
-impl<F: Fetcher> ToComponent<F> for RadialConfig {
-    fn to_component(
+impl<F: Fetcher> ComponentConfig<F> for RadialConfig {
+    fn create_component(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,

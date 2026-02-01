@@ -1,5 +1,7 @@
 pub mod config;
 
+use crate::{output::config::component::ComponentConfig, state::State, types::size::Size};
+use config::OutputConfig;
 use smithay_client_toolkit::{
     output::OutputInfo,
     shell::{
@@ -7,15 +9,11 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
-
 use tracing::error;
+use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{components::Component, Renderer};
 use wayland_client::QueueHandle;
 use wgpu::{PresentMode, Surface, SurfaceConfiguration};
-
-use crate::{state::State, types::size::Size};
-use config::OutputConfig;
 
 /// Contains every relevant information for an output.
 pub struct OutputCtx {
@@ -53,7 +51,7 @@ impl OutputCtx {
 
             for comp_conf in config.components {
                 let component: Box<dyn Component> = comp_conf
-                    .to_component(renderer, sample_processor, surface_config.format)
+                    .create_component(renderer, sample_processor, surface_config.format)
                     .unwrap_or_else(|msg| {
                         error!("{}", msg);
                         panic!("Invalid fragment shader code");

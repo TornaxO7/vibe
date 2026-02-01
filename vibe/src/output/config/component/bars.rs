@@ -1,4 +1,4 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::{FreqRange, Rgba};
 use serde::{Deserialize, Serialize};
@@ -15,8 +15,8 @@ pub struct BarsConfig {
     pub format: BarsFormatConfig,
 }
 
-impl<F: Fetcher> ToComponent<F> for BarsConfig {
-    fn to_component(
+impl<F: Fetcher> ComponentConfig<F> for BarsConfig {
+    fn create_component(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,

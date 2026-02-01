@@ -3,18 +3,18 @@ pub mod component;
 use std::{ffi::OsStr, io, path::PathBuf};
 
 use anyhow::Context;
-use component::ComponentConfig;
+use component::Config;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
     pub enable: bool,
-    pub components: Vec<ComponentConfig>,
+    pub components: Vec<Config>,
 }
 
 impl OutputConfig {
-    pub fn new(info: &OutputInfo, default_component: ComponentConfig) -> anyhow::Result<Self> {
+    pub fn new(info: &OutputInfo, default_component: Config) -> anyhow::Result<Self> {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {
@@ -48,7 +48,7 @@ impl OutputConfig {
 
         for component in self.components.iter() {
             match component {
-                ComponentConfig::FragmentCanvas(config) => {
+                Config::FragmentCanvas(config) => {
                     if let vibe_renderer::components::ShaderSource::Path(path) =
                         &config.fragment_code.source
                     {
@@ -59,10 +59,10 @@ impl OutputConfig {
                         paths.push(t.path.clone());
                     }
                 }
-                ComponentConfig::WallpaperPulseEdges(config) => {
+                Config::WallpaperPulseEdges(config) => {
                     paths.push(config.wallpaper_path.clone());
                 }
-                ComponentConfig::WallpaperLightSources(config) => {
+                Config::WallpaperLightSources(config) => {
                     paths.push(config.wallpaper_path.clone());
                 }
                 _ => {}
@@ -105,7 +105,7 @@ mod tests {
         let output_config = OutputConfig {
             enable: true,
             components: vec![
-                ComponentConfig::FragmentCanvas(FragmentCanvasConfig {
+                Config::FragmentCanvas(FragmentCanvasConfig {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
                     texture: Some(FragmentCanvasTexture {
                         path: "/dir/fragment_canvas_img.png".into(),
@@ -115,7 +115,7 @@ mod tests {
                         source: ShaderSource::Path("/dir/fragment_canvas_code.wgsl".into()),
                     },
                 }),
-                ComponentConfig::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
+                Config::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
                     wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
                     audio_conf: WallpaperPulseEdgesAudioConfig {
                         sensitivity: 4.,
@@ -135,7 +135,7 @@ mod tests {
                         kernel_size: 3,
                     },
                 }),
-                ComponentConfig::WallpaperLightSources(LightSourcesConfig {
+                Config::WallpaperLightSources(LightSourcesConfig {
                     wallpaper_path: "/tmp/wallpaper_light_sources.png".into(),
                     audio_conf: component::LightSourcesAudioConfig {
                         freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),

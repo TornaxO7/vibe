@@ -9,7 +9,7 @@ use vibe_audio::{
 };
 use vibe_renderer::RendererDescriptor;
 
-use crate::output::config::component::ComponentConfig;
+use crate::output::config::component;
 
 const STEREO_AUDIO: u16 = 2;
 
@@ -59,7 +59,7 @@ pub struct AudioConfig {
 pub struct Config {
     pub graphics_config: GraphicsConfig,
     pub audio_config: Option<AudioConfig>,
-    pub default_component: Option<ComponentConfig>,
+    pub default_component: Option<component::Config>,
 }
 
 impl Config {

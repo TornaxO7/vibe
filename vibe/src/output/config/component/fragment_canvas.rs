@@ -1,4 +1,4 @@
-use crate::output::config::component::{ConfigError, ToComponent};
+use crate::output::config::component::{ConfigError, ComponentConfig};
 
 use super::FreqRange;
 use image::{DynamicImage, ImageReader};
@@ -25,14 +25,15 @@ pub struct FragmentCanvasConfig {
     pub texture: Option<FragmentCanvasTexture>,
 }
 
-impl<F: Fetcher> ToComponent<F> for FragmentCanvasConfig {
-    fn to_component(
+impl<F: Fetcher> ComponentConfig<F> for FragmentCanvasConfig {
+    fn create_component(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn vibe_renderer::Component>, ConfigError> {
         let img = match &self.texture {
+            None => None,
             Some(texture) => match texture.load() {
                 Ok(img) => Some(img),
                 Err(FragmentCanvasLoadTexture::IO(err)) => {
@@ -43,7 +44,6 @@ impl<F: Fetcher> ToComponent<F> for FragmentCanvasConfig {
                 }
                 Err(FragmentCanvasLoadTexture::Decode(err)) => return Err(ConfigError::Image(err)),
             },
-            None => None,
         };
 
         // Check: Is `texture_path` set if it's used in the shader-code?
@@ -112,5 +112,82 @@ impl From<FragmentCanvasAudioConfig> for BarProcessorConfig {
 impl From<&FragmentCanvasAudioConfig> for BarProcessorConfig {
     fn from(conf: &FragmentCanvasAudioConfig) -> Self {
         Self::from(conf.clone())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod texture_path {
+        //! Tests regarding the texture path
+        use vibe_audio::{fetcher::DummyFetcher, SampleProcessor};
+        use vibe_renderer::{
+            components::{ShaderLanguage, ShaderSource},
+            Renderer,
+        };
+
+        use super::*;
+        use crate::output::config::component::Config;
+
+        /// Shader code accesses the texture/sampler but no texture is set => Error should occur
+        #[test]
+        fn wgsl_with_missing_texture_path() {
+            let renderer = Renderer::default();
+            let processor = SampleProcessor::new(DummyFetcher::new(1));
+
+            let config = Config::FragmentCanvas(FragmentCanvasConfig {
+            audio_conf: FragmentCanvasAudioConfig {
+                amount_bars: NonZero::new(10).unwrap(),
+                freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
+                sensitivity: 4.0,
+            },
+            fragment_code: ShaderCode {
+                language: ShaderLanguage::Wgsl,
+                source: ShaderSource::Code("@fragment\nfn main(@builtin(position) pos: vec4f) -> @location(0) { return textureSample(iTexture, iSampler, pos.xy/iResolution.xy); }".to_string()),
+            },
+            texture: None,
+        });
+
+            let err = config
+                .create_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
+                .err()
+                .unwrap();
+
+            match err {
+                ConfigError::MissingTexture => {}
+                _ => unreachable!("No other config error should occur but it did: {}", err),
+            }
+        }
+
+        /// Shader code accesses the texture/sampler but no texture is set => Error should occur
+        #[test]
+        fn glsl_with_missing_texture_path() {
+            let renderer = Renderer::default();
+            let processor = SampleProcessor::new(DummyFetcher::new(1));
+
+            let config = Config::FragmentCanvas (FragmentCanvasConfig{
+            audio_conf: FragmentCanvasAudioConfig {
+                amount_bars: NonZero::new(10).unwrap(),
+                freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
+                sensitivity: 4.0,
+            },
+            fragment_code: ShaderCode {
+                language: ShaderLanguage::Glsl,
+                source: ShaderSource::Code("void main() { fragColor = texture(sampler2D(iTexture, iSampler), gl_FragCoord.xy/iResolution.xy); }".to_string()),
+            },
+            texture: None,
+        });
+
+            let err = config
+                .create_component(&renderer, &processor, wgpu::TextureFormat::Rgba8Unorm)
+                .err()
+                .unwrap();
+
+            match err {
+                ConfigError::MissingTexture => {}
+                _ => unreachable!("No other config error should occur but it did: {}", err),
+            }
+        }
     }
 }

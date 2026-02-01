@@ -16,7 +16,7 @@ use winit::{
 
 use crate::{
     output::config::{
-        component::{ComponentConfig, ConfigError},
+        component::{ComponentConfig, Config, ConfigError},
         OutputConfig,
     },
     types::size::Size,
@@ -53,13 +53,13 @@ impl State<'_> {
         &mut self,
         renderer: &Renderer,
         processor: &SampleProcessor<SystemAudioFetcher>,
-        comp_configs: &[ComponentConfig],
+        comp_configs: &[Config],
     ) -> Result<(), ConfigError> {
         let mut new_components = Vec::with_capacity(comp_configs.len());
 
         for config in comp_configs.iter() {
             let mut component =
-                config.to_component(renderer, processor, self.surface_config.format)?;
+                config.create_component(renderer, processor, self.surface_config.format)?;
 
             component.update_resolution(
                 renderer,

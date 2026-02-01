@@ -1,4 +1,4 @@
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 
 use super::FreqRange;
 use serde::{Deserialize, Serialize};
@@ -17,8 +17,8 @@ pub struct ChessyConfig {
     pub audio_conf: ChessyAudioConfig,
 }
 
-impl<F: Fetcher> ToComponent<F> for ChessyConfig {
-    fn to_component(
+impl<F: Fetcher> ComponentConfig<F> for ChessyConfig {
+    fn create_component(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,

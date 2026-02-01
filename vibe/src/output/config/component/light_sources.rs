@@ -1,5 +1,5 @@
 use super::ConfigError;
-use crate::output::config::component::ToComponent;
+use crate::output::config::component::ComponentConfig;
 use image::ImageReader;
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, ops::Range, path::PathBuf};
@@ -26,8 +26,8 @@ pub struct LightSourcesConfig {
     pub debug_sources: bool,
 }
 
-impl<F: Fetcher> ToComponent<F> for LightSourcesConfig {
-    fn to_component(
+impl<F: Fetcher> ComponentConfig<F> for LightSourcesConfig {
+    fn create_component(
         &self,
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
