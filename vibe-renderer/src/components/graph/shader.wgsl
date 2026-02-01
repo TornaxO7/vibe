@@ -1,21 +1,30 @@
-// the bottom left corner of the box in vertex space
+struct VertexParams {
+    // vector pointing to the right side of the box in vertex space.
+    // - Isn't normalized.
+    // - Length of this vector returns the width of the box
+    right: vec2f,
+    // the bottom left corner of the box in vertex space
+    bottom_left_corner: vec2f,
+    // vector pointing at the top of the box. Length is also the height of the box.
+    // - Isn't normalized
+    // - Length of this vector returns the height of the box
+    up: vec2f,
+}
+
+struct FragmentParams {
+    color1: vec4f,
+    color2: vec4f,
+}
+
 @group(0) @binding(0)
-var<uniform> bottom_left_corner: vec2f;
+var<uniform> vp: VertexParams;
 
-// vector pointing to the right side of the box in vertex space.
-// - Isn't normalized.
-// - Length of this vector returns the width of the box
 @group(0) @binding(1)
-var<uniform> right: vec2f;
+var<uniform> fp: FragmentParams;
 
-// vector pointing at the top of the box. Length is also the height of the box.
-// - Isn't normalized
-// - Length of this vector returns the height of the box
-@group(0) @binding(2)
-var<uniform> up: vec2f;
-
-@group(0) @binding(3)
-var<uniform> amount_bars: u32;
+// used in fragment shader
+@group(1) @binding(0)
+var<storage, read> freqs: array<f32>;
 
 struct Input {
     @builtin(vertex_index) vertex_idx: u32,
@@ -59,18 +68,18 @@ fn treble_bass(in: Input) -> Output {
 fn bass_treble_inner(in: Input) -> Output {
     // move further to the right for the second block.
     // Note: `* 0.98` due to floating point issues. Move the right block a bit to the left block so that there will be no gap.
-    var pos = bottom_left_corner + (right * 0.98) * f32(in.instance_idx);
+    var pos = vp.bottom_left_corner + (vp.right * 0.98) * f32(in.instance_idx);
     var rel_pos = vec2f(0.);
 
     let is_top = in.vertex_idx <= 1;
     if (is_top) {
-        pos += up;
+        pos += vp.up;
         rel_pos.y = 1.;
     }
 
     let is_right = in.vertex_idx == 1 || in.vertex_idx == 3;
     if (is_right) {
-        pos += right;
+        pos += vp.right;
         rel_pos.x = 1.;
     }
 
@@ -81,15 +90,6 @@ fn bass_treble_inner(in: Input) -> Output {
 }
 
 // == fragment code ==
-@group(0) @binding(4)
-var<uniform> color1: vec4f;
-
-@group(0) @binding(5)
-var<uniform> color2: vec4f;
-
-@group(1) @binding(0)
-var<storage, read> freqs: array<f32>;
-
 fn get_mask(rel_pos: vec2f) -> f32 {
     var freq = freqs[u32(floor(rel_pos.x * f32(arrayLength(&freqs))))]*.9;
     freq = max(freq, 1e-5);
@@ -101,19 +101,19 @@ fn get_mask(rel_pos: vec2f) -> f32 {
 
 @fragment
 fn color(in: Output) -> @location(0) vec4f {
-    return color1 * get_mask(in.rel_pos);
+    return fp.color1 * get_mask(in.rel_pos);
 }
 
 @fragment
 fn horizontal_gradient(in: Output) -> @location(0) vec4f {
     let mask = get_mask(in.rel_pos);
-    let col = mix(color1, color2, in.rel_pos.x);
+    let col = mix(fp.color1, fp.color2, in.rel_pos.x);
     return col * mask;
 }
 
 @fragment
 fn vertical_gradient(in: Output) -> @location(0) vec4f {
     let mask = get_mask(in.rel_pos);
-    let col = mix(color1, color2, smoothstep(0., 1., in.rel_pos.y));
+    let col = mix(fp.color1, fp.color2, smoothstep(0., 1., in.rel_pos.y));
     return col * mask;
 }

@@ -3,18 +3,19 @@ pub mod component;
 use std::{ffi::OsStr, io, path::PathBuf};
 
 use anyhow::Context;
-use component::ComponentConfig;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
+
+use crate::output::config::component::ComponentConfig;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
     pub enable: bool,
-    pub components: Vec<ComponentConfig>,
+    pub components: Vec<component::Config>,
 }
 
 impl OutputConfig {
-    pub fn new(info: &OutputInfo, default_component: ComponentConfig) -> anyhow::Result<Self> {
+    pub fn new(info: &OutputInfo, default_component: component::Config) -> anyhow::Result<Self> {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {
@@ -47,24 +48,7 @@ impl OutputConfig {
         let mut paths = Vec::new();
 
         for component in self.components.iter() {
-            match component {
-                ComponentConfig::Bars {
-                    variant: component::BarsVariantConfig::FragmentCode(code),
-                    ..
-                } => {
-                    if let vibe_renderer::components::ShaderSource::Path(path) = &code.source {
-                        paths.push(path.clone());
-                    }
-                }
-                ComponentConfig::FragmentCanvas { fragment_code, .. } => {
-                    if let vibe_renderer::components::ShaderSource::Path(path) =
-                        &fragment_code.source
-                    {
-                        paths.push(path.clone());
-                    }
-                }
-                _ => {}
-            };
+            paths.extend(component.external_paths());
         }
 
         paths
@@ -89,40 +73,73 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 
 #[cfg(test)]
 mod tests {
-    use component::BarsAudioConfig;
-    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
-
     use super::*;
+    use crate::output::config::component::{
+        self, FragmentCanvasConfig, FragmentCanvasTexture, FreqRange, LightSourcesConfig,
+        WallpaperPulseEdgesAudioConfig, WallpaperPulseEdgesConfig, WallpaperPulseEdgesGaussianBlur,
+        WallpaperPulseEdgesThresholds,
+    };
+    use std::{collections::HashSet, num::NonZero};
+    use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
     #[test]
     fn external_paths() {
         let output_config = OutputConfig {
             enable: true,
             components: vec![
-                ComponentConfig::FragmentCanvas {
+                component::Config::FragmentCanvas(FragmentCanvasConfig {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
+                    texture: Some(FragmentCanvasTexture {
+                        path: "/dir/fragment_canvas_img.png".into(),
+                    }),
                     fragment_code: ShaderCode {
                         language: ShaderLanguage::Wgsl,
-                        source: ShaderSource::Path("/dir/file1".into()),
+                        source: ShaderSource::Path("/dir/fragment_canvas_code.wgsl".into()),
                     },
-                },
-                ComponentConfig::Bars {
-                    audio_conf: BarsAudioConfig::default(),
-                    max_height: 0.69,
-                    variant: component::BarsVariantConfig::FragmentCode(ShaderCode {
-                        language: ShaderLanguage::Glsl,
-                        source: ShaderSource::Path("/dir/file2".into()),
-                    }),
-                    placement: component::BarsPlacementConfig::Bottom,
-                    format: component::BarsFormatConfig::BassTreble,
-                },
+                }),
+                component::Config::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
+                    wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
+                    audio_conf: WallpaperPulseEdgesAudioConfig {
+                        sensitivity: 4.,
+                        freq_range: FreqRange::Custom(
+                            NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                        ),
+                    },
+                    thresholds: WallpaperPulseEdgesThresholds {
+                        high: 0.2,
+                        low: 0.8,
+                    },
+                    wallpaper_brightness: 0.5,
+                    edge_width: 0.2,
+                    pulse_brightness: 0.5,
+                    gaussian_blur: WallpaperPulseEdgesGaussianBlur {
+                        sigma: 0.5,
+                        kernel_size: 3,
+                    },
+                }),
+                component::Config::WallpaperLightSources(LightSourcesConfig {
+                    wallpaper_path: "/tmp/wallpaper_light_sources.png".into(),
+                    audio_conf: component::LightSourcesAudioConfig {
+                        freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                        sensitivity: 0.5,
+                    },
+                    sources: vec![],
+                    uniform_pulse: true,
+                    debug_sources: false,
+                }),
             ],
         };
 
-        assert_eq!(
-            output_config.external_paths(),
-            vec![PathBuf::from("/dir/file1"), PathBuf::from("/dir/file2")]
-        );
+        let expected = HashSet::from([
+            "/dir/fragment_canvas_img.png".into(),
+            "/dir/fragment_canvas_code.wgsl".into(),
+            "/tmp/wallpaper_palse_edges.png".into(),
+            "/tmp/wallpaper_light_sources.png".into(),
+        ]);
+
+        let current: HashSet<PathBuf> = output_config.external_paths().into_iter().collect();
+
+        assert_eq!(expected, current);
     }
 
     #[test]

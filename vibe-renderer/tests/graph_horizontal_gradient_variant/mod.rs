@@ -3,10 +3,7 @@ use std::num::NonZero;
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
 
-use crate::Tester;
-
-const RED: [f32; 4] = [1., 0., 0., 1.];
-const BLUE: [f32; 4] = [0., 0., 1., 1.];
+use crate::{Tester, BLUE, RED};
 
 #[test]
 fn test() {
@@ -14,14 +11,14 @@ fn test() {
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let graph = Graph::new(&GraphDescriptor {
-        device: tester.renderer.device(),
+        renderer: &tester.renderer,
         sample_processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: GraphVariant::HorizontalGradient {
-            left: RED,
-            right: BLUE,
+            left: RED.into(),
+            right: BLUE.into(),
         },
         placement: vibe_renderer::components::GraphPlacement::Custom {
             bottom_left_corner: [0.2, 0.5],

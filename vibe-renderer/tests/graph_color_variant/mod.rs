@@ -9,12 +9,12 @@ fn test() {
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let graph = Graph::new(&GraphDescriptor {
-        device: tester.renderer.device(),
+        renderer: &tester.renderer,
         sample_processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
-        variant: GraphVariant::Color(RED),
+        variant: GraphVariant::Color(RED.into()),
         placement: vibe_renderer::components::GraphPlacement::Bottom,
         format: GraphFormat::BassTreble,
     });

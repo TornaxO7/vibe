@@ -1,10 +1,13 @@
 use cgmath::Deg;
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
-use crate::components::{Pixels, Rgba, ShaderCode};
+use crate::{
+    components::{Pixels, Rgba},
+    Renderer,
+};
 
 pub struct BarsDescriptor<'a, F: Fetcher> {
-    pub device: &'a wgpu::Device,
+    pub renderer: &'a Renderer,
     pub sample_processor: &'a SampleProcessor<F>,
     pub audio_conf: vibe_audio::BarProcessorConfig,
     pub texture_format: wgpu::TextureFormat,
@@ -47,7 +50,6 @@ pub enum BarsFormat {
 pub enum BarVariant {
     Color(Rgba),
     PresenceGradient { high: Rgba, low: Rgba },
-    FragmentCode(ShaderCode),
     HorizontalGradient { left: Rgba, right: Rgba },
     VerticalGradient { top: Rgba, bottom: Rgba },
 }

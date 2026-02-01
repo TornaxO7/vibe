@@ -39,6 +39,9 @@ use crate::texture_component::{TextureComponent, TextureComponentDescriptor};
 
 const TURQUOISE: [f32; 4] = [0., 1., 1., 1.];
 const DARK_BLUE: [f32; 4] = [0.05, 0., 0.321, 255.];
+const BLUE: [f32; 4] = [0., 0., 1., 1.];
+const RED: [f32; 4] = [1., 0., 0., 1.];
+const WHITE: [f32; 4] = [1f32; 4];
 
 struct State<'a> {
     renderer: Renderer,
@@ -101,12 +104,12 @@ impl<'a> State<'a> {
                         zoom_factor: 10.,
                     },
                 ],
-                base_color: [0., 0.5, 0.5],
+                base_color: [0., 0.5, 0.5].into(),
                 movement_speed: 0.005,
                 sensitivity: 0.2,
             })) as Box<dyn Component>),
             ComponentName::BarsColorVariant => Bars::new(&BarsDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
                     amount_bars: std::num::NonZero::new(60).unwrap(),
@@ -115,7 +118,7 @@ impl<'a> State<'a> {
                 },
                 texture_format: surface_config.format,
                 max_height: 0.5,
-                variant: BarVariant::Color([0., 0., 1., 1.]),
+                variant: BarVariant::Color([0., 0., 1., 1.].into()),
                 // placement: BarsPlacement::Custom {
                 //     bottom_left_corner: (0.5, 0.5),
                 //     width_factor: 0.5,
@@ -125,34 +128,8 @@ impl<'a> State<'a> {
                 format: BarsFormat::BassTreble,
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
-            ComponentName::BarsFragmentCodeVariant => Bars::new(&BarsDescriptor {
-                device: renderer.device(),
-                sample_processor: &processor,
-                audio_conf: BarProcessorConfig::default(),
-                texture_format: surface_config.format,
-                max_height: 0.75,
-                placement: vibe_renderer::components::BarsPlacement::Top,
-                variant: BarVariant::FragmentCode(ShaderCode {
-                    language: vibe_renderer::components::ShaderLanguage::Wgsl,
-                    source: vibe_renderer::components::ShaderSource::Code(
-                        "
-                        @fragment
-                        fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
-                            var uv = (2. * pos.xy - iResolution.xy) / iResolution.y;
-                            uv.y *= -1.;
-
-                            let col: vec3<f32> = sin(vec3(2., 4., 8.) * iTime * .25) * .2 + .6;
-                            return vec4<f32>(col, uv.y);
-                        }
-                        "
-                        .into(),
-                    ),
-                }),
-                format: BarsFormat::BassTreble,
-            })
-            .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
                     sensitivity: 4.,
@@ -162,8 +139,8 @@ impl<'a> State<'a> {
                 texture_format: surface_config.format,
                 max_height: 0.25,
                 variant: BarVariant::PresenceGradient {
-                    high: TURQUOISE,
-                    low: DARK_BLUE,
+                    high: TURQUOISE.into(),
+                    low: DARK_BLUE.into(),
                 },
                 placement: BarsPlacement::Custom {
                     bottom_left_corner: (0., 0.5),
@@ -175,7 +152,7 @@ impl<'a> State<'a> {
             })
             .map(|bars| Box::new(bars) as Box<dyn Component>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: processor,
                 audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: std::num::NonZero::new(30).unwrap(),
@@ -184,7 +161,7 @@ impl<'a> State<'a> {
                 texture_format: surface_config.format,
                 variant: CircleVariant::Graph {
                     spike_sensitivity: 0.3,
-                    color: [0., 1., 1., 1.],
+                    color: TURQUOISE.into(),
                 },
 
                 radius: 0.1,
@@ -209,18 +186,20 @@ impl<'a> State<'a> {
                 FragmentCanvas::new(&FragmentCanvasDescriptor {
                     sample_processor: &processor,
                     audio_conf: vibe_audio::BarProcessorConfig::default(),
-                    device: renderer.device(),
+                    renderer: &renderer,
                     format: surface_config.format,
+
+                    img: None,
                     fragment_code: fragment_source,
                 })
                 .map(|canvas| Box::new(canvas) as Box<dyn Component>)
             }
             ComponentName::GraphColorVariant => Ok(Box::new(Graph::new(&GraphDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 sample_processor: processor,
                 audio_conf: BarProcessorConfig::default(),
                 output_texture_format: surface_config.format,
-                variant: GraphVariant::Color([0., 0., 1., 1.]),
+                variant: GraphVariant::Color(BLUE.into()),
                 max_height: 0.5,
                 format: GraphFormat::BassTreble,
                 // placement: vibe_renderer::components::GraphPlacement::Bottom,
@@ -232,7 +211,7 @@ impl<'a> State<'a> {
             })) as Box<dyn Component>),
             ComponentName::GraphHorizontalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
-                    device: renderer.device(),
+                    renderer: &renderer,
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
                         sensitivity: 4.0,
@@ -240,8 +219,8 @@ impl<'a> State<'a> {
                     },
                     output_texture_format: surface_config.format,
                     variant: GraphVariant::HorizontalGradient {
-                        left: [1., 0., 0., 1.],
-                        right: [0., 0., 1., 1.],
+                        left: RED.into(),
+                        right: BLUE.into(),
                     },
                     max_height: 0.5,
                     format: GraphFormat::BassTreble,
@@ -250,7 +229,7 @@ impl<'a> State<'a> {
             }
             ComponentName::GraphVerticalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
-                    device: renderer.device(),
+                    renderer: &renderer,
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
                         amount_bars: NonZero::new(256).unwrap(),
@@ -259,8 +238,8 @@ impl<'a> State<'a> {
                     },
                     output_texture_format: surface_config.format,
                     variant: GraphVariant::VerticalGradient {
-                        top: [1., 0., 0., 1.],
-                        bottom: [0., 0., 1., 1.],
+                        top: RED.into(),
+                        bottom: BLUE.into(),
                     },
                     max_height: 0.5,
                     format: GraphFormat::BassTrebleBass,
@@ -272,7 +251,7 @@ impl<'a> State<'a> {
                 })) as Box<dyn Component>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {
-                device: renderer.device(),
+                renderer: &renderer,
                 processor,
                 audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: NonZero::new(60).unwrap(),
@@ -281,7 +260,7 @@ impl<'a> State<'a> {
                 },
                 output_texture_format: surface_config.format,
 
-                variant: RadialVariant::Color([1., 0., 0., 1.]),
+                variant: RadialVariant::Color(RED.into()),
 
                 init_rotation: cgmath::Deg(90.),
                 circle_radius: 0.2,
@@ -293,7 +272,7 @@ impl<'a> State<'a> {
 
             ComponentName::RadialHeightGradientVariant => {
                 Ok(Box::new(Radial::new(&RadialDescriptor {
-                    device: renderer.device(),
+                    renderer: &renderer,
                     processor,
                     audio_conf: vibe_audio::BarProcessorConfig {
                         amount_bars: NonZero::new(60).unwrap(),
@@ -303,8 +282,8 @@ impl<'a> State<'a> {
                     output_texture_format: surface_config.format,
 
                     variant: RadialVariant::HeightGradient {
-                        inner: [1., 0., 0., 1.],
-                        outer: [1., 1., 1., 1.],
+                        inner: RED.into(),
+                        outer: WHITE.into(),
                     },
 
                     init_rotation: cgmath::Deg(90.),

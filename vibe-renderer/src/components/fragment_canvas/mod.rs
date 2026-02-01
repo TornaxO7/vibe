@@ -1,68 +1,40 @@
-use std::borrow::Cow;
-use std::io::Write;
-
+use super::{Component, ShaderCode, ShaderCodeError};
+use crate::{Renderable, Renderer};
 use pollster::FutureExt;
+use std::borrow::Cow;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig, BpmDetector, BpmDetectorConfig, SampleProcessor,
+    BarProcessor, BarProcessorConfig, SampleProcessor,
 };
 use wgpu::include_wgsl;
 
-use crate::{resource_manager::ResourceManager, Renderable};
-
-use super::{Component, ShaderCode, ShaderCodeError};
-
 const ENTRYPOINT: &str = "main";
-
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const RESOLUTION: u32 = 0;
-    pub const FREQS: u32 = 1;
-    pub const TIME: u32 = 2;
-    pub const MOUSE: u32 = 3;
-    pub const BPM: u32 = 4;
-    pub const COLORS: u32 = 5;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::Resolution, crate::util::buffer(RESOLUTION, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Freqs, crate::util::buffer(FREQS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Storage { read_only: true })),
-            (ResourceID::Time, crate::util::buffer(TIME, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Mouse, crate::util::buffer(MOUSE, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Bpm, crate::util::buffer(BPM, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Colors, crate::util::buffer(COLORS, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    Resolution,
-    Freqs,
-    Time,
-    Mouse,
-    Bpm,
-    Colors,
-}
 
 pub struct FragmentCanvasDescriptor<'a, F: Fetcher> {
     pub sample_processor: &'a SampleProcessor<F>,
     pub audio_conf: BarProcessorConfig,
-    pub device: &'a wgpu::Device,
+    pub renderer: &'a Renderer,
     pub format: wgpu::TextureFormat,
 
     // fragment shader relevant stuff
     pub fragment_code: ShaderCode,
+    pub img: Option<image::DynamicImage>,
+}
+
+struct TextureCtx {
+    sampler: wgpu::Sampler,
+    _texture: wgpu::Texture,
+    tv: wgpu::TextureView,
 }
 
 pub struct FragmentCanvas {
     bar_processor: BarProcessor,
-    bpm_detector: BpmDetector,
 
-    resource_manager: ResourceManager<ResourceID>,
+    iresolution: wgpu::Buffer,
+    freqs: wgpu::Buffer,
+    itime: wgpu::Buffer,
+    imouse: wgpu::Buffer,
+    _itexture: Option<TextureCtx>,
 
     bind_group0: wgpu::BindGroup,
 
@@ -71,87 +43,123 @@ pub struct FragmentCanvas {
 
 impl FragmentCanvas {
     pub fn new<F: Fetcher>(desc: &FragmentCanvasDescriptor<F>) -> Result<Self, ShaderCodeError> {
-        let device = desc.device;
+        let device = desc.renderer.device();
+        let queue = desc.renderer.queue();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
-        let bpm_detector = BpmDetector::new(desc.sample_processor, BpmDetectorConfig::default());
 
-        let mut resource_manager = ResourceManager::new();
+        let iresolution = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iResolution` buffer"),
+            size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        let bind_group0_mapping = bindings0::init_mapping();
+        let freqs = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `freqs` buffer"),
+            size: (std::mem::size_of::<f32>() * usize::from(u16::from(desc.audio_conf.amount_bars)))
+                as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        resource_manager.extend_buffers([
-            (
-                ResourceID::Resolution,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iResolution` buffer"),
-                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Freqs,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `freqs` buffer"),
-                    size: (std::mem::size_of::<f32>()
-                        * usize::from(u16::from(desc.audio_conf.amount_bars)))
-                        as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Time,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iTime` buffer"),
-                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Mouse,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iMouse` buffer"),
-                    size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Bpm,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iBPM` buffer"),
-                    size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-            (
-                ResourceID::Colors,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Fragment canvas: `iColors` buffer"),
-                    // 4 colors as vec4f (vec4 for alignment, xyz = rgb, w = unused)
-                    size: (std::mem::size_of::<[f32; 4]>() * 4) as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-        ]);
+        let itime = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iTime` buffer"),
+            size: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
 
-        let (bind_group0, bind_group0_layout) = resource_manager.build_bind_group(
-            "Fragment canvas: Bind group 0",
-            device,
-            &bind_group0_mapping,
-        );
+        let imouse = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iMouse` buffer"),
+            size: std::mem::size_of::<[f32; 2]>() as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let itexture = desc.img.as_ref().map(|img| {
+            let sampler = device.create_sampler(&crate::util::DEFAULT_SAMPLER_DESCRIPTOR);
+            let texture = crate::util::load_img_to_texture(device, queue, img);
+            let tv = texture.create_view(&wgpu::TextureViewDescriptor::default());
+
+            TextureCtx {
+                sampler,
+                _texture: texture,
+                tv,
+            }
+        });
+
+        let bind_group0_layout = {
+            let mut entries = vec![
+                wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 1,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 2,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                wgpu::BindGroupLayoutEntry {
+                    binding: 3,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+            ];
+
+            if let Some(_texture) = &itexture {
+                entries.extend_from_slice(&[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 4,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 5,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Texture {
+                            sample_type: wgpu::TextureSampleType::Float { filterable: true },
+                            view_dimension: wgpu::TextureViewDimension::D2,
+                            multisampled: false,
+                        },
+                        count: None,
+                    },
+                ]);
+            }
+
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Fragment canvas: Bind group 0 layout"),
+                entries: &entries,
+            })
+        };
 
         let pipeline = {
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Fragment canvas pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout],
-                ..Default::default()
-            });
-
             let vertex_module =
                 device.create_shader_module(include_wgsl!("../utils/full_screen_vertex.wgsl"));
 
@@ -188,6 +196,12 @@ impl FragmentCanvas {
                 module
             };
 
+            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                label: Some("Fragment canvas: Pipeline layout"),
+                bind_group_layouts: &[&bind_group0_layout],
+                ..Default::default()
+            });
+
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Fragment canvas render pipeline",
@@ -212,11 +226,54 @@ impl FragmentCanvas {
             ))
         };
 
+        let bind_group0 = {
+            let mut entries = vec![
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: iresolution.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: freqs.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 2,
+                    resource: itime.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 3,
+                    resource: imouse.as_entire_binding(),
+                },
+            ];
+
+            if let Some(texture) = &itexture {
+                entries.extend_from_slice(&[
+                    wgpu::BindGroupEntry {
+                        binding: 4,
+                        resource: wgpu::BindingResource::Sampler(&texture.sampler),
+                    },
+                    wgpu::BindGroupEntry {
+                        binding: 5,
+                        resource: wgpu::BindingResource::TextureView(&texture.tv),
+                    },
+                ]);
+            }
+
+            device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Fragment canvas: Bind group 0"),
+                layout: &bind_group0_layout,
+                entries: &entries,
+            })
+        };
+
         Ok(Self {
             bar_processor,
-            bpm_detector,
 
-            resource_manager,
+            iresolution,
+            freqs,
+            itime,
+            imouse,
+            _itexture: itexture,
 
             bind_group0,
 
@@ -237,13 +294,8 @@ impl Component for FragmentCanvas {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::Resolution)
-            .unwrap();
-
         queue.write_buffer(
-            buffer,
+            &self.iresolution,
             0,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
@@ -254,44 +306,20 @@ impl Component for FragmentCanvas {
         queue: &wgpu::Queue,
         processor: &SampleProcessor<SystemAudioFetcher>,
     ) {
-        // Update frequency bars
         let bar_values = self.bar_processor.process_bars(processor);
-        let buffer = self.resource_manager.get_buffer(ResourceID::Freqs).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
 
-        // Update BPM
-        let bpm = self.bpm_detector.process(processor);
-        let buffer = self.resource_manager.get_buffer(ResourceID::Bpm).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&bpm));
-
-        // Write BPM to file for external tools (waybar, etc.)
-        if let Ok(mut file) = std::fs::File::create("/tmp/vibe-bpm") {
-            let _ = writeln!(file, "{:.0}", bpm);
-        }
+        queue.write_buffer(&self.freqs, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Time).unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::bytes_of(&new_time));
+        queue.write_buffer(&self.itime, 0, bytemuck::bytes_of(&new_time));
     }
 
     fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32)) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Mouse).unwrap();
-
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[new_pos.0, new_pos.1]));
-    }
-
-    fn update_colors(&mut self, queue: &wgpu::Queue, colors: &[[f32; 3]; 4]) {
-        let buffer = self.resource_manager.get_buffer(ResourceID::Colors).unwrap();
-
-        // Convert to vec4 format for GPU alignment (xyz = rgb, w = 1.0)
-        let colors_vec4: [[f32; 4]; 4] = [
-            [colors[0][0], colors[0][1], colors[0][2], 1.0],
-            [colors[1][0], colors[1][1], colors[1][2], 1.0],
-            [colors[2][0], colors[2][1], colors[2][2], 1.0],
-            [colors[3][0], colors[3][1], colors[3][2], 1.0],
-        ];
-
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&colors_vec4));
+        queue.write_buffer(
+            &self.imouse,
+            0,
+            bytemuck::cast_slice(&[new_pos.0, new_pos.1]),
+        );
     }
 }

@@ -21,12 +21,12 @@ pub use radial::{Radial, RadialDescriptor, RadialFormat, RadialVariant};
 use crate::{Renderable, Renderer};
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, path::PathBuf};
+use utils::wgsl_types::*;
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 
 // rgba values are each directly set in the fragment shader
-pub type Rgba = [f32; 4];
-pub type Rgb = [f32; 3];
-
+pub type Rgba = Vec4f;
+pub type Rgb = Vec3f;
 pub type Pixels<N> = NonZero<N>;
 
 /// Every component needs to implement this.
@@ -44,10 +44,6 @@ pub trait Component: Renderable {
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
 
     fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32));
-
-    /// Update color palette uniforms. Default implementation does nothing.
-    /// Only FragmentCanvas currently uses this.
-    fn update_colors(&mut self, _queue: &wgpu::Queue, _colors: &[[f32; 3]; 4]) {}
 }
 
 impl Renderable for Box<dyn Component> {
@@ -86,7 +82,7 @@ pub struct ShaderCode {
 }
 
 impl ShaderCode {
-    fn source(&self) -> std::io::Result<String> {
+    pub fn source(&self) -> std::io::Result<String> {
         match self.source.clone() {
             ShaderSource::Code(code) => Ok(code),
             ShaderSource::Path(path) => std::fs::read_to_string(path),

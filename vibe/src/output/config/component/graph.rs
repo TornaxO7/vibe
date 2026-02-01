@@ -1,21 +1,60 @@
-use std::{num::NonZero, ops::Range};
+use crate::output::config::component::ComponentConfig;
 
+use super::{FreqRange, Rgba};
 use cgmath::Deg;
 use serde::{Deserialize, Serialize};
-use vibe_renderer::components::{GraphFormat, GraphPlacement, GraphVariant};
+use std::num::NonZero;
+use vibe_audio::fetcher::Fetcher;
+use vibe_renderer::components::{
+    Graph, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,
+};
 
-use super::Rgba;
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphConfig {
+    audio_conf: GraphAudioConfig,
+    max_height: f32,
+    variant: GraphVariantConfig,
+    placement: GraphPlacementConfig,
+    format: GraphFormatConfig,
+}
+
+impl ComponentConfig for GraphConfig {
+    fn create_component<F: Fetcher>(
+        &self,
+        renderer: &vibe_renderer::Renderer,
+        processor: &vibe_audio::SampleProcessor<F>,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+        let variant = GraphVariant::from(&self.variant);
+        let placement = GraphPlacement::from(&self.placement);
+
+        Ok(Box::new(Graph::new(&GraphDescriptor {
+            renderer,
+            sample_processor: processor,
+            audio_conf: vibe_audio::BarProcessorConfig::from(&self.audio_conf),
+            output_texture_format: texture_format,
+            variant,
+            max_height: self.max_height,
+            placement,
+            format: self.format.clone().into(),
+        })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphAudioConfig {
-    pub freq_range: Range<NonZero<u16>>,
+    pub freq_range: FreqRange,
     pub sensitivity: f32,
 }
 
 impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
         Self {
-            freq_range: conf.freq_range,
+            freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
 
             ..Default::default()

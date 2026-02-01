@@ -24,21 +24,13 @@ var<uniform> iTime: f32;
 @group(0) @binding(3)
 var<uniform> iMouse: vec2f;
 
-// Contains the detected BPM (beats per minute) of the audio.
-// Typically in the range 60-200 for most music.
-// Use this to sync animations to the music tempo.
+// The sampler for `iTexture`
 @group(0) @binding(4)
-var<uniform> iBPM: f32;
+var iSampler: sampler;
 
-// Color palette for shader customization.
-// Each color is a vec4 where xyz = RGB (0.0-1.0), w = 1.0.
-// Configure via ~/.config/vibe/colors.toml
-struct ColorPalette {
-    color1: vec4f,
-    color2: vec4f,
-    color3: vec4f,
-    color4: vec4f,
-}
-
+// The texture which contains the image you set.
+// Usage (example):
+//
+// `let col = textureSample(iTexture, iSampler, uv).rgb;`
 @group(0) @binding(5)
-var<uniform> iColors: ColorPalette;
+var iTexture: texture_2d<f32>;

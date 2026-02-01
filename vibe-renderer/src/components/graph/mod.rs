@@ -1,12 +1,11 @@
 mod descriptor;
 
-use std::{collections::HashMap, num::NonZero};
-
-use cgmath::{Deg, Matrix2, Vector2};
 pub use descriptor::*;
 
-use super::Component;
-use crate::{resource_manager::ResourceManager, Renderable, Renderer};
+use super::{Component, Rgba, Vec2f};
+use crate::{Renderable, Renderer};
+use cgmath::{Deg, Matrix2, Vector2};
+use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, BarProcessorConfig,
@@ -19,6 +18,7 @@ const AMOUNT_VERTICES: u32 = 4;
 /// The x coords goes from -1 to 1.
 const VERTEX_SURFACE_WIDTH: f32 = 2.;
 
+#[derive(Debug, Clone, Copy)]
 enum VertexEntrypoint {
     BassTreble,
     TrebleBass,
@@ -33,6 +33,7 @@ impl VertexEntrypoint {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 enum FragmentEntrypoint {
     Color,
     HorizontalGradient,
@@ -49,81 +50,63 @@ impl FragmentEntrypoint {
     }
 }
 
-mod bindings0 {
-    use super::ResourceID;
-    use std::collections::HashMap;
-
-    pub const BOTTOM_LEFT_CORNER: u32 = 0;
-    pub const RIGHT: u32 = 1;
-    pub const UP: u32 = 2;
-    pub const AMOUNT_BARS: u32 = 3;
-
-    pub const COLOR1: u32 = 4;
-    pub const COLOR2: u32 = 5;
-
-    #[rustfmt::skip]
-    pub fn init_mapping() -> HashMap<ResourceID, wgpu::BindGroupLayoutEntry> {
-        HashMap::from([
-            (ResourceID::BottomLeftCorner, crate::util::buffer(BOTTOM_LEFT_CORNER, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Right, crate::util::buffer(RIGHT, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Up, crate::util::buffer(UP, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::AmountBars, crate::util::buffer(AMOUNT_BARS, wgpu::ShaderStages::VERTEX, wgpu::BufferBindingType::Uniform)),
-
-            (ResourceID::Color1, crate::util::buffer(COLOR1, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-            (ResourceID::Color2, crate::util::buffer(COLOR2, wgpu::ShaderStages::FRAGMENT, wgpu::BufferBindingType::Uniform)),
-        ])
-    }
-}
-
-mod bindings1 {
-    pub const FREQS: u32 = 0;
-}
-
 struct PipelineCtx {
     pipeline: wgpu::RenderPipeline,
+
     bind_group1: wgpu::BindGroup,
-    bind_group1_mapping: HashMap<ResourceID, wgpu::BindGroupLayoutEntry>,
+    freqs_buffer: wgpu::Buffer,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-enum ResourceID {
-    BottomLeftCorner,
-    Right,
-    Up,
-    AmountBars,
+type Right = Vec2f;
+type BottomLeftCorner = Vec2f;
+type Up = Vec2f;
 
-    Color1,
-    Color2,
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct VertexParams {
+    right: Right,
+    bottom_left_corner: BottomLeftCorner,
+    up: Up,
+}
 
-    Freqs1,
-    Freqs2,
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
+struct FragmentParams {
+    color1: Rgba,
+    color2: Rgba,
 }
 
 pub struct Graph {
     bar_processor: vibe_audio::BarProcessor,
 
-    resource_manager: ResourceManager<ResourceID>,
-
     bind_group0: wgpu::BindGroup,
+    vertex_params_buffer: wgpu::Buffer,
+    _fragment_params_buffer: wgpu::Buffer,
 
     left: PipelineCtx,
     right: Option<PipelineCtx>,
 
+    // data used to update the values inside the buffers
     amount_bars: GraphAmountBars,
     angle: Deg<f32>,
 }
 
 impl Graph {
     pub fn new<F: Fetcher>(desc: &GraphDescriptor<F>) -> Self {
-        let device = desc.device;
-
-        let mut resource_manager = ResourceManager::new();
-        let bind_group0_mapping = bindings0::init_mapping();
+        let device = desc.renderer.device();
 
         let amount_bars = match desc.placement {
             GraphPlacement::Bottom | GraphPlacement::Top => GraphAmountBars::ScreenWidth,
             GraphPlacement::Right | GraphPlacement::Left => GraphAmountBars::ScreenHeight,
             GraphPlacement::Custom { amount_bars, .. } => GraphAmountBars::Custom(amount_bars),
+        };
+
+        let angle = match desc.placement {
+            GraphPlacement::Bottom => Deg(0.),
+            GraphPlacement::Right => Deg(90.),
+            GraphPlacement::Top => Deg(180.),
+            GraphPlacement::Left => Deg(270.),
+            GraphPlacement::Custom { rotation, .. } => rotation,
         };
 
         let bar_processor = BarProcessor::new(
@@ -134,17 +117,15 @@ impl Graph {
             },
         );
 
-        let (bottom_left_corner, angle) = match desc.placement {
-            GraphPlacement::Bottom => (Vector2::from([-1., -1.]), Deg(0.)),
-            GraphPlacement::Right => (Vector2::from([1., -1.]), Deg(90.)),
-            GraphPlacement::Top => (Vector2::from([1., 1.]), Deg(180.)),
-            GraphPlacement::Left => (Vector2::from([-1., 1.]), Deg(270.)),
-            GraphPlacement::Custom {
-                bottom_left_corner,
-                rotation,
-                ..
-            } => {
-                let bottom_left_corner = {
+        let vertex_params_buffer = {
+            let bottom_left_corner = match desc.placement {
+                GraphPlacement::Bottom => Vector2::from([-1., -1.]),
+                GraphPlacement::Right => Vector2::from([1., -1.]),
+                GraphPlacement::Top => Vector2::from([1., 1.]),
+                GraphPlacement::Left => Vector2::from([-1., 1.]),
+                GraphPlacement::Custom {
+                    bottom_left_corner, ..
+                } => {
                     // remap [0, 1] x [0, 1] to [-1, 1] x [-1, 1]
                     let mut pos = {
                         let bottom_left_corner = Vector2::from(bottom_left_corner);
@@ -157,226 +138,156 @@ impl Graph {
                     pos.x = pos.x.clamp(-1., 1.);
                     pos.y = pos.y.clamp(-1., 1.);
                     pos
-                };
+                }
+            };
 
-                (bottom_left_corner, rotation)
-            }
-        };
-        let rotation = Matrix2::from_angle(angle);
+            let rotation = Matrix2::from_angle(angle);
 
-        let (fragment_entrypoint, color1, color2) = match desc.variant {
-            GraphVariant::Color(color) => (FragmentEntrypoint::Color, color, color),
-            GraphVariant::HorizontalGradient { left, right } => {
-                (FragmentEntrypoint::HorizontalGradient, left, right)
-            }
-            GraphVariant::VerticalGradient { top, bottom } => {
-                (FragmentEntrypoint::VerticalGradient, top, bottom)
-            }
-        };
-
-        resource_manager.extend_buffers([
-            (
-                ResourceID::BottomLeftCorner,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `bottom_left_corner` buffer"),
-                    contents: bytemuck::cast_slice(&[bottom_left_corner.x, bottom_left_corner.y]),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                }),
-            ),
-            (ResourceID::Right, {
-                let right = rotation * Vector2::unit_y();
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `right` buffer"),
-                    contents: bytemuck::cast_slice(&[right.x, right.y]),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                })
-            }),
-            (ResourceID::Up, {
+            let right = rotation * Vector2::unit_y();
+            let up = {
                 let mut up = Vector2::unit_y();
                 up = rotation * up;
                 // stretch the up vector accordingly to the vertex space
-                up = up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH;
+                up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH
+            };
 
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `up` buffer"),
-                    contents: bytemuck::cast_slice(&[up.x, up.y]),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                })
-            }),
-            (
-                ResourceID::AmountBars,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `amount_bars` buffer"),
-                    contents: bytemuck::bytes_of(&u32::from(amount_bars.get().get())),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                }),
-            ),
-            (
-                ResourceID::Color1,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `color1` buffer"),
-                    contents: bytemuck::cast_slice(&color1),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::Color2,
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Graph: `color2` buffer"),
-                    contents: bytemuck::cast_slice(&color2),
-                    usage: wgpu::BufferUsages::UNIFORM,
-                }),
-            ),
-            (
-                ResourceID::Freqs1,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Graph: `freqs1` buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
-                        as wgpu::BufferAddress,
-                    usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
-                    mapped_at_creation: false,
-                }),
-            ),
-        ]);
+            let vertex_params = VertexParams {
+                bottom_left_corner: bottom_left_corner.into(),
+                right: right.into(),
+                up: up.into(),
+            };
 
-        let (left_vertex_entrypoint, right_vertex_entrypoint) = match desc.format {
-            GraphFormat::BassTreble => (VertexEntrypoint::BassTreble, None),
-            GraphFormat::TrebleBass => (VertexEntrypoint::TrebleBass, None),
-            GraphFormat::BassTrebleBass => (
-                VertexEntrypoint::BassTreble,
-                Some(VertexEntrypoint::TrebleBass),
-            ),
-            GraphFormat::TrebleBassTreble => (
-                VertexEntrypoint::TrebleBass,
-                Some(VertexEntrypoint::BassTreble),
-            ),
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Graph: Vertex params buffer"),
+                contents: bytemuck::bytes_of(&vertex_params),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
         };
 
-        let (bind_group0, bind_group0_layout) =
-            resource_manager.build_bind_group("Graph: Bind group 0", device, &bind_group0_mapping);
+        let fragment_params_buffer = {
+            let (color1, color2) = match desc.variant {
+                GraphVariant::Color(color) => (color, color),
+                GraphVariant::HorizontalGradient { left, right } => (left, right),
+                GraphVariant::VerticalGradient { top, bottom } => (top, bottom),
+            };
 
-        let shader = device.create_shader_module(include_wgsl!("./shader.wgsl"));
+            let fragment_params = FragmentParams { color1, color2 };
+
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Graph: Fragment params buffer"),
+                contents: bytemuck::bytes_of(&fragment_params),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
+        };
+
+        let fragment_entrypoint = match desc.variant {
+            GraphVariant::Color(_) => FragmentEntrypoint::Color,
+            GraphVariant::HorizontalGradient { .. } => FragmentEntrypoint::HorizontalGradient,
+            GraphVariant::VerticalGradient { .. } => FragmentEntrypoint::VerticalGradient,
+        };
+
         let left = {
-            let bind_group1_mapping = HashMap::from([(
-                ResourceID::Freqs1,
-                crate::util::buffer(
-                    bindings1::FREQS,
-                    wgpu::ShaderStages::FRAGMENT,
-                    wgpu::BufferBindingType::Storage { read_only: true },
-                ),
-            )]);
-
-            let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
-                "Graph: Left bind group 1",
-                device,
-                &bind_group1_mapping,
-            );
-
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Grgaph: Left pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                ..Default::default()
+            let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Graph: Left freqs buffer"),
+                size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
+                    as wgpu::BufferAddress,
+                usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+                mapped_at_creation: false,
             });
 
-            let pipeline = device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
-                crate::util::SimpleRenderPipelineDescriptor {
-                    label: "Graph: Left render pipeline",
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some(left_vertex_entrypoint.as_str()),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[],
-                    },
-                    fragment: wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some(fragment_entrypoint.as_str()),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: desc.output_texture_format,
-                            blend: None,
-                            write_mask: wgpu::ColorWrites::all(),
-                        })],
-                    },
-                },
-            ));
+            let vertex_entrypoint = match desc.format {
+                GraphFormat::BassTreble | GraphFormat::BassTrebleBass => {
+                    VertexEntrypoint::BassTreble
+                }
+                GraphFormat::TrebleBass | GraphFormat::TrebleBassTreble => {
+                    VertexEntrypoint::TrebleBass
+                }
+            };
+
+            let pipeline = create_pipeline(
+                device,
+                desc.output_texture_format,
+                vertex_entrypoint,
+                fragment_entrypoint,
+            );
+
+            let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Graph: Left bind group 1"),
+                layout: &pipeline.get_bind_group_layout(1),
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: freqs_buffer.as_entire_binding(),
+                }],
+            });
 
             PipelineCtx {
                 pipeline,
                 bind_group1,
-                bind_group1_mapping,
+                freqs_buffer,
             }
         };
 
-        let right = right_vertex_entrypoint.map(|vertex_entrypoint| {
-            resource_manager.insert_buffer(
-                ResourceID::Freqs2,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Graph: `freqs2` buffer"),
+        let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("Graph: Bind group 0"),
+            layout: &left.pipeline.get_bind_group_layout(0),
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: vertex_params_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: fragment_params_buffer.as_entire_binding(),
+                },
+            ],
+        });
+
+        let right = {
+            let vertex_entrypoint = match desc.format {
+                GraphFormat::BassTreble | GraphFormat::TrebleBass => None,
+                GraphFormat::BassTrebleBass => Some(VertexEntrypoint::TrebleBass),
+                GraphFormat::TrebleBassTreble => Some(VertexEntrypoint::BassTreble),
+            };
+
+            vertex_entrypoint.map(|vertex_entrypoint| {
+                let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                    label: Some("Graph: Right freqs buffer"),
                     size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
                         as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
-                }),
-            );
+                });
 
-            let bind_group1_mapping = HashMap::from([(
-                ResourceID::Freqs2,
-                crate::util::buffer(
-                    bindings1::FREQS,
-                    wgpu::ShaderStages::FRAGMENT,
-                    wgpu::BufferBindingType::Storage { read_only: true },
-                ),
-            )]);
+                let pipeline = create_pipeline(
+                    device,
+                    desc.output_texture_format,
+                    vertex_entrypoint,
+                    fragment_entrypoint,
+                );
 
-            let (bind_group1, bind_group1_layout) = resource_manager.build_bind_group(
-                "Graph: Right bind group 1",
-                device,
-                &bind_group1_mapping,
-            );
+                let bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                    label: Some("Graph: Right bind group 1"),
+                    layout: &pipeline.get_bind_group_layout(1),
+                    entries: &[wgpu::BindGroupEntry {
+                        binding: 0,
+                        resource: freqs_buffer.as_entire_binding(),
+                    }],
+                });
 
-            let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-                label: Some("Graph: Right pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout, &bind_group1_layout],
-                ..Default::default()
-            });
-
-            let pipeline = device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
-                crate::util::SimpleRenderPipelineDescriptor {
-                    label: "Graph: Right render pipeline",
-                    layout: Some(&pipeline_layout),
-                    vertex: wgpu::VertexState {
-                        module: &shader,
-                        entry_point: Some(vertex_entrypoint.as_str()),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        buffers: &[],
-                    },
-                    fragment: wgpu::FragmentState {
-                        module: &shader,
-                        entry_point: Some(fragment_entrypoint.as_str()),
-                        compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        targets: &[Some(wgpu::ColorTargetState {
-                            format: desc.output_texture_format,
-                            blend: None,
-                            write_mask: wgpu::ColorWrites::all(),
-                        })],
-                    },
-                },
-            ));
-
-            PipelineCtx {
-                pipeline,
-                bind_group1,
-                bind_group1_mapping,
-            }
-        });
+                PipelineCtx {
+                    pipeline,
+                    bind_group1,
+                    freqs_buffer,
+                }
+            })
+        };
 
         Self {
             bar_processor,
 
-            resource_manager,
-
             bind_group0,
+            vertex_params_buffer,
+            _fragment_params_buffer: fragment_params_buffer,
 
             left,
             right,
@@ -411,14 +322,14 @@ impl Component for Graph {
     ) {
         let bar_values = self.bar_processor.process_bars(processor);
 
-        let buffer = self
-            .resource_manager
-            .get_buffer(ResourceID::Freqs1)
-            .unwrap();
-        queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[0]));
+        queue.write_buffer(
+            &self.left.freqs_buffer,
+            0,
+            bytemuck::cast_slice(&bar_values[0]),
+        );
 
-        if let Some(buffer) = self.resource_manager.get_buffer(ResourceID::Freqs2) {
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&bar_values[1]));
+        if let Some(right) = &self.right {
+            queue.write_buffer(&right.freqs_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
 
@@ -434,18 +345,8 @@ impl Component for Graph {
             GraphAmountBars::Custom(amount) => amount,
         };
 
+        // update `right` vector
         {
-            let buffer = self
-                .resource_manager
-                .get_buffer(ResourceID::AmountBars)
-                .unwrap();
-
-            queue.write_buffer(buffer, 0, bytemuck::bytes_of(&(amount_bars.get() as u32)));
-        }
-
-        {
-            let buffer = self.resource_manager.get_buffer(ResourceID::Right).unwrap();
-
             let pixel_width_in_vertex_space =
                 1. / (new_resolution[0] as f32 / VERTEX_SURFACE_WIDTH);
 
@@ -458,13 +359,17 @@ impl Component for Graph {
                 right /= 2.;
             }
 
-            queue.write_buffer(buffer, 0, bytemuck::cast_slice(&[right.x, right.y]));
+            queue.write_buffer(
+                &self.vertex_params_buffer,
+                0,
+                bytemuck::cast_slice(&[right.x, right.y]),
+            );
         }
 
         self.bar_processor.set_amount_bars(amount_bars);
 
         let buffer_desc = wgpu::BufferDescriptor {
-            label: Some("Graph: `freqs1` buffer"),
+            label: None,
             size: (std::mem::size_of::<f32>() * amount_bars.get() as usize) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
@@ -472,34 +377,42 @@ impl Component for Graph {
 
         // update left `freqs` buffer and bindings
         {
-            self.resource_manager
-                .replace_buffer(ResourceID::Freqs1, device.create_buffer(&buffer_desc));
+            let new_freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Graph: Left freqs buffer"),
+                ..buffer_desc
+            });
 
-            let (bind_group, _layout) = self.resource_manager.build_bind_group(
-                "Graph: Left bind group 1",
-                device,
-                &self.left.bind_group1_mapping,
-            );
-            self.left.bind_group1 = bind_group;
+            let new_bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Graph: Left bind group 1"),
+                layout: &self.left.pipeline.get_bind_group_layout(1),
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: new_freqs_buffer.as_entire_binding(),
+                }],
+            });
+
+            self.left.freqs_buffer = new_freqs_buffer;
+            self.left.bind_group1 = new_bind_group1;
         }
 
         // update right `freqs` buffer and bindings
         if let Some(right) = &mut self.right {
-            self.resource_manager.replace_buffer(
-                ResourceID::Freqs2,
-                device.create_buffer(&wgpu::BufferDescriptor {
-                    label: Some("Graph: `freqs2` buffer"),
-                    ..buffer_desc.clone()
-                }),
-            );
+            let new_freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("Graph: Right freqs buffer"),
+                ..buffer_desc
+            });
 
-            let (bind_group, _layout) = self.resource_manager.build_bind_group(
-                "Graph: Right bind group 1",
-                device,
-                &right.bind_group1_mapping,
-            );
+            let new_bind_group1 = device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("Graph: Right bind group 1"),
+                layout: &self.left.pipeline.get_bind_group_layout(1),
+                entries: &[wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: new_freqs_buffer.as_entire_binding(),
+                }],
+            });
 
-            right.bind_group1 = bind_group;
+            right.freqs_buffer = new_freqs_buffer;
+            right.bind_group1 = new_bind_group1;
         }
     }
 
@@ -524,4 +437,81 @@ impl GraphAmountBars {
             GraphAmountBars::Custom(non_zero) => *non_zero,
         }
     }
+}
+
+fn create_pipeline(
+    device: &wgpu::Device,
+    texture_format: wgpu::TextureFormat,
+    vertex_entrypoint: VertexEntrypoint,
+    fragment_entrypoint: FragmentEntrypoint,
+) -> wgpu::RenderPipeline {
+    let module = device.create_shader_module(include_wgsl!("./shader.wgsl"));
+
+    let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+        label: Some("Bars: Pipeline layout"),
+        bind_group_layouts: &[
+            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bars: Bind group 0 layout"),
+                entries: &[
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 0,
+                        visibility: wgpu::ShaderStages::VERTEX,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                    wgpu::BindGroupLayoutEntry {
+                        binding: 1,
+                        visibility: wgpu::ShaderStages::FRAGMENT,
+                        ty: wgpu::BindingType::Buffer {
+                            ty: wgpu::BufferBindingType::Uniform,
+                            has_dynamic_offset: false,
+                            min_binding_size: None,
+                        },
+                        count: None,
+                    },
+                ],
+            }),
+            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                label: Some("Bars: Bind group 1 layout"),
+                entries: &[wgpu::BindGroupLayoutEntry {
+                    binding: 0,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Storage { read_only: true },
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                }],
+            }),
+        ],
+        ..Default::default()
+    });
+
+    device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
+        crate::util::SimpleRenderPipelineDescriptor {
+            label: "Bar: Render pipeline",
+            layout: Some(&layout),
+            vertex: wgpu::VertexState {
+                module: &module,
+                entry_point: Some(vertex_entrypoint.as_str()),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                buffers: &[],
+            },
+            fragment: wgpu::FragmentState {
+                module: &module,
+                entry_point: Some(fragment_entrypoint.as_str()),
+                compilation_options: wgpu::PipelineCompilationOptions::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format: texture_format,
+                    blend: None,
+                    write_mask: wgpu::ColorWrites::all(),
+                })],
+            },
+        },
+    ))
 }

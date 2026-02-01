@@ -1,8 +1,7 @@
 use crate::{
-    colors::ColorManager,
     config::ConfigError,
     output::{
-        config::{component::ComponentConfig, OutputConfig},
+        config::{component::Config, OutputConfig},
         OutputCtx,
     },
     types::size::Size,
@@ -40,7 +39,7 @@ use wayland_client::{
 pub struct State {
     pub run: bool,
 
-    default_component: ComponentConfig,
+    default_component: Config,
 
     output_state: OutputState,
     registry_state: RegistryState,
@@ -55,8 +54,6 @@ pub struct State {
     pointer: Option<WlPointer>,
 
     outputs: HashMap<WlOutput, OutputCtx>,
-
-    color_manager: ColorManager,
 }
 
 impl State {
@@ -79,6 +76,12 @@ impl State {
                 {
                     match io_err.kind() {
                         std::io::ErrorKind::NotFound => {
+                            warn!(concat![
+                                "Looks like you are starting `vibe` for the first time.\n",
+                                "\tPlease see the 5th point here: <https://github.com/TornaxO7/vibe/blob/main/USAGE.md>\n",
+                                "\tto check if `vibe` is listenting to the correct source."
+                            ]);
+
                             if let Err(err) = default_config.save() {
                                 warn!("Couldn't save default config file: {:?}", err);
                             }
@@ -136,27 +139,20 @@ impl State {
             outputs: HashMap::new(),
 
             default_component: vibe_config.default_component.unwrap_or_default(),
-
-            color_manager: ColorManager::new(),
         })
     }
 
     pub fn render(&mut self, output_key: WlOutput, qh: &QueueHandle<Self>) {
-        // Check for color config changes (cheap mtime check)
-        self.color_manager.check_and_reload();
-
         let output = self.outputs.get_mut(&output_key).unwrap();
 
         // update the buffers for the next frame
         {
             let queue = self.renderer.queue();
             let curr_time = self.time.elapsed().as_secs_f32();
-            let colors = self.color_manager.colors();
 
             for component in output.components.iter_mut() {
                 component.update_audio(queue, &self.sample_processor);
                 component.update_time(queue, curr_time);
-                component.update_colors(queue, &colors);
             }
         }
 

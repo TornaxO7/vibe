@@ -1,17 +1,27 @@
+struct VertexParams {
+    position_offset: vec2f,   
+    circle_radius: f32,
+    aspect_ratio: f32,
+}
+
+struct FragmentParams {
+    color1: vec4f,
+    color2: vec4f,
+}
+
+struct VertexFragmentParams {
+    bar_width: f32,
+    bar_height_sensitivity: f32,
+}
+
 @group(0) @binding(0)
-var<uniform> bar_width: f32;
+var<uniform> vp: VertexParams;
 
 @group(0) @binding(1)
-var<uniform> circle_radius: f32;
+var<uniform> fp: FragmentParams;
 
 @group(0) @binding(2)
-var<uniform> aspect_ratio: f32;
-
-@group(0) @binding(3)
-var<uniform> bar_height_sensitivity: f32;
-
-@group(0) @binding(4)
-var<uniform> position_offset: vec2f;
+var<uniform> vfp: VertexFragmentParams;
 
 @group(1) @binding(0)
 var<storage, read> freqs: array<f32>;
@@ -57,14 +67,14 @@ fn treble_bass(in: Input) -> Output {
 //   height
 //
 fn vertex_main(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
-    let width: f32 = bar_width / 2.;
-    let height: f32 = bar_height_sensitivity * freq + circle_radius;
+    let width: f32 = vfp.bar_width / 2.;
+    let height: f32 = vfp.bar_height_sensitivity * freq + vp.circle_radius;
     var rect_pos: vec2f;
 
     if (vertex_idx == 0) {
-        rect_pos = vec2f(circle_radius, width);
+        rect_pos = vec2f(vp.circle_radius, width);
     } else if (vertex_idx == 1) {
-        rect_pos = vec2f(circle_radius, -width);
+        rect_pos = vec2f(vp.circle_radius, -width);
     } else if (vertex_idx == 2) {
         rect_pos = vec2f(height, width);
     } else { // in.vertex_idx == 3
@@ -73,35 +83,29 @@ fn vertex_main(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
 
     var final_pos: vec2f;
     final_pos = rotations[instance_idx] * rect_pos;
-    final_pos.x /= aspect_ratio;
-    final_pos += position_offset;
+    final_pos.x /= vp.aspect_ratio;
+    final_pos += vp.position_offset;
 
     var out: Output;
     out.vpos = vec4f(final_pos, 0., 1.);
-    out.rect_pos = vec2f(rect_pos.x - circle_radius, rect_pos.y);
+    out.rect_pos = vec2f(rect_pos.x - vp.circle_radius, rect_pos.y);
     return out;
 }
 
 // == fragment stuff ==
-@group(0) @binding(5)
-var<uniform> color1: vec4f;
-
-@group(0) @binding(6)
-var<uniform> color2: vec4f;
-
 @fragment
-fn color_entrypoint(in: Output) -> @location(0) vec4f {
-    return _fragment_smoothing(color1, in.rect_pos);
+fn fs_color(in: Output) -> @location(0) vec4f {
+    return _fragment_smoothing(fp.color1, in.rect_pos);
 }
 
 @fragment
-fn height_gradient_entrypoint(in: Output) -> @location(0) vec4f {
-    let col = mix(color1, color2, smoothstep(0., .5, in.rect_pos.x / bar_height_sensitivity));
+fn fs_height_gradient(in: Output) -> @location(0) vec4f {
+    let col = mix(fp.color1, fp.color2, smoothstep(0., .5, in.rect_pos.x / vfp.bar_height_sensitivity));
     return _fragment_smoothing(col, in.rect_pos);
 }
 
 fn _fragment_smoothing(col: vec4f, rect_pos: vec2f) -> vec4f {
-    let max_width = bar_width / 2.;
+    let max_width = vfp.bar_width / 2.;
     let rel_y = abs(rect_pos.y) / max_width;
 
     let width_smoothing = smoothstep(1., 0., rel_y);

@@ -15,9 +15,8 @@ use winit::{
 };
 
 use crate::{
-    colors::ColorManager,
     output::config::{
-        component::{ComponentConfig, ConfigError},
+        component::{ComponentConfig, Config, ConfigError},
         OutputConfig,
     },
     types::size::Size,
@@ -54,13 +53,13 @@ impl State<'_> {
         &mut self,
         renderer: &Renderer,
         processor: &SampleProcessor<SystemAudioFetcher>,
-        comp_configs: &[ComponentConfig],
+        comp_configs: &[Config],
     ) -> Result<(), ConfigError> {
         let mut new_components = Vec::with_capacity(comp_configs.len());
 
         for config in comp_configs.iter() {
             let mut component =
-                config.to_component(renderer, processor, self.surface_config.format)?;
+                config.create_component(renderer, processor, self.surface_config.format)?;
 
             component.update_resolution(
                 renderer,
@@ -120,7 +119,6 @@ struct OutputRenderer<'a> {
     watcher: INotifyWatcher,
     rx: Receiver<notify::Result<notify::Event>>,
     time: Instant,
-    color_manager: ColorManager,
 }
 
 impl OutputRenderer<'_> {
@@ -175,7 +173,6 @@ impl OutputRenderer<'_> {
             output_config,
             output_name,
             time: Instant::now(),
-            color_manager: ColorManager::new(),
         })
     }
 
@@ -293,15 +290,10 @@ impl ApplicationHandler for OutputRenderer<'_> {
             WindowEvent::RedrawRequested => {
                 state.window.request_redraw();
 
-                // Check for color config changes
-                self.color_manager.check_and_reload();
-                let colors = self.color_manager.colors();
-
                 self.processor.process_next_samples();
                 for component in state.components.iter_mut() {
                     component.update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
                     component.update_audio(self.renderer.queue(), &self.processor);
-                    component.update_colors(self.renderer.queue(), &colors);
                 }
 
                 match state.render(&self.renderer) {

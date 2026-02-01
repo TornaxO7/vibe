@@ -1,7 +1,7 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Radial, RadialDescriptor, RadialVariant};
 
-use crate::Tester;
+use crate::{Tester, RED};
 
 #[test]
 fn test() {
@@ -9,11 +9,11 @@ fn test() {
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let radial = Radial::new(&RadialDescriptor {
-        device: tester.renderer.device(),
+        renderer: &tester.renderer,
         processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
-        variant: RadialVariant::Color(super::RED),
+        variant: RadialVariant::Color(RED.into()),
 
         init_rotation: cgmath::Deg(90.0),
         circle_radius: 0.01,
