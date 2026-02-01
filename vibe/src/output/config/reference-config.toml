@@ -5,57 +5,57 @@ enable = true
 ## Bars - Color
 [[components]]
 [components.Bars]
+max_height = 1.0
 placement = "Bottom"
-max_height = 0.75
 format = "BassTreble"
 [components.Bars.audio_conf]
-amount_bars = 60
+amount_bars = 6
 sensitivity = 4.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.Bars.variant]
 Color = [0, 255, 255, 255]
-
-## Bars - Presence gradient
-[[components]]
-[components.Bars]
-max_height = 0.75
-placement = "Top"
-format = "TrebleBass"
-[components.Bars.audio_conf]
-amount_bars = 60
-sensitivity = 2.0
-freq_range = { start = 50, end = 10000 }
-[components.Bars.variant.PresenceGradient]
-high_presence = [0, 255, 255, 255]
-low_presence = [13, 0, 82, 255]
-
-## Bars - Vertical gradient
-[[components]]
-[components.Bars]
-max_height = 0.75
-placement = "Top"
-format = "TrebleBass"
-[components.Bars.audio_conf]
-amount_bars = 60
-sensitivity = 2.0
-freq_range = { start = 50, end = 10000 }
-[components.Bars.variant.VerticalGradient]
-top = [0, 255, 255, 255]
-bottom = [13, 0, 82, 255]
 
 ## Bars - Horizontal gradient
 [[components]]
 [components.Bars]
-max_height = 0.75
-placement = "Top"
-format = "TrebleBass"
+max_height = 0.5
+placement = "Bottom"
+format = "BassTreble"
 [components.Bars.audio_conf]
-amount_bars = 60
-sensitivity = 2.0
-freq_range = { start = 50, end = 10000 }
+amount_bars = 6
+sensitivity = 4.0
+freq_range = "Bass"
 [components.Bars.variant.HorizontalGradient]
-left = [0, 255, 255, 255]
-right = [13, 0, 82, 255]
+left = [0, 0, 255, 255]
+right = [255, 0, 0, 255]
+
+## Bars - Vertical Gradient
+[[components]]
+[components.Bars]
+max_height = 0.75
+placement = "Bottom"
+format = "BassTreble"
+[components.Bars.audio_conf]
+amount_bars = 6
+sensitivity = 4.0
+freq_range = "Mid"
+[components.Bars.variant.VerticalGradient]
+top = [0, 0, 255, 255]
+bottom = [255, 0, 0, 255]
+
+## Bars - Presence gradient
+[[components]]
+[components.Bars]
+max_height = 0.1
+placement = "Bottom"
+format = "BassTreble"
+[components.Bars.audio_conf]
+amount_bars = 6
+sensitivity = 4.0
+freq_range = "Treble"
+[components.Bars.variant.PresenceGradient]
+high_presence = [0, 0, 255, 255]
+low_presence = [255, 0, 0, 255]
 
 # Fragment canvas
 
@@ -64,7 +64,7 @@ right = [13, 0, 82, 255]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 4.5
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
 path = "/tmp/fragment_code.wgsl"
@@ -74,7 +74,7 @@ path = "/tmp/fragment_code.wgsl"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 10.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
 code = """
@@ -93,7 +93,7 @@ path = "/tmp/img.png"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 4.5
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
 path = "/tmp/fragment_code.wgsl"
@@ -104,7 +104,7 @@ path = "/tmp/fragment_code.wgsl"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 1.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
 path = "/tmp/fragment_code.wgsl"
@@ -114,7 +114,7 @@ path = "/tmp/fragment_code.wgsl"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 10.5
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
 code = """
@@ -132,7 +132,7 @@ path = "/tmp/img.png"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
 sensitivity = 1.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
 path = "/tmp/fragment_code.wgsl"
@@ -146,10 +146,10 @@ movement_speed = 0.009999999776482582
 [components.Aurodio.audio_conf]
 sensitivity = 10.0
 [[components.Aurodio.layers]]
-freq_range = { start = 50, end = 500 }
+freq_range.Custom = { start = 50, end = 500 }
 zoom_factor = 5.0
 [[components.Aurodio.layers]]
-freq_range = { start = 600, end = 2000 }
+freq_range.Custom = { start = 600, end = 2000 }
 zoom_factor = 10.0
 
 # Graph
@@ -162,7 +162,7 @@ placement = "Top"
 format = "BassTreble"
 [components.Graph.audio_conf]
 sensitivity = 0.1
-freq_range = { start = 50, end = 5000 }
+freq_range.Custom = { start = 50, end = 5000 }
 amount_bars = 150
 [components.Graph.variant]
 Color = [0, 0, 255, 255]
@@ -175,7 +175,7 @@ placement = "Bottom"
 format = "BassTrebleBass"
 [components.Graph.audio_conf]
 sensitivity = 3.0
-freq_range = { start = 50, end = 5000 }
+freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.HorizontalGradient]
 left = [255, 0, 0, 255]
 right = [0, 0, 255, 255]
@@ -188,7 +188,7 @@ placement = "Right"
 format = "TrebleBassTreble"
 [components.Graph.audio_conf]
 sensitivity = 8.0
-freq_range = { start = 50, end = 5000 }
+freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
 top = [3, 185, 191, 255]
 bottom = [2, 111, 114, 255]
@@ -204,7 +204,7 @@ rotation = 90.0
 amount_bars = 500
 [components.Graph.audio_conf]
 sensitivity = 8.0
-freq_range = { start = 50, end = 5000 }
+freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
 top = [3, 185, 191, 255]
 bottom = [2, 111, 114, 255]
@@ -220,7 +220,7 @@ position = [0.5, 0.5]
 [components.Circle.audio_conf]
 amount_bars = 30
 sensitivity = 10.5
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.Circle.variant.Graph]
 spike_sensitivity = 0.2
 color = [255, 255, 255, 255]
@@ -239,7 +239,7 @@ format = "TrebleBassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
 sensitivity = 5.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant]
 Color = [0, 255, 0, 255]
 
@@ -255,7 +255,7 @@ format = "BassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
 sensitivity = 5.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant.HeightGradient]
 inner = [255, 0, 0, 255]
 outer = [255, 255, 255, 255]
@@ -271,7 +271,7 @@ zoom_factor = 5.0
 [components.Chessy.audio_conf]
 amount_bars = 10
 sensitivity = 5.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 
 ## Chessy - Circle
 [[components]]
@@ -282,7 +282,7 @@ zoom_factor = 5.0
 [components.Chessy.audio_conf]
 amount_bars = 10
 sensitivity = 5.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }
 
 ## Chessy - Heart
 [[components]]
@@ -293,4 +293,4 @@ zoom_factor = 5.0
 [components.Chessy.audio_conf]
 amount_bars = 10
 sensitivity = 5.0
-freq_range = { start = 50, end = 10000 }
+freq_range.Custom = { start = 50, end = 10000 }

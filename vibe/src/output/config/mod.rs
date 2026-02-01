@@ -97,8 +97,8 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 mod tests {
     use super::*;
     use crate::output::config::component::{
-        FragmentCanvasTexture, WallpaperPulseEdgeAudioConfig, WallpaperPulseEdgeGaussianBlur,
-        WallpaperPulseEdgeThresholds,
+        FragmentCanvasTexture, FreqRange, WallpaperPulseEdgeAudioConfig,
+        WallpaperPulseEdgeGaussianBlur, WallpaperPulseEdgeThresholds,
     };
     use std::{collections::HashSet, num::NonZero};
     use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
@@ -122,7 +122,9 @@ mod tests {
                     wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
                     audio_conf: WallpaperPulseEdgeAudioConfig {
                         sensitivity: 4.,
-                        freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                        freq_range: FreqRange::Custom(
+                            NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+                        ),
                     },
                     thresholds: WallpaperPulseEdgeThresholds {
                         high: 0.2,

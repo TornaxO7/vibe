@@ -1,5 +1,4 @@
-use std::{num::NonZero, ops::Range};
-
+use super::FreqRange;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -9,6 +8,6 @@ pub struct AurodioAudioConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AurodioLayerConfig {
-    pub freq_range: Range<NonZero<u16>>,
+    pub freq_range: FreqRange,
     pub zoom_factor: f32,
 }

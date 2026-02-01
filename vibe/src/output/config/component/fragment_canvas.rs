@@ -1,7 +1,7 @@
-use std::{num::NonZero, ops::Range, path::PathBuf};
-
+use super::FreqRange;
 use image::{DynamicImage, ImageReader};
 use serde::{Deserialize, Serialize};
+use std::{num::NonZero, path::PathBuf};
 use vibe_audio::BarProcessorConfig;
 
 #[derive(thiserror::Error, Debug)]
@@ -31,7 +31,7 @@ impl FragmentCanvasTexture {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct FragmentCanvasAudioConfig {
     pub amount_bars: NonZero<u16>,
-    pub freq_range: Range<NonZero<u16>>,
+    pub freq_range: FreqRange,
     pub sensitivity: f32,
 }
 
@@ -39,7 +39,7 @@ impl Default for FragmentCanvasAudioConfig {
     fn default() -> Self {
         Self {
             amount_bars: NonZero::new(60).unwrap(),
-            freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+            freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
             sensitivity: 0.2,
         }
     }
@@ -49,7 +49,7 @@ impl From<FragmentCanvasAudioConfig> for BarProcessorConfig {
     fn from(conf: FragmentCanvasAudioConfig) -> Self {
         Self {
             amount_bars: conf.amount_bars,
-            freq_range: conf.freq_range,
+            freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
             ..Default::default()
         }
