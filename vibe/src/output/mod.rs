@@ -129,12 +129,21 @@ pub fn get_surface_config(
     size: Size,
 ) -> wgpu::SurfaceConfiguration {
     let surface_caps = surface.get_capabilities(adapter);
+    // Prefer common renderable non-sRGB formats; some GPUs (AMD) expose
+    // Rgba16Unorm first which isn't renderable.
     let format = surface_caps
         .formats
         .iter()
-        .find(|f| !f.is_srgb())
         .copied()
-        .unwrap();
+        .find(|f| {
+            !f.is_srgb()
+                && matches!(
+                    f,
+                    wgpu::TextureFormat::Bgra8Unorm | wgpu::TextureFormat::Rgba8Unorm
+                )
+        })
+        .or_else(|| surface_caps.formats.iter().find(|f| !f.is_srgb()).copied())
+        .unwrap_or(surface_caps.formats[0]);
 
     if !surface_caps
         .alpha_modes
