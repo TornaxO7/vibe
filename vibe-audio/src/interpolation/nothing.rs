@@ -1,5 +1,7 @@
 use super::{context::InterpolationCtx, Interpolater, InterpolationInner};
 
+/// Interpolates nothing... as the name says...
+/// which basically means that it won't fill any other values.
 #[derive(Debug)]
 pub struct NothingInterpolation {
     ctx: InterpolationCtx,
@@ -40,7 +42,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = NothingInterpolation::new(supporting_points);
+        let mut interpolator = NothingInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 

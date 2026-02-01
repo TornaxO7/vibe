@@ -4,6 +4,7 @@ use super::{context::InterpolationCtx, Interpolater, InterpolationInner};
 
 type Width = usize;
 
+/// Applies the cubic spline interpolation between two supporting points.
 #[derive(Debug, Clone)]
 pub struct CubicSplineInterpolation {
     ctx: InterpolationCtx,
@@ -196,7 +197,7 @@ mod tests {
         let supporting_points = [SupportingPoint { x: 0, y: 1.0 }];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points);
+        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 
@@ -211,7 +212,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points);
+        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 
@@ -227,7 +228,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points);
+        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 
@@ -245,7 +246,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points);
+        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 

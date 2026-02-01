@@ -219,7 +219,7 @@ mod tests {
             SupportingPoint { x: 10, y: 0.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(supporting_points);
 
         assert_eq!(
             ctx.sections.as_ref(),

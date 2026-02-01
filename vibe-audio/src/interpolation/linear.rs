@@ -4,6 +4,7 @@ use tracing::debug;
 
 use super::{context::InterpolationCtx, Interpolater, InterpolationInner, SupportingPoint};
 
+/// Interpolates linearly between two supporting points.
 #[derive(Debug)]
 pub struct LinearInterpolation {
     ctx: InterpolationCtx,
@@ -61,7 +62,7 @@ mod tests {
     fn one_supporting_point_and_zero_sections() {
         let supporting_points = [SupportingPoint { x: 0, y: 0.5 }];
 
-        let mut interpolator = LinearInterpolation::new(supporting_points);
+        let mut interpolator = LinearInterpolation::new(supporting_points.clone());
         let mut buffer = [0f32];
 
         interpolator.interpolate(&mut buffer);
@@ -77,7 +78,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = LinearInterpolation::new(supporting_points);
+        let mut interpolator = LinearInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 
@@ -93,7 +94,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = LinearInterpolation::new(supporting_points);
+        let mut interpolator = LinearInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 
@@ -109,7 +110,7 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = LinearInterpolation::new(supporting_points);
+        let mut interpolator = LinearInterpolation::new(supporting_points.clone());
 
         interpolator.interpolate(&mut buffer);
 

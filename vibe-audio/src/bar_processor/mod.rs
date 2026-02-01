@@ -13,12 +13,12 @@ pub struct BarProcessor {
     // The final bar values.
     //
     // Mapping:
-    // 1st Index: Channel
-    // 2nd index: Bar value
+    // - 1st Index: Channel
+    // - 2nd index: Bar value
     bar_values: Box<[Box<[f32]>]>,
 
-    // channels[i] = contains the interpolation context for the i-th channel
-    channels: Box<[ChannelCtx]>,
+    // ctx[i] = channel context of the i-th channel
+    ctx: Box<[ChannelCtx]>,
 
     config: BarProcessorConfig,
     sample_rate: SampleRate,
@@ -39,7 +39,7 @@ impl BarProcessor {
 
         Self {
             config,
-            channels,
+            ctx: channels,
             bar_values,
 
             sample_rate,
@@ -53,7 +53,7 @@ impl BarProcessor {
     /// You are accessing the `j`th bar value of the `i`th audio channel.
     pub fn process_bars<F: Fetcher>(&mut self, processor: &SampleProcessor<F>) -> &[Box<[f32]>] {
         for ((channel_idx, channel), fft_ctx) in self
-            .channels
+            .ctx
             .iter_mut()
             .enumerate()
             .zip(processor.fft_out().iter())
@@ -65,6 +65,7 @@ impl BarProcessor {
         &self.bar_values
     }
 
+    /// Returns the current config of the bar processor.
     pub fn config(&self) -> &BarProcessorConfig {
         &self.config
     }
@@ -99,7 +100,7 @@ impl BarProcessor {
     /// ```
     pub fn set_amount_bars(&mut self, amount_bars: NonZero<u16>) {
         self.config.amount_bars = amount_bars;
-        let amount_channels = self.channels.len();
+        let amount_channels = self.ctx.len();
 
         let (channels, bar_values) = Self::get_channels_and_bar_values(
             &self.config,
@@ -108,10 +109,13 @@ impl BarProcessor {
             self.sample_len,
         );
 
-        self.channels = channels;
+        self.ctx = channels;
         self.bar_values = bar_values;
     }
 
+    /// Allocates the array for the final bar values and the respective channel context for each audio channel.
+    ///
+    /// Little helper function.
     fn get_channels_and_bar_values(
         config: &BarProcessorConfig,
         amount_channels: usize,
