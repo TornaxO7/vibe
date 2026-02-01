@@ -22,14 +22,29 @@ layout(set = 0, binding = 2) uniform float iTime;
 //   - (1, 1) => bottom right corner
 layout(set = 0, binding = 3) uniform vec2 iMouse;
 
+// Contains the detected BPM (beats per minute) of the audio.
+// Typically in the range 60-200 for most music.
+// Use this to sync animations to the music tempo.
+layout(set = 0, binding = 4) uniform float iBPM;
+
+// Color palette for shader customization.
+// Each color is a vec4 where xyz = RGB (0.0-1.0), w = 1.0.
+// Configure via ~/.config/vibe/colors.toml
+layout(set = 0, binding = 5) uniform ColorPalette {
+    vec4 color1;
+    vec4 color2;
+    vec4 color3;
+    vec4 color4;
+} iColors;
+
 // The sampler for `iTexture`
-layout(set = 0, binding = 4) uniform sampler iSampler;
+layout(set = 0, binding = 6) uniform sampler iSampler;
 
 // The texture which contains the image you set.
 // Usage (example):
 //
 // `vec3 texel = texture(sampler2D(iTexture, iSampler), vec2(.0, .5)).rgb;`
-layout(set = 0, binding = 5) uniform texture2D iTexture;
+layout(set = 0, binding = 7) uniform texture2D iTexture;
 
 // The color for the fragment/pixel.
 // Needs to be set in your shader (like in shadertoy).

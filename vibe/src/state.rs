@@ -1,4 +1,5 @@
 use crate::{
+    colors::ColorManager,
     config::ConfigError,
     output::{
         config::{component::Config, OutputConfig},
@@ -54,6 +55,8 @@ pub struct State {
     pointer: Option<WlPointer>,
 
     outputs: HashMap<WlOutput, OutputCtx>,
+
+    color_manager: ColorManager,
 }
 
 impl State {
@@ -139,20 +142,27 @@ impl State {
             outputs: HashMap::new(),
 
             default_component: vibe_config.default_component.unwrap_or_default(),
+
+            color_manager: ColorManager::new(),
         })
     }
 
     pub fn render(&mut self, output_key: WlOutput, qh: &QueueHandle<Self>) {
+        // Check for color config changes (cheap mtime check)
+        self.color_manager.check_and_reload();
+
         let output = self.outputs.get_mut(&output_key).unwrap();
 
         // update the buffers for the next frame
         {
             let queue = self.renderer.queue();
             let curr_time = self.time.elapsed().as_secs_f32();
+            let colors = self.color_manager.colors();
 
             for component in output.components.iter_mut() {
                 component.update_audio(queue, &self.sample_processor);
                 component.update_time(queue, curr_time);
+                component.update_colors(queue, &colors);
             }
         }
 

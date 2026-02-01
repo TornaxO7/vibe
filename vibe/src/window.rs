@@ -15,6 +15,7 @@ use winit::{
 };
 
 use crate::{
+    colors::ColorManager,
     output::config::{
         component::{ComponentConfig, Config, ConfigError},
         OutputConfig,
@@ -119,6 +120,7 @@ struct OutputRenderer<'a> {
     watcher: INotifyWatcher,
     rx: Receiver<notify::Result<notify::Event>>,
     time: Instant,
+    color_manager: ColorManager,
 }
 
 impl OutputRenderer<'_> {
@@ -173,6 +175,7 @@ impl OutputRenderer<'_> {
             output_config,
             output_name,
             time: Instant::now(),
+            color_manager: ColorManager::new(),
         })
     }
 
@@ -290,10 +293,15 @@ impl ApplicationHandler for OutputRenderer<'_> {
             WindowEvent::RedrawRequested => {
                 state.window.request_redraw();
 
+                // Check for color config changes
+                self.color_manager.check_and_reload();
+                let colors = self.color_manager.colors();
+
                 self.processor.process_next_samples();
                 for component in state.components.iter_mut() {
                     component.update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
                     component.update_audio(self.renderer.queue(), &self.processor);
+                    component.update_colors(self.renderer.queue(), &colors);
                 }
 
                 match state.render(&self.renderer) {
