@@ -2,7 +2,7 @@ mod descriptor;
 
 pub use descriptor::*;
 
-use super::Component;
+use super::{Component, Rgba, Vec2f};
 use crate::Renderable;
 use cgmath::{Deg, Matrix2, Rad, Vector2};
 use std::num::NonZero;
@@ -59,19 +59,23 @@ impl CirclePart {
     }
 }
 
+type PositionOffset = Vec2f;
+type CircleRadius = f32;
+type AspectRatio = f32;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct VertexParams {
-    position_offset: [f32; 2],
-    circle_radius: f32,
-    aspect_ratio: f32,
+    position_offset: PositionOffset,
+    circle_radius: CircleRadius,
+    aspect_ratio: AspectRatio,
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct FragmentParams {
-    color1: [f32; 4],
-    color2: [f32; 4],
+    color1: Rgba,
+    color2: Rgba,
 }
 
 #[repr(C)]
@@ -110,19 +114,16 @@ impl Radial {
         let bar_processor = BarProcessor::new(desc.processor, desc.audio_conf.clone());
 
         let vertex_params_buffer = {
-            let position_offset: [f32; 2] = {
+            let position_offset = {
                 let x_factor = desc.position.0.clamp(0., 1.);
                 let y_factor = desc.position.1.clamp(0., 1.);
 
                 let coord_system_origin: Vector2<f32> = Vector2::from((-1., 1.)); // top left in vertex space
-                let pos_offset =
-                    coord_system_origin + Vector2::from((2. * x_factor, 2. * -y_factor));
-
-                pos_offset.into()
+                coord_system_origin + Vector2::from((2. * x_factor, 2. * -y_factor))
             };
 
             let vertex_params = VertexParams {
-                position_offset,
+                position_offset: position_offset.into(),
                 circle_radius: desc.circle_radius,
                 aspect_ratio: 0.,
             };
@@ -381,9 +382,13 @@ impl Component for Radial {
 
         {
             let aspect_ratio = new_resolution[0] as f32 / new_resolution[1] as f32;
+
+            let offset =
+                std::mem::size_of::<PositionOffset>() + std::mem::size_of::<CircleRadius>();
+
             queue.write_buffer(
                 &self.vertex_params_buffer,
-                12,
+                offset as wgpu::BufferAddress,
                 bytemuck::bytes_of(&aspect_ratio),
             );
         }

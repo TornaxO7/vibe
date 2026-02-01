@@ -1,9 +1,7 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Circle, CircleDescriptor, CircleVariant};
 
-use crate::Tester;
-
-const WHITE: [f32; 4] = [1.; 4];
+use crate::{Tester, WHITE};
 
 #[test]
 fn test() {
@@ -17,7 +15,7 @@ fn test() {
         texture_format: tester.output_texture_format(),
         variant: CircleVariant::Graph {
             spike_sensitivity: 0.1,
-            color: WHITE,
+            color: WHITE.into(),
         },
         radius: 0.1,
         rotation: cgmath::Deg(90.),

@@ -1,10 +1,7 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsFormat};
 
-use crate::Tester;
-
-const RED: [f32; 4] = [1., 0., 0., 1.];
-const BLUE: [f32; 4] = [0., 0., 1., 1.];
+use crate::{Tester, BLUE, RED};
 
 #[test]
 fn test() {
@@ -18,8 +15,8 @@ fn test() {
         texture_format: tester.output_texture_format(),
         max_height: 1.,
         variant: BarVariant::PresenceGradient {
-            high: RED,
-            low: BLUE,
+            high: RED.into(),
+            low: BLUE.into(),
         },
         placement: vibe_renderer::components::BarsPlacement::Right,
         format: BarsFormat::TrebleBassTreble,

@@ -2,8 +2,8 @@ mod descriptor;
 
 pub use descriptor::*;
 
+use super::{Component, Vec2f};
 use crate::{
-    components::Component,
     texture_generation::{SdfMask, SdfPattern},
     Renderable,
 };
@@ -13,13 +13,18 @@ use wgpu::{include_wgsl, util::DeviceExt};
 // this texture size seems good enough for a 1920x1080 screen.
 const DEFAULT_SDF_TEXTURE_SIZE: u32 = 512;
 
+type Resolution = Vec2f;
+type Time = f32;
+type MovementSpeed = f32;
+type ZoomFactor = f32;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Default)]
 struct Data {
-    resolution: [f32; 2],
-    time: f32,
-    movement_speed: f32,
-    zoom_factor: f32,
+    resolution: Resolution,
+    time: Time,
+    movement_speed: MovementSpeed,
+    zoom_factor: ZoomFactor,
     _padding: f32,
 }
 
@@ -45,7 +50,7 @@ impl Chessy {
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
 
         let data = Data {
-            resolution: [0f32; 2],
+            resolution: Resolution::default(),
             time: 0f32,
             movement_speed: desc.movement_speed,
             zoom_factor: desc.zoom_factor,

@@ -1,7 +1,7 @@
 mod descriptor;
 pub use descriptor::*;
 
-use super::Component;
+use super::{Component, Vec2f, Vec3f};
 use crate::{texture_generation::ValueNoise, Renderable};
 use std::num::NonZero;
 use vibe_audio::{
@@ -10,14 +10,20 @@ use vibe_audio::{
 };
 use wgpu::{include_wgsl, util::DeviceExt};
 
+type BaseColor = Vec3f;
+type Time = f32;
+type Resolution = Vec2f;
+type MovementSpeed = f32;
+type PointsWidth = u32;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct FragmentParams {
-    base_color: [f32; 3],
-    time: f32,
-    resolution: [f32; 2],
-    movement_speed: f32,
-    points_width: u32,
+    base_color: BaseColor,
+    time: Time,
+    resolution: Resolution,
+    movement_speed: MovementSpeed,
+    points_width: PointsWidth,
 }
 
 pub struct Aurodio {
@@ -62,8 +68,8 @@ impl Aurodio {
 
             let fragment_params = FragmentParams {
                 base_color: desc.base_color,
-                time: 0f32,
-                resolution: [0f32; 2],
+                time: Time::default(),
+                resolution: Resolution::default(),
                 movement_speed: desc.movement_speed,
                 points_width,
             };
@@ -238,9 +244,11 @@ impl Component for Aurodio {
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        let offset = std::mem::size_of::<BaseColor>();
+
         queue.write_buffer(
             &self.fragment_params_buffer,
-            std::mem::size_of::<[f32; 3]>() as wgpu::BufferAddress,
+            offset as wgpu::BufferAddress,
             bytemuck::bytes_of(&new_time),
         );
     }
@@ -248,12 +256,7 @@ impl Component for Aurodio {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        let offset = {
-            let base_color_size = std::mem::size_of::<[f32; 3]>();
-            let time_size = std::mem::size_of::<f32>();
-
-            base_color_size + time_size
-        };
+        let offset = std::mem::size_of::<BaseColor>() + std::mem::size_of::<Time>();
 
         queue.write_buffer(
             &self.fragment_params_buffer,

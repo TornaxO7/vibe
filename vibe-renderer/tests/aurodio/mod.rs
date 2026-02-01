@@ -16,7 +16,7 @@ fn test() {
         renderer: &tester.renderer,
         sample_processor: &sample_processor,
         texture_format: tester.output_texture_format(),
-        base_color: BLUE,
+        base_color: BLUE.into(),
         movement_speed: 0.2,
         layers: &[AurodioLayerDescriptor {
             freq_range: NonZero::new(50).unwrap()..NonZero::new(200).unwrap(),

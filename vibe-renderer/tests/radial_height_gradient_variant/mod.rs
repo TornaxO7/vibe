@@ -1,7 +1,7 @@
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{Radial, RadialDescriptor, RadialVariant};
 
-use crate::Tester;
+use crate::{Tester, RED, WHITE};
 
 #[test]
 fn test() {
@@ -14,8 +14,8 @@ fn test() {
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
         variant: RadialVariant::HeightGradient {
-            inner: super::RED,
-            outer: super::WHITE,
+            inner: RED.into(),
+            outer: WHITE.into(),
         },
 
         init_rotation: cgmath::Deg(90.0),

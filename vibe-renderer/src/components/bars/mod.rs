@@ -2,11 +2,8 @@ mod descriptor;
 
 pub use descriptor::*;
 
-use super::{Component, ShaderCodeError};
-use crate::{
-    components::{Pixels, Rgba},
-    Renderable,
-};
+use super::{Component, Pixels, Rgba, ShaderCodeError, Vec2f};
+use crate::Renderable;
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
 use vibe_audio::{
@@ -25,19 +22,24 @@ const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
 const TRUE: u32 = 1;
 const FALSE: u32 = 0;
 
-type Vec2f = [f32; 2];
+type ColumnDirection = Vec2f;
+type BottomLeftCorner = Vec2f;
+type UpDirection = Vec2f;
+type MaxHeight = f32;
+type HeightMirrored = u32;
+type AmountBars = u32;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 struct VertexParams {
-    column_direction: Vec2f,
-    bottom_left_corner: Vec2f,
-    up_direction: Vec2f,
-    max_height: f32,
+    column_direction: ColumnDirection,
+    bottom_left_corner: BottomLeftCorner,
+    up_direction: UpDirection,
+    max_height: MaxHeight,
     // should be a boolean, but... you know, it's not possible due to `bytemuck::Pod`.
     // So, it's meaning is: 1 = True, 0 = False
-    height_mirrored: u32,
-    amount_bars: u32,
+    height_mirrored: HeightMirrored,
+    amount_bars: AmountBars,
 
     // memory padding
     _padding1: u32,
@@ -151,7 +153,7 @@ impl Bars {
                 column_direction: column_direction.into(),
                 max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
                 height_mirrored,
-                amount_bars: amount_bars.get() as u32,
+                amount_bars: amount_bars.get() as AmountBars,
                 _padding1: 0,
             }
         };

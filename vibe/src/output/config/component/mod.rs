@@ -272,7 +272,7 @@ impl ComponentConfig {
                     renderer,
                     sample_processor: processor,
                     texture_format,
-                    base_color: base_color.as_f32(),
+                    base_color: base_color.as_f32().into(),
                     movement_speed: *movement_speed,
                     sensitivity: audio_conf.sensitivity,
                     layers: &layers,
@@ -462,7 +462,7 @@ pub struct Rgba(pub [u8; 4]);
 impl Rgba {
     pub const TURQUOISE: Self = Self([0, 255, 255, 255]);
 
-    pub fn as_f32(&self) -> [f32; 4] {
+    pub fn as_f32(&self) -> vibe_renderer::components::Rgba {
         let mut rgba_f32 = [0f32; 4];
         for (idx, value) in self.0.iter().enumerate() {
             rgba_f32[idx] = (*value as f32) / 255f32;
@@ -473,7 +473,7 @@ impl Rgba {
             *value = value.powf(GAMMA);
         }
 
-        rgba_f32
+        rgba_f32.into()
     }
 }
 

@@ -2,7 +2,7 @@ mod descriptor;
 
 pub use descriptor::*;
 
-use super::Component;
+use super::{Component, Rgba, Vec2f};
 use crate::{Renderable, Renderer};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
@@ -57,19 +57,23 @@ struct PipelineCtx {
     freqs_buffer: wgpu::Buffer,
 }
 
+type Right = Vec2f;
+type BottomLeftCorner = Vec2f;
+type Up = Vec2f;
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct VertexParams {
-    right: [f32; 2],
-    bottom_left_corner: [f32; 2],
-    up: [f32; 2],
+    right: Right,
+    bottom_left_corner: BottomLeftCorner,
+    up: Up,
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct FragmentParams {
-    color1: [f32; 4],
-    color2: [f32; 4],
+    color1: Rgba,
+    color2: Rgba,
 }
 
 pub struct Graph {
@@ -148,9 +152,9 @@ impl Graph {
             };
 
             let vertex_params = VertexParams {
-                bottom_left_corner: Into::<[f32; 2]>::into(bottom_left_corner),
-                right: Into::<[f32; 2]>::into(right),
-                up: Into::<[f32; 2]>::into(up),
+                bottom_left_corner: bottom_left_corner.into(),
+                right: right.into(),
+                up: up.into(),
             };
 
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
