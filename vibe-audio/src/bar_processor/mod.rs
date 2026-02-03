@@ -141,8 +141,6 @@ impl BarProcessor {
                 channel.total_amount_bars()
             };
 
-            println!("{}", total_amount_bars);
-
             vec![vec![0f32; total_amount_bars].into_boxed_slice(); amount_channels]
                 .into_boxed_slice()
         };
@@ -194,5 +192,42 @@ mod tests {
         for channel in bars {
             assert_eq!(channel.len(), u16::MAX as usize);
         }
+    }
+
+    /// If we already use the maximum amount of bars, then we don't have any bars left for the padding => should panic
+    #[test]
+    #[should_panic]
+    fn one_channel_u16_max_bars_with_padding() {
+        let processor = SampleProcessor::new(DummyFetcher::new(1));
+
+        BarProcessor::new(
+            &processor,
+            BarProcessorConfig {
+                amount_bars: NonZero::new(u16::MAX).unwrap(),
+                padding: Some(PaddingConfig {
+                    side: PaddingSide::Left,
+                    size: PaddingSize::Custom(NonZero::new(1).unwrap()),
+                }),
+                ..Default::default()
+            },
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn two_channels_u16_max_bars_with_padding() {
+        let processor = SampleProcessor::new(DummyFetcher::new(2));
+
+        BarProcessor::new(
+            &processor,
+            BarProcessorConfig {
+                amount_bars: NonZero::new(u16::MAX).unwrap(),
+                padding: Some(PaddingConfig {
+                    side: PaddingSide::Right,
+                    size: PaddingSize::Custom(NonZero::new(1).unwrap()),
+                }),
+                ..Default::default()
+            },
+        );
     }
 }

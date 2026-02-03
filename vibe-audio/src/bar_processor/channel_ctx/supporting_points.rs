@@ -66,7 +66,26 @@ pub fn compute(
             prev_fft_range = new_fft_range;
         }
 
-        panic!("{}", supporting_points.last().unwrap().x);
+        // It could happen that we don't have enough supporting points yet to have the given amount of bars set in `config.amount_bars`.
+        // So just add a supporting point in the end.
+        {
+            let last_x = supporting_points.last().unwrap().x + 1;
+            let not_enough_supporting_points = last_x < config.amount_bars.get() as usize;
+            if not_enough_supporting_points {
+                supporting_points.push(SupportingPoint {
+                    x: (config.amount_bars.get() - 1) as usize,
+                    y: 0.,
+                });
+            }
+
+            assert!(
+                supporting_points.last().unwrap().x == (config.amount_bars.get() - 1) as usize,
+                "The supporting points from '{:?}' to '{:?}' don't cover '{}' bars <.<",
+                supporting_points.first().unwrap(),
+                supporting_points.last().unwrap(),
+                config.amount_bars.get()
+            );
+        }
 
         // re-adjust the supporting points if needed
         {
@@ -89,6 +108,15 @@ pub fn compute(
 
         // apply padding
         if let Some(padding) = &config.padding {
+            let padding_size = match padding.size {
+                PaddingSize::Custom(amount) => amount,
+            };
+
+            assert!(
+                config.amount_bars.checked_add(padding_size.get()).is_some(),
+                "The current amount of bars + padding bars are exceeding the maximum amount of bars.\nEither reduce the amount of bars ro reduce the padding size."
+            );
+
             let requires_left_padding =
                 [PaddingSide::Left, PaddingSide::Both].contains(&padding.side);
 
@@ -97,11 +125,7 @@ pub fn compute(
                 padded_supporting_points.push(SupportingPoint { x: 0, y: 0. });
 
                 for mut sp in supporting_points {
-                    let amount = match padding.size {
-                        PaddingSize::Custom(amount) => amount,
-                    };
-
-                    sp.x += amount.get() as usize;
+                    sp.x += padding_size.get() as usize;
                     padded_supporting_points.push(sp);
                 }
 
@@ -112,14 +136,10 @@ pub fn compute(
                 [PaddingSide::Both, PaddingSide::Right].contains(&padding.side);
 
             if requires_right_padding {
-                let amount = match padding.size {
-                    PaddingSize::Custom(amount) => amount,
-                };
-
                 let last_sp = supporting_points.last().unwrap();
 
                 supporting_points.push(SupportingPoint {
-                    x: last_sp.x + amount.get() as usize,
+                    x: last_sp.x + padding_size.get() as usize,
                     y: 0.,
                 });
             }
