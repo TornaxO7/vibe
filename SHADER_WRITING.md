@@ -910,11 +910,113 @@ Access in shader: `let col = textureSample(iTexture, iSampler, uv).rgb;`
 
 In window mode (`vibe window-1`), config and shader files are watched with inotify. Save the file and the shader reloads automatically — no restart needed. The audio pipeline's normalize_factor starts conservatively low and ramps up, so reloaded shaders fade in smoothly.
 
+## Avoiding Dull Colors
+
+The fastest way to kill a shader's visual appeal is to average colors together. Averaging converges toward gray — every `mix()` with `t = 0.5` and every `/4.0` across the palette pulls the output toward muddy middle tones. The palette has four distinct colors for a reason. Keep them distinct.
+
+### The Averaging Trap
+
+```wgsl
+// BAD: averaging the entire palette produces gray mud
+let color = (c1 + c2 + c3 + c4) / 4.0;
+
+// BAD: 50/50 blend of complementary colors → desaturated
+let color = mix(c1, c4, 0.5);
+
+// BAD: blending all audio bands into one signal, then blending all colors
+let energy = (bass + mid + treble) / 3.0;
+let color = mix(mix(c1, c2, energy), mix(c3, c4, energy), 0.5);
+```
+
+Every blend operation loses saturation. Chain two blends and the color is already noticeably duller than either input.
+
+### Keep Colors Separated by Role
+
+Each color should dominate in its own region. Don't blend them all into the same pixel.
+
+```wgsl
+// GOOD: each color owns a spatial zone
+if depth < 0.3 {
+    color = c4 * 1.3;              // Hot inner — accent, saturated
+} else if depth < 0.6 {
+    color = mix(c4, c3, (depth - 0.3) * 3.33);  // Transition zone
+} else {
+    color = c2 * 1.1;              // Cool outer — secondary, distinct
+}
+
+// GOOD: colors separated by material, not blended together
+// Monolith body = c3, satellites = c4, rings = mix(c4, c2, 0.3), floor = c1
+```
+
+### Use Asymmetric Blends
+
+When you must blend, avoid 50/50. Push toward one end:
+
+```wgsl
+// BAD
+let col = mix(c2, c3, 0.5);
+
+// GOOD: one color dominates, the other tints
+let col = mix(c2, c3, 0.15);    // Mostly c2, with a hint of c3
+let col = c3 * 0.85 + c4 * 0.08;  // c3 with a whisper of c4 glow
+```
+
+### Boost Saturation After Blending
+
+If blending is unavoidable (fog, distance falloff), compensate:
+
+```wgsl
+// After a blend that may desaturate
+let luminance = dot(color, vec3<f32>(0.299, 0.587, 0.114));
+color = mix(vec3<f32>(luminance), color, 1.3);  // Push saturation up by 30%
+```
+
+### Emissive and Additive Color
+
+Additive blending (using `+=` instead of `mix`) preserves vibrancy because it brightens without diluting:
+
+```wgsl
+// GOOD: additive glow keeps the accent color pure
+color += c4 * glow_intensity;           // Bright accent added on top
+color += c2 * fresnel * 0.3;            // Edge rim adds color, doesn't blend
+
+// Compare to:
+// BAD: mix dilutes both the base and the glow
+color = mix(color, c4, glow_intensity);  // Muddies toward average
+```
+
+Use additive for glow, emissive edges, rim lighting, and god rays. Use `mix()` only for material transitions (zone boundaries, fog).
+
+### Multiply for Tinting, Don't Average
+
+To tint a color without dulling it:
+
+```wgsl
+// GOOD: tinting preserves saturation structure
+color *= vec3<f32>(1.02, 1.0, 0.98);  // Warm shift
+color *= c2 / max(max(c2.r, c2.g), c2.b);  // Normalize and tint
+
+// BAD: mixing with a tint color toward 0.5 → dull
+color = mix(color, c2, 0.3);
+```
+
+### Contrast Beats Blending
+
+When in doubt, increase contrast instead of blending more colors into the output:
+
+```wgsl
+// Deepen contrast — this makes colors pop
+color = pow(color, vec3<f32>(0.9)) * 1.2;
+color = max(color - vec3<f32>(0.03), vec3<f32>(0.0));  // Crush blacks
+```
+
+A shader with three strongly separated color zones and high contrast will always look better than one that carefully blends all four colors into a smooth gradient across the screen.
+
 ## Design Principles
 
 1. **The shader should look interesting with no audio.** Bass = 0, mid = 0, treble = 0 should still produce a moving, visually appealing image. Audio adds energy, not existence.
 
-2. **Use all four palette colors.** A shader that ignores color2 will look flat when the user picks a four-tone scheme. Assign each color a role and use it.
+2. **Use all four palette colors — but keep them separated.** Assign each color a spatial or material role. Don't blend them all into the same pixel. Separation creates visual richness; averaging creates mud.
 
 3. **Prefer slow, continuous motion.** Base animations on `iTime * 0.08`, not `iTime * 5.0`. The shader runs as a background or ambient display. Slow orbits, gentle drifts, and gradual zooms.
 
@@ -925,3 +1027,5 @@ In window mode (`vibe window-1`), config and shader files are watched with inoti
 6. **Tone map and vignette.** Every shader should end with Reinhard tone mapping and a vignette. This prevents harsh clipping and gives a cinematic feel.
 
 7. **Test with different color palettes.** A shader that looks great with blue-purple might look terrible with warm orange-red. Use `mix()` between palette colors, not hardcoded values.
+
+8. **Contrast over blending.** If the output looks flat, the fix is almost never "blend in more colors." The fix is more contrast, stronger zone separation, or additive glow on top of a dark base.
