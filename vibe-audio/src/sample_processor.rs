@@ -1,4 +1,7 @@
-use std::sync::{Arc, Mutex};
+use std::{
+    num::NonZero,
+    sync::{Arc, Mutex},
+};
 
 use cpal::SampleRate;
 use realfft::{num_complex::Complex32, RealFftPlanner};
@@ -97,8 +100,8 @@ impl<F: Fetcher> SampleProcessor<F> {
         self.sample_buffer.lock().unwrap().sample_rate()
     }
 
-    pub(crate) fn amount_channels(&self) -> usize {
-        self.channels.len()
+    pub(crate) fn amount_channels(&self) -> NonZero<u8> {
+        NonZero::new(self.channels.len() as u8).unwrap()
     }
 }
 

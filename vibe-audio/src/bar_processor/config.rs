@@ -30,6 +30,27 @@ pub enum BarDistribution {
     Natural,
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub enum PaddingSide {
+    Left,
+    Right,
+    Both,
+}
+
+#[derive(Debug, Clone)]
+pub enum PaddingSize {
+    // TODO: Add auto detection
+    // Auto,
+    // unit: "Bars"
+    Custom(NonZero<u16>),
+}
+
+#[derive(Debug, Clone)]
+pub struct PaddingConfig {
+    pub side: PaddingSide,
+    pub size: PaddingSize,
+}
+
 /// The config options for [crate::BarProcessor].
 #[derive(Debug, Clone)]
 pub struct BarProcessorConfig {
@@ -50,6 +71,8 @@ pub struct BarProcessorConfig {
     /// Set the bar distribution.
     /// In general you needn't use another value than its default.
     pub bar_distribution: BarDistribution,
+
+    pub padding: Option<PaddingConfig>,
 }
 
 impl Default for BarProcessorConfig {
@@ -60,6 +83,7 @@ impl Default for BarProcessorConfig {
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
             sensitivity: 2.,
             bar_distribution: BarDistribution::Uniform,
+            padding: None,
         }
     }
 }

@@ -1,16 +1,15 @@
 mod supporting_points;
 
-use std::ops::Range;
-
 use crate::{
     interpolation::{
-        CubicSplineInterpolation, Interpolater, InterpolationInner, LinearInterpolation,
-        NothingInterpolation,
+        CubicSplineInterpolation, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
+        InterpolatorPadding, LinearInterpolation, NothingInterpolation,
     },
     BarProcessorConfig, InterpolationVariant,
 };
 use cpal::SampleRate;
 use realfft::num_complex::Complex32;
+use std::ops::Range;
 
 const INIT_NORMALIZATION_FACTOR: f32 = 1.;
 
@@ -19,7 +18,7 @@ pub struct ChannelCtx {
     // The interpolation strategy for this channel
     interpolator: Box<dyn Interpolater>,
     // Contains the index range for each supporting point within the fft output for each supporting point
-    ranges: Box<[Range<usize>]>,
+    fft_out_ranges: Box<[Range<usize>]>,
 
     normalize_factor: f32,
     sensitivity: f32,
@@ -37,22 +36,35 @@ pub struct ChannelCtx {
 /// Construction relevant methods
 impl ChannelCtx {
     pub fn new(config: &BarProcessorConfig, sample_rate: SampleRate, fft_size: usize) -> Self {
-        let (supporting_points, ranges) = supporting_points::compute(config, sample_rate, fft_size);
+        let (supporting_points, fft_out_ranges) =
+            supporting_points::compute(config, sample_rate, fft_size);
 
-        let interpolator: Box<dyn Interpolater> = match config.interpolation {
-            InterpolationVariant::None => NothingInterpolation::boxed(supporting_points),
-            InterpolationVariant::Linear => LinearInterpolation::boxed(supporting_points),
-            InterpolationVariant::CubicSpline => CubicSplineInterpolation::boxed(supporting_points),
+        let interpolator: Box<dyn Interpolater> = {
+            let desc = InterpolatorDescriptor {
+                supporting_points,
+                padding: config
+                    .padding
+                    .clone()
+                    .map(|conf| InterpolatorPadding::from(conf)),
+            };
+
+            match config.interpolation {
+                InterpolationVariant::None => NothingInterpolation::boxed(desc),
+                InterpolationVariant::Linear => LinearInterpolation::boxed(desc),
+                InterpolationVariant::CubicSpline => CubicSplineInterpolation::boxed(desc),
+            }
         };
 
-        let peak = vec![0f32; u16::from(config.amount_bars) as usize].into_boxed_slice();
+        let total_amount_bars = interpolator.total_amount_bars();
+
+        let peak = vec![0f32; total_amount_bars].into_boxed_slice();
         let fall = peak.clone();
         let mem = peak.clone();
         let prev = peak.clone();
 
         Self {
             interpolator,
-            ranges,
+            fft_out_ranges: fft_out_ranges,
 
             normalize_factor: INIT_NORMALIZATION_FACTOR,
             sensitivity: config.sensitivity,
@@ -75,8 +87,8 @@ impl ChannelCtx {
 
         for (bar_idx, (supporting_point, fft_range)) in self
             .interpolator
-            .supporting_points_mut()
-            .zip(self.ranges.iter())
+            .supporting_points_unpadded_mut()
+            .zip(self.fft_out_ranges.iter())
             .enumerate()
         {
             let normalized_x = supporting_point.x as f32 / amount_bars as f32;
@@ -138,5 +150,9 @@ impl ChannelCtx {
 
     pub fn interpolate(&mut self, bar_values: &mut [f32]) {
         self.interpolator.interpolate(bar_values);
+    }
+
+    pub fn total_amount_bars(&self) -> usize {
+        self.prev.len()
     }
 }

@@ -1,6 +1,10 @@
 use crate::{
-    bar_processor::config::BarDistribution, interpolation::SupportingPoint, BarProcessorConfig,
-    MAX_HUMAN_FREQUENCY, MIN_HUMAN_FREQUENCY,
+    bar_processor::{
+        config::{BarDistribution, PaddingSide},
+        PaddingSize,
+    },
+    interpolation::SupportingPoint,
+    BarProcessorConfig, MAX_HUMAN_FREQUENCY, MIN_HUMAN_FREQUENCY,
 };
 use cpal::SampleRate;
 use std::ops::Range;
@@ -15,7 +19,7 @@ pub fn compute(
     config: &BarProcessorConfig,
     sample_rate: SampleRate,
     fft_size: usize,
-) -> (Box<[SupportingPoint]>, Box<[Range<usize>]>) {
+) -> (Vec<SupportingPoint>, Box<[Range<usize>]>) {
     // == preparations
     let weights = {
         let amount_bars = config.amount_bars.get() as u32;
@@ -62,27 +66,70 @@ pub fn compute(
             prev_fft_range = new_fft_range;
         }
 
+        panic!("{}", supporting_points.last().unwrap().x);
+
         // re-adjust the supporting points if needed
-        match config.bar_distribution {
-            BarDistribution::Uniform => {
-                let step = config.amount_bars.get() as f32 / supporting_points.len() as f32;
-                let supporting_points_len = supporting_points.len();
-                for (idx, supporting_point) in supporting_points
-                    [..supporting_points_len.saturating_sub(1)]
-                    .iter_mut()
-                    .enumerate()
-                {
-                    supporting_point.x = (idx as f32 * step) as usize;
+        {
+            match config.bar_distribution {
+                BarDistribution::Uniform => {
+                    // apply distribution
+                    let step = config.amount_bars.get() as f32 / supporting_points.len() as f32;
+                    let supporting_points_len = supporting_points.len();
+                    for (idx, supporting_point) in supporting_points
+                        [..supporting_points_len.saturating_sub(1)]
+                        .iter_mut()
+                        .enumerate()
+                    {
+                        supporting_point.x = (idx as f32 * step) as usize;
+                    }
                 }
+                BarDistribution::Natural => {}
             }
-            BarDistribution::Natural => {}
+        }
+
+        // apply padding
+        if let Some(padding) = &config.padding {
+            let requires_left_padding =
+                [PaddingSide::Left, PaddingSide::Both].contains(&padding.side);
+
+            if requires_left_padding {
+                let mut padded_supporting_points = Vec::with_capacity(supporting_points.len() + 1);
+                padded_supporting_points.push(SupportingPoint { x: 0, y: 0. });
+
+                for mut sp in supporting_points {
+                    let amount = match padding.size {
+                        PaddingSize::Custom(amount) => amount,
+                    };
+
+                    sp.x += amount.get() as usize;
+                    padded_supporting_points.push(sp);
+                }
+
+                supporting_points = padded_supporting_points;
+            }
+
+            let requires_right_padding =
+                [PaddingSide::Both, PaddingSide::Right].contains(&padding.side);
+
+            if requires_right_padding {
+                let amount = match padding.size {
+                    PaddingSize::Custom(amount) => amount,
+                };
+
+                let last_sp = supporting_points.last().unwrap();
+
+                supporting_points.push(SupportingPoint {
+                    x: last_sp.x + amount.get() as usize,
+                    y: 0.,
+                });
+            }
         }
 
         (supporting_points, supporting_point_fft_ranges)
     };
 
     (
-        supporting_points.into_boxed_slice(),
+        supporting_points,
         supporting_point_fft_ranges.into_boxed_slice(),
     )
 }

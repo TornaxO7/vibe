@@ -1,6 +1,7 @@
+use super::{
+    context::InterpolationCtx, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
+};
 use nalgebra::{Cholesky, DMatrix, DVector, Dyn};
-
-use super::{context::InterpolationCtx, Interpolater, InterpolationInner};
 
 type Width = usize;
 
@@ -16,9 +17,9 @@ pub struct CubicSplineInterpolation {
     gradient_diffs: Box<[f32]>,
 }
 
-impl InterpolationInner for CubicSplineInterpolation {
-    fn new(supporting_points: impl IntoIterator<Item = super::SupportingPoint>) -> Self {
-        let ctx = InterpolationCtx::new(supporting_points);
+impl InterpolatorCreation for CubicSplineInterpolation {
+    fn new(desc: InterpolatorDescriptor) -> Self {
+        let ctx = InterpolationCtx::new(desc);
 
         let section_widths = if ctx.supporting_points.len() >= 2 {
             let mut section_widths = Vec::with_capacity(ctx.supporting_points.len() - 1);
@@ -134,8 +135,12 @@ impl Interpolater for CubicSplineInterpolation {
         }
     }
 
-    fn supporting_points_mut(&mut self) -> std::slice::IterMut<'_, super::SupportingPoint> {
-        self.ctx.supporting_points.iter_mut()
+    fn get_ctx(&self) -> &InterpolationCtx {
+        &self.ctx
+    }
+
+    fn get_ctx_mut(&mut self) -> &mut InterpolationCtx {
+        &mut self.ctx
     }
 }
 
@@ -171,9 +176,8 @@ fn get_matrix(section_widths: &[usize]) -> DMatrix<f32> {
 
 #[cfg(test)]
 mod tests {
-    use crate::interpolation::SupportingPoint;
-
     use super::*;
+    use crate::interpolation::SupportingPoint;
 
     fn validate_interpolation(interpolation: &[f32]) {
         // just check that the interpolation didn't panic (any unwraps)
@@ -184,7 +188,10 @@ mod tests {
 
     #[test]
     fn no_supporting_points() {
-        let mut interpolator = CubicSplineInterpolation::new([]);
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: vec![],
+            ..Default::default()
+        });
         let mut buffer = vec![];
 
         interpolator.interpolate(&mut buffer);
@@ -194,10 +201,13 @@ mod tests {
 
     #[test]
     fn one_supporting_point() {
-        let supporting_points = [SupportingPoint { x: 0, y: 1.0 }];
+        let supporting_points = vec![SupportingPoint { x: 0, y: 1.0 }];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone(),
+            ..Default::default()
+        });
 
         interpolator.interpolate(&mut buffer);
 
@@ -206,13 +216,16 @@ mod tests {
 
     #[test]
     fn two_supporting_points() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0. },
             SupportingPoint { x: 5, y: 1.0 },
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone(),
+            ..Default::default()
+        });
 
         interpolator.interpolate(&mut buffer);
 
@@ -221,14 +234,17 @@ mod tests {
 
     #[test]
     fn three_supporting_points() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0. },
             SupportingPoint { x: 5, y: 0.25 },
             SupportingPoint { x: 10, y: 1. },
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone(),
+            ..Default::default()
+        });
 
         interpolator.interpolate(&mut buffer);
 
@@ -237,7 +253,7 @@ mod tests {
 
     #[test]
     fn multiple_supporting_points() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0. },
             SupportingPoint { x: 5, y: 0.25 },
             SupportingPoint { x: 10, y: 0.3 },
@@ -246,7 +262,10 @@ mod tests {
         ];
 
         let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = CubicSplineInterpolation::new(supporting_points.clone());
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone(),
+            ..Default::default()
+        });
 
         interpolator.interpolate(&mut buffer);
 

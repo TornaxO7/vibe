@@ -6,7 +6,7 @@ use channel_ctx::ChannelCtx;
 use cpal::SampleRate;
 use std::num::NonZero;
 
-pub use config::{BarProcessorConfig, InterpolationVariant};
+pub use config::*;
 
 /// The struct which computes the bar values of the samples of the fetcher.
 pub struct BarProcessor {
@@ -100,7 +100,7 @@ impl BarProcessor {
     /// ```
     pub fn set_amount_bars(&mut self, amount_bars: NonZero<u16>) {
         self.config.amount_bars = amount_bars;
-        let amount_channels = self.ctx.len();
+        let amount_channels = self.amount_channels();
 
         let (channels, bar_values) = Self::get_channels_and_bar_values(
             &self.config,
@@ -118,19 +118,40 @@ impl BarProcessor {
     /// Little helper function.
     fn get_channels_and_bar_values(
         config: &BarProcessorConfig,
-        amount_channels: usize,
+        amount_channels: NonZero<u8>,
         sample_rate: SampleRate,
         sample_len: usize,
     ) -> (Box<[ChannelCtx]>, Box<[Box<[f32]>]>) {
-        let mut channels = Vec::with_capacity(amount_channels);
-        let bar_values =
-            vec![vec![0f32; config.amount_bars.get() as usize].into_boxed_slice(); amount_channels];
+        let amount_channels = amount_channels.get() as usize;
+        let channels = {
+            let mut channels = Vec::with_capacity(amount_channels);
 
-        for _ in 0..amount_channels {
-            channels.push(ChannelCtx::new(config, sample_rate, sample_len));
-        }
+            for _ in 0..amount_channels {
+                channels.push(ChannelCtx::new(config, sample_rate, sample_len));
+            }
 
-        (channels.into_boxed_slice(), bar_values.into_boxed_slice())
+            channels
+        };
+
+        let bar_values: Box<[Box<[f32]>]> = {
+            let total_amount_bars = {
+                let channel = channels
+                    .first()
+                    .expect("There's at least one audio channel");
+                channel.total_amount_bars()
+            };
+
+            println!("{}", total_amount_bars);
+
+            vec![vec![0f32; total_amount_bars].into_boxed_slice(); amount_channels]
+                .into_boxed_slice()
+        };
+
+        (channels.into_boxed_slice(), bar_values)
+    }
+
+    fn amount_channels(&self) -> NonZero<u8> {
+        NonZero::new(self.ctx.len() as u8).unwrap()
     }
 }
 
