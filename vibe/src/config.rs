@@ -83,7 +83,7 @@ impl Config {
                     )
                 })?;
 
-                match vibe_audio::util::get_device(device_id, DeviceType::Output)? {
+                match vibe_audio::util::get_device(device_id, DeviceType::Input)? {
                     Some(device) => device,
                     None => {
                         anyhow::bail!(
@@ -92,14 +92,14 @@ impl Config {
                             "\nThere's no output device with the id \"{}\" as you've set in \"{}\"\n",
                             "Please choose one from the list and add it to your config."
                         ],
-                        vibe_audio::util::get_device_ids(DeviceType::Output)?,
+                        vibe_audio::util::get_device_ids(DeviceType::Input)?,
                         &output_device_id,
                         crate::get_config_path().to_string_lossy()
                     );
                     }
                 }
             }
-            None => match vibe_audio::util::get_default_device(DeviceType::Output) {
+            None => match vibe_audio::util::get_default_device(DeviceType::Input) {
                 Some(device) => device,
                 None => {
                     anyhow::bail!(
@@ -108,7 +108,7 @@ impl Config {
                             "\nCouldn't find the default output device on your system.\n",
                             "Please choose one from the list and add it to your config in \"{}\"."
                         ],
-                        vibe_audio::util::get_device_ids(DeviceType::Output)?,
+                        vibe_audio::util::get_device_ids(DeviceType::Input)?,
                         crate::get_config_path().to_string_lossy()
                     );
                 }

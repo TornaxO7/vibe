@@ -26,13 +26,13 @@ fn main() -> anyhow::Result<()> {
     init_logging();
 
     let args = cli::Args::parse();
-    if args.show_output_devices {
-        let device_ids = vibe_audio::util::get_device_ids(vibe_audio::util::DeviceType::Output)?
+    if args.show_input_devices {
+        let device_ids = vibe_audio::util::get_device_ids(vibe_audio::util::DeviceType::Input)?
             .iter()
             .map(|id| id.to_string())
             .collect::<Vec<String>>();
 
-        info!("Available output devices:\n\n{:#?}\n", device_ids);
+        info!("Available input devices:\n\n{:#?}\n", device_ids);
         return Ok(());
     }
 

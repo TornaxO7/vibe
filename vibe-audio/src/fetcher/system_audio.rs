@@ -8,14 +8,14 @@ use tracing::debug;
 #[derive(thiserror::Error, Debug)]
 pub enum SystemAudioError {
     /// No default audio device could be found to fetch from.
-    #[error("Couldn't retrieve default output dev")]
+    #[error("Couldn't retrieve default input dev")]
     NoDefaultDevice,
 
-    /// No default configuration could be found of the default output device.
-    #[error("Couldn't retrieve any config of the output stream of the default device.")]
+    /// No default configuration could be found of the default input device.
+    #[error("Couldn't retrieve any config of the input stream of the default device.")]
     NoAvailableOutputConfigs,
 
-    #[error("Couldn't get supported output config of device: {0}")]
+    #[error("Couldn't get supported input config of device: {0}")]
     SupportedStreamConfigError(#[from] cpal::SupportedStreamConfigsError),
 
     #[error("Couldn't build an audio stream:\n{0}")]
@@ -31,8 +31,8 @@ pub struct Descriptor {
 
 impl Default for Descriptor {
     fn default() -> Self {
-        let device = crate::util::get_default_device(crate::util::DeviceType::Output)
-            .expect("Default output device is set in the system");
+        let device = crate::util::get_default_device(crate::util::DeviceType::Input)
+            .expect("Default input device is set in the system");
 
         Self {
             device,
@@ -56,7 +56,7 @@ impl SystemAudio {
         let stream_config = {
             let mut matching_configs: Vec<_> = desc
                 .device
-                .supported_output_configs()?
+                .supported_input_configs()?
                 .filter(|conf| {
                     let matching_sample_format = desc
                         .sample_format
