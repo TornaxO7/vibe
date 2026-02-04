@@ -90,18 +90,18 @@
 //!     break;
 //! }
 //! ```
-pub mod fetcher;
-pub mod util;
-
 mod bar_processor;
 mod interpolation;
 mod sample_processor;
 
-pub use bar_processor::{BarProcessor, BarProcessorConfig, InterpolationVariant};
-pub use cpal;
-pub use sample_processor::SampleProcessor;
+pub mod fetcher;
+pub mod util;
 
 use cpal::SampleRate;
+
+pub use bar_processor::*;
+pub use cpal;
+pub use sample_processor::SampleProcessor;
 
 type Hz = u16;
 

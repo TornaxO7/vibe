@@ -117,6 +117,8 @@ impl Graph {
             },
         );
 
+        let total_amount_bars = bar_processor.total_amount_bars();
+
         let vertex_params_buffer = {
             let bottom_left_corner = match desc.placement {
                 GraphPlacement::Bottom => Vector2::from([-1., -1.]),
@@ -189,8 +191,7 @@ impl Graph {
         let left = {
             let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Graph: Left freqs buffer"),
-                size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
-                    as wgpu::BufferAddress,
+                size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
@@ -252,8 +253,7 @@ impl Graph {
             vertex_entrypoint.map(|vertex_entrypoint| {
                 let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Graph: Right freqs buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
-                        as wgpu::BufferAddress,
+                    size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -345,6 +345,9 @@ impl Component for Graph {
             GraphAmountBars::Custom(amount) => amount,
         };
 
+        self.bar_processor.set_amount_bars(amount_bars);
+        let total_amount_bars = self.bar_processor.total_amount_bars();
+
         // update `right` vector
         {
             let pixel_width_in_vertex_space =
@@ -352,7 +355,7 @@ impl Component for Graph {
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
-            let mut right = amount_bars.get() as f32 * right_dir;
+            let mut right = total_amount_bars as f32 * right_dir;
 
             let renders_two_audio_channel = self.right.is_some();
             if renders_two_audio_channel {
@@ -366,11 +369,9 @@ impl Component for Graph {
             );
         }
 
-        self.bar_processor.set_amount_bars(amount_bars);
-
         let buffer_desc = wgpu::BufferDescriptor {
             label: None,
-            size: (std::mem::size_of::<f32>() * amount_bars.get() as usize) as wgpu::BufferAddress,
+            size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         };
