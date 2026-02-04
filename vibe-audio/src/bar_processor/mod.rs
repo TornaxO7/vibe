@@ -182,6 +182,7 @@ mod tests {
         let bars = bar_processor.process_bars(&processor);
         assert_eq!(bars.len(), 1);
         assert_eq!(bars[0].len(), u16::MAX as usize);
+        assert_eq!(bar_processor.total_amount_bars(), u16::MAX as usize);
     }
 
     #[test]
@@ -194,6 +195,8 @@ mod tests {
                 ..Default::default()
             },
         );
+
+        assert_eq!(bar_processor.total_amount_bars(), u16::MAX as usize);
 
         let bars = bar_processor.process_bars(&processor);
         assert_eq!(bars.len(), 2);

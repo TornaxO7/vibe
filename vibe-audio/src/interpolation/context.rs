@@ -116,7 +116,7 @@ impl InterpolationCtx {
             let first = self.supporting_points.first().unwrap();
             let last = self.supporting_points.last().unwrap();
 
-            last.x - first.x + 1
+            (last.x - first.x) + 1
         }
     }
 
