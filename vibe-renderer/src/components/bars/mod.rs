@@ -115,8 +115,8 @@ pub struct Bars {
 impl Bars {
     pub fn new<F: Fetcher>(desc: &BarsDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.renderer.device();
-        let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let amount_bars = bar_processor.total_amount_bars();
 
         let (bottom_left_corner, angle, width) = match desc.placement {
             BarsPlacement::Bottom => (Vector2::from([-1., -1.]), Deg(0.), BarsWidth::ScreenWidth),
@@ -168,7 +168,7 @@ impl Bars {
                 column_direction: column_direction.into(),
                 max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
                 height_mirrored,
-                amount_bars: amount_bars.get() as AmountBars,
+                amount_bars: amount_bars as AmountBars,
                 _padding1: 0,
             }
         };
@@ -220,8 +220,7 @@ impl Bars {
         let left = {
             let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Bars: Left freq buffer"),
-                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                    as wgpu::BufferAddress,
+                size: (std::mem::size_of::<f32>() * amount_bars) as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
@@ -285,8 +284,7 @@ impl Bars {
             vertex_entrypoint.map(|vertex_entrypoint| {
                 let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Bars: Right freq buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                        as wgpu::BufferAddress,
+                    size: (std::mem::size_of::<f32>() * amount_bars) as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -316,7 +314,7 @@ impl Bars {
         };
 
         Ok(Self {
-            amount_bars,
+            amount_bars: NonZero::new(amount_bars as u16).unwrap(),
             bar_processor,
 
             bind_group0,

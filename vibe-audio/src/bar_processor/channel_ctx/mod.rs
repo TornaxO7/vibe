@@ -42,10 +42,7 @@ impl ChannelCtx {
         let interpolator: Box<dyn Interpolater> = {
             let desc = InterpolatorDescriptor {
                 supporting_points,
-                padding: config
-                    .padding
-                    .clone()
-                    .map(|conf| InterpolatorPadding::from(conf)),
+                padding: config.padding.clone().map(InterpolatorPadding::from),
             };
 
             match config.interpolation {
@@ -64,7 +61,7 @@ impl ChannelCtx {
 
         Self {
             interpolator,
-            fft_out_ranges: fft_out_ranges,
+            fft_out_ranges,
 
             normalize_factor: INIT_NORMALIZATION_FACTOR,
             sensitivity: config.sensitivity,

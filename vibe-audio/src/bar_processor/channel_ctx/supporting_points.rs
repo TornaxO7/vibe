@@ -108,6 +108,7 @@ pub fn compute(
 
         // apply padding
         if let Some(padding) = &config.padding {
+            #[allow(clippy::infallible_destructuring_match)]
             let padding_size = match padding.size {
                 PaddingSize::Custom(amount) => amount,
             };

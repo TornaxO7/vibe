@@ -8,6 +8,10 @@ use std::num::NonZero;
 
 pub use config::*;
 
+// for clippy
+type Channels = Box<[ChannelCtx]>;
+type BarValues = Box<[Box<[f32]>]>;
+
 /// The struct which computes the bar values of the samples of the fetcher.
 pub struct BarProcessor {
     // The final bar values.
@@ -15,10 +19,10 @@ pub struct BarProcessor {
     // Mapping:
     // - 1st Index: Channel
     // - 2nd index: Bar value
-    bar_values: Box<[Box<[f32]>]>,
+    bar_values: BarValues,
 
     // ctx[i] = channel context of the i-th channel
-    ctx: Box<[ChannelCtx]>,
+    ctx: Channels,
 
     config: BarProcessorConfig,
     sample_rate: SampleRate,
@@ -121,7 +125,7 @@ impl BarProcessor {
         amount_channels: NonZero<u8>,
         sample_rate: SampleRate,
         sample_len: usize,
-    ) -> (Box<[ChannelCtx]>, Box<[Box<[f32]>]>) {
+    ) -> (Channels, BarValues) {
         let amount_channels = amount_channels.get() as usize;
         let channels = {
             let mut channels = Vec::with_capacity(amount_channels);
@@ -133,7 +137,7 @@ impl BarProcessor {
             channels
         };
 
-        let bar_values: Box<[Box<[f32]>]> = {
+        let bar_values: BarValues = {
             let total_amount_bars = {
                 let channel = channels
                     .first()
@@ -150,6 +154,11 @@ impl BarProcessor {
 
     fn amount_channels(&self) -> NonZero<u8> {
         NonZero::new(self.ctx.len() as u8).unwrap()
+    }
+
+    /// Returns the amount of bars per channel which the bar processor generates (including the padded bars).
+    pub fn total_amount_bars(&self) -> usize {
+        self.bar_values[0].len()
     }
 }
 

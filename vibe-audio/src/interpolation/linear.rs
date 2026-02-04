@@ -53,86 +53,153 @@ mod tests {
     use super::*;
     use crate::interpolation::SupportingPoint;
 
-    #[test]
-    fn zero_supporting_points_and_zero_sections() {
-        let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
-            supporting_points: vec![],
-            ..Default::default()
-        });
-        let mut buffer = vec![];
+    mod without_padding {
+        use super::*;
 
-        interpolator.interpolate(&mut buffer);
-        assert!(buffer.is_empty());
+        #[test]
+        fn zero_supporting_points_and_zero_sections() {
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: vec![],
+                ..Default::default()
+            });
+            let mut buffer = vec![];
+
+            interpolator.interpolate(&mut buffer);
+            assert!(buffer.is_empty());
+        }
+
+        #[test]
+        fn one_supporting_point_and_zero_sections() {
+            let supporting_points = vec![SupportingPoint { x: 0, y: 0.5 }];
+
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                ..Default::default()
+            });
+            let mut buffer = [0f32];
+
+            interpolator.interpolate(&mut buffer);
+
+            assert_eq!(&buffer, &[0.5]);
+        }
+
+        #[test]
+        fn two_supporting_points_and_one_section() {
+            let supporting_points = vec![
+                SupportingPoint { x: 0, y: 0.0 },
+                SupportingPoint { x: 4, y: 1.0 },
+            ];
+
+            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                ..Default::default()
+            });
+
+            interpolator.interpolate(&mut buffer);
+
+            assert_eq!(&buffer, &[0.0, 0.25, 0.5, 0.75, 1.0]);
+        }
+
+        #[test]
+        fn three_supporting_points_and_one_section() {
+            let supporting_points = vec![
+                SupportingPoint { x: 0, y: 0.0 },
+                SupportingPoint { x: 2, y: 1.0 },
+                SupportingPoint { x: 3, y: 0.0 },
+            ];
+
+            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                ..Default::default()
+            });
+
+            interpolator.interpolate(&mut buffer);
+
+            assert_eq!(&buffer, &[0.0, 0.5, 1.0, 0.0]);
+        }
+
+        #[test]
+        fn three_supporting_points_and_two_sections() {
+            let supporting_points = vec![
+                SupportingPoint { x: 0, y: 0.0 },
+                SupportingPoint { x: 2, y: 1.0 },
+                SupportingPoint { x: 6, y: 0.0 },
+            ];
+
+            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                ..Default::default()
+            });
+
+            interpolator.interpolate(&mut buffer);
+
+            assert_eq!(&buffer, &[0.0, 0.5, 1.0, 0.75, 0.5, 0.25, 0.0],);
+        }
     }
 
-    #[test]
-    fn one_supporting_point_and_zero_sections() {
-        let supporting_points = vec![SupportingPoint { x: 0, y: 0.5 }];
+    mod with_padding {
+        use super::*;
+        use crate::interpolation::{InterpolatorPadding, InterpolatorPaddingSize};
+        use std::num::NonZero;
 
-        let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
-            supporting_points: supporting_points.clone(),
-            ..Default::default()
-        });
-        let mut buffer = [0f32];
+        #[test]
+        fn one_supporting_point_left_padding() {
+            let supporting_points = vec![SupportingPoint { x: 0, y: 0.5 }];
 
-        interpolator.interpolate(&mut buffer);
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                padding: Some(InterpolatorPadding {
+                    side: crate::interpolation::InterpolatorPaddingSide::Left,
+                    size: InterpolatorPaddingSize::Custom(NonZero::new(2).unwrap()),
+                }),
+            });
 
-        assert_eq!(&buffer, &[0.5]);
-    }
+            let mut buffer = [0f32; 3];
 
-    #[test]
-    fn two_supporting_points_and_one_section() {
-        let supporting_points = vec![
-            SupportingPoint { x: 0, y: 0.0 },
-            SupportingPoint { x: 4, y: 1.0 },
-        ];
+            interpolator.interpolate(&mut buffer);
 
-        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
-            supporting_points: supporting_points.clone(),
-            ..Default::default()
-        });
+            assert_eq!(&buffer, &[0., 0.25, 0.5]);
+        }
 
-        interpolator.interpolate(&mut buffer);
+        #[test]
+        fn one_supporting_point_right_padding() {
+            let supporting_points = vec![SupportingPoint { x: 0, y: 0.5 }];
 
-        assert_eq!(&buffer, &[0.0, 0.25, 0.5, 0.75, 1.0]);
-    }
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                padding: Some(InterpolatorPadding {
+                    side: crate::interpolation::InterpolatorPaddingSide::Right,
+                    size: InterpolatorPaddingSize::Custom(NonZero::new(2).unwrap()),
+                }),
+            });
 
-    #[test]
-    fn three_supporting_points_and_one_section() {
-        let supporting_points = vec![
-            SupportingPoint { x: 0, y: 0.0 },
-            SupportingPoint { x: 2, y: 1.0 },
-            SupportingPoint { x: 3, y: 0.0 },
-        ];
+            let mut buffer = [0f32; 3];
 
-        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
-            supporting_points: supporting_points.clone(),
-            ..Default::default()
-        });
+            interpolator.interpolate(&mut buffer);
 
-        interpolator.interpolate(&mut buffer);
+            assert_eq!(&buffer, &[0.5, 0.25, 0.]);
+        }
 
-        assert_eq!(&buffer, &[0.0, 0.5, 1.0, 0.0]);
-    }
+        #[test]
+        fn one_supporting_point_both_padding() {
+            let supporting_points = vec![SupportingPoint { x: 0, y: 0.5 }];
 
-    #[test]
-    fn three_supporting_points_and_two_sections() {
-        let supporting_points = vec![
-            SupportingPoint { x: 0, y: 0.0 },
-            SupportingPoint { x: 2, y: 1.0 },
-            SupportingPoint { x: 6, y: 0.0 },
-        ];
+            let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
+                supporting_points: supporting_points.clone(),
+                padding: Some(InterpolatorPadding {
+                    side: crate::interpolation::InterpolatorPaddingSide::Both,
+                    size: InterpolatorPaddingSize::Custom(NonZero::new(2).unwrap()),
+                }),
+            });
 
-        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-        let mut interpolator = LinearInterpolation::new(InterpolatorDescriptor {
-            supporting_points: supporting_points.clone(),
-            ..Default::default()
-        });
+            let mut buffer = [0f32; 5];
 
-        interpolator.interpolate(&mut buffer);
+            interpolator.interpolate(&mut buffer);
 
-        assert_eq!(&buffer, &[0.0, 0.5, 1.0, 0.75, 0.5, 0.25, 0.0],);
+            assert_eq!(&buffer, &[0., 0.25, 0.5, 0.25, 0.]);
+        }
     }
 }
