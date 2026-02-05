@@ -46,6 +46,7 @@ impl FragmentCanvas {
         let device = desc.renderer.device();
         let queue = desc.renderer.queue();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let iresolution = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas: `iResolution` buffer"),
@@ -56,8 +57,7 @@ impl FragmentCanvas {
 
         let freqs = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas: `freqs` buffer"),
-            size: (std::mem::size_of::<f32>() * usize::from(u16::from(desc.audio_conf.amount_bars)))
-                as wgpu::BufferAddress,
+            size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

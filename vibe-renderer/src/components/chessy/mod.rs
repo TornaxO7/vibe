@@ -48,6 +48,7 @@ impl Chessy {
         let renderer = desc.renderer;
         let device = renderer.device();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let data = Data {
             resolution: Resolution::default(),
@@ -65,8 +66,7 @@ impl Chessy {
 
         let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Chessy: `freqs` buffer"),
-            size: (std::mem::size_of::<f32>() * desc.audio_config.amount_bars.get() as usize)
-                as wgpu::BufferAddress,
+            size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

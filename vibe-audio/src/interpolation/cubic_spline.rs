@@ -186,128 +186,125 @@ mod tests {
         }
     }
 
-    mod without_padding {
+    #[test]
+    fn no_supporting_points() {
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: vec![].into(),
+            ..Default::default()
+        });
+        let mut buffer = vec![];
+
+        interpolator.interpolate(&mut buffer);
+
+        assert_eq!(&buffer, &[]);
+    }
+
+    #[test]
+    fn one_supporting_point() {
+        let supporting_points = vec![SupportingPoint { x: 0, y: 1.0 }];
+
+        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
+
+        interpolator.interpolate(&mut buffer);
+
+        assert_eq!(&buffer, &[1.]);
+    }
+
+    #[test]
+    fn two_supporting_points() {
+        let supporting_points = vec![
+            SupportingPoint { x: 0, y: 0. },
+            SupportingPoint { x: 5, y: 1.0 },
+        ];
+
+        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
+
+        interpolator.interpolate(&mut buffer);
+
+        validate_interpolation(&buffer);
+    }
+
+    #[test]
+    fn three_supporting_points() {
+        let supporting_points = vec![
+            SupportingPoint { x: 0, y: 0. },
+            SupportingPoint { x: 5, y: 0.25 },
+            SupportingPoint { x: 10, y: 1. },
+        ];
+
+        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
+
+        interpolator.interpolate(&mut buffer);
+
+        validate_interpolation(&buffer);
+    }
+
+    #[test]
+    fn multiple_supporting_points() {
+        let supporting_points = vec![
+            SupportingPoint { x: 0, y: 0. },
+            SupportingPoint { x: 5, y: 0.25 },
+            SupportingPoint { x: 10, y: 0.3 },
+            SupportingPoint { x: 15, y: 0.6 },
+            SupportingPoint { x: 20, y: 1. },
+        ];
+
+        let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
+        let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
+
+        interpolator.interpolate(&mut buffer);
+
+        validate_interpolation(&buffer);
+    }
+
+    mod matrix {
         use super::*;
 
         #[test]
-        fn no_supporting_points() {
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: vec![],
-                ..Default::default()
-            });
-            let mut buffer = vec![];
+        fn no_sections() {
+            let matrix = get_matrix(&[]);
+            let expected_matrix = DMatrix::from_row_slice(0, 0, &[]);
 
-            interpolator.interpolate(&mut buffer);
-
-            assert_eq!(&buffer, &[]);
+            assert_eq!(
+                matrix, expected_matrix,
+                "\nLeft:\n{}\nRight:\n{}",
+                matrix, expected_matrix
+            );
         }
 
         #[test]
-        fn one_supporting_point() {
-            let supporting_points = vec![SupportingPoint { x: 0, y: 1.0 }];
+        fn one_section() {
+            const DIMENSION: usize = 1;
+            let matrix = get_matrix(&[1]);
+            let expected_matrix = DMatrix::from_row_slice(DIMENSION, DIMENSION, &[2.]);
 
-            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                ..Default::default()
-            });
-
-            interpolator.interpolate(&mut buffer);
-
-            assert_eq!(&buffer, &[1.]);
+            assert_eq!(
+                matrix, expected_matrix,
+                "\nLeft:\n{}\nRight:\n{}",
+                matrix, expected_matrix
+            );
         }
 
         #[test]
-        fn two_supporting_points() {
-            let supporting_points = vec![
-                SupportingPoint { x: 0, y: 0. },
-                SupportingPoint { x: 5, y: 1.0 },
-            ];
-
-            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                ..Default::default()
-            });
-
-            interpolator.interpolate(&mut buffer);
-
-            validate_interpolation(&buffer);
-        }
-
-        #[test]
-        fn three_supporting_points() {
-            let supporting_points = vec![
-                SupportingPoint { x: 0, y: 0. },
-                SupportingPoint { x: 5, y: 0.25 },
-                SupportingPoint { x: 10, y: 1. },
-            ];
-
-            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                ..Default::default()
-            });
-
-            interpolator.interpolate(&mut buffer);
-
-            validate_interpolation(&buffer);
-        }
-
-        #[test]
-        fn multiple_supporting_points() {
-            let supporting_points = vec![
-                SupportingPoint { x: 0, y: 0. },
-                SupportingPoint { x: 5, y: 0.25 },
-                SupportingPoint { x: 10, y: 0.3 },
-                SupportingPoint { x: 15, y: 0.6 },
-                SupportingPoint { x: 20, y: 1. },
-            ];
-
-            let mut buffer = vec![0f32; supporting_points.last().unwrap().x + 1];
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                ..Default::default()
-            });
-
-            interpolator.interpolate(&mut buffer);
-
-            validate_interpolation(&buffer);
-        }
-
-        mod matrix {
-            use super::*;
-
-            #[test]
-            fn no_sections() {
-                let matrix = get_matrix(&[]);
-                let expected_matrix = DMatrix::from_row_slice(0, 0, &[]);
-
-                assert_eq!(
-                    matrix, expected_matrix,
-                    "\nLeft:\n{}\nRight:\n{}",
-                    matrix, expected_matrix
-                );
-            }
-
-            #[test]
-            fn one_section() {
-                const DIMENSION: usize = 1;
-                let matrix = get_matrix(&[1]);
-                let expected_matrix = DMatrix::from_row_slice(DIMENSION, DIMENSION, &[2.]);
-
-                assert_eq!(
-                    matrix, expected_matrix,
-                    "\nLeft:\n{}\nRight:\n{}",
-                    matrix, expected_matrix
-                );
-            }
-
-            #[test]
-            fn two_sections() {
-                const DIMENSION: usize = 2;
-                let matrix = get_matrix(&[1; DIMENSION]);
-                #[rustfmt::skip]
+        fn two_sections() {
+            const DIMENSION: usize = 2;
+            let matrix = get_matrix(&[1; DIMENSION]);
+            #[rustfmt::skip]
                 let expected_matrix = DMatrix::from_row_slice(DIMENSION, DIMENSION,
                     &[
                         2., 1.,
@@ -315,18 +312,18 @@ mod tests {
                     ]
                 );
 
-                assert_eq!(
-                    matrix, expected_matrix,
-                    "\nLeft:\n{}\nRight:\n{}",
-                    matrix, expected_matrix
-                );
-            }
+            assert_eq!(
+                matrix, expected_matrix,
+                "\nLeft:\n{}\nRight:\n{}",
+                matrix, expected_matrix
+            );
+        }
 
-            #[test]
-            fn three_sections() {
-                const DIMENSION: usize = 3;
-                let matrix = get_matrix(&[1; DIMENSION]);
-                #[rustfmt::skip]
+        #[test]
+        fn three_sections() {
+            const DIMENSION: usize = 3;
+            let matrix = get_matrix(&[1; DIMENSION]);
+            #[rustfmt::skip]
                 let expected_matrix = DMatrix::from_row_slice(DIMENSION, DIMENSION,
                     &[
                         2., 1., 0.,
@@ -335,18 +332,18 @@ mod tests {
                     ]
                 );
 
-                assert_eq!(
-                    matrix, expected_matrix,
-                    "\nLeft:\n{}\nRight:\n{}",
-                    matrix, expected_matrix
-                );
-            }
+            assert_eq!(
+                matrix, expected_matrix,
+                "\nLeft:\n{}\nRight:\n{}",
+                matrix, expected_matrix
+            );
+        }
 
-            #[test]
-            fn ten_sections() {
-                const DIMENSION: usize = 10;
-                let matrix = get_matrix(&[1; DIMENSION]);
-                #[rustfmt::skip]
+        #[test]
+        fn ten_sections() {
+            const DIMENSION: usize = 10;
+            let matrix = get_matrix(&[1; DIMENSION]);
+            #[rustfmt::skip]
                 let expected_matrix = DMatrix::from_row_slice(DIMENSION, DIMENSION,
                     &[
                         2., 1., 0., 0., 0., 0., 0., 0., 0., 0.,
@@ -362,124 +359,10 @@ mod tests {
                     ]
                 );
 
-                assert_eq!(
-                    matrix, expected_matrix,
-                    "\nLeft:\n{}\nRight:\n{}",
-                    matrix, expected_matrix
-                );
-            }
-        }
-    }
-
-    mod with_padding {
-        use std::num::NonZero;
-
-        use crate::interpolation::{
-            InterpolatorPadding, InterpolatorPaddingSide, InterpolatorPaddingSize,
-        };
-
-        use super::*;
-
-        #[test]
-        fn one_supporting_point_left_padding() {
-            let supporting_points = vec![SupportingPoint { x: 0, y: 1. }];
-
-            let padding_size = 10;
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                padding: Some(InterpolatorPadding {
-                    side: InterpolatorPaddingSide::Left,
-                    size: InterpolatorPaddingSize::Custom(NonZero::new(padding_size).unwrap()),
-                }),
-            });
-
-            let mut buffer = vec![0f32; padding_size as usize + 1];
-            interpolator.interpolate(&mut buffer);
-
             assert_eq!(
-                &buffer,
-                &[
-                    0.0, 0.1855, 0.34399998, 0.4785, 0.592, 0.6875, 0.768, 0.8365, 0.896, 0.9495,
-                    1.0
-                ]
-            );
-        }
-
-        #[test]
-        fn one_supporting_point_right_padding() {
-            let supporting_points = vec![SupportingPoint { x: 0, y: 1. }];
-
-            let padding_size = 10;
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                padding: Some(InterpolatorPadding {
-                    side: InterpolatorPaddingSide::Right,
-                    size: InterpolatorPaddingSize::Custom(NonZero::new(padding_size).unwrap()),
-                }),
-            });
-
-            let mut buffer = vec![0f32; padding_size as usize + 1];
-            interpolator.interpolate(&mut buffer);
-
-            assert_eq!(
-                &buffer,
-                &[
-                    1.0,
-                    0.8145,
-                    0.656,
-                    0.5215,
-                    0.40800002,
-                    0.3125,
-                    0.23199998,
-                    0.16350003,
-                    0.10399999,
-                    0.050499965,
-                    0.0
-                ]
-            );
-        }
-
-        #[test]
-        fn one_supporting_point_both_padding() {
-            let supporting_points = vec![SupportingPoint { x: 0, y: 1. }];
-
-            let padding_size = 10;
-            let mut interpolator = CubicSplineInterpolation::new(InterpolatorDescriptor {
-                supporting_points: supporting_points.clone(),
-                padding: Some(InterpolatorPadding {
-                    side: InterpolatorPaddingSide::Both,
-                    size: InterpolatorPaddingSize::Custom(NonZero::new(padding_size).unwrap()),
-                }),
-            });
-
-            let mut buffer = vec![0f32; (padding_size * 2) as usize + 1];
-            interpolator.interpolate(&mut buffer);
-
-            assert_eq!(
-                &buffer,
-                &[
-                    0.0,
-                    0.010000005,
-                    0.040000007,
-                    0.09000005,
-                    0.16000004,
-                    0.25,
-                    0.36000007,
-                    0.49,
-                    0.64,
-                    0.81000006,
-                    1.0, // the actual supporting point
-                    0.843,
-                    0.704,
-                    0.581,
-                    0.472,
-                    0.375,
-                    0.288,
-                    0.20900002,
-                    0.13599998,
-                    0.066999964,
-                    0.0
-                ]
+                matrix, expected_matrix,
+                "\nLeft:\n{}\nRight:\n{}",
+                matrix, expected_matrix
             );
         }
     }

@@ -5,7 +5,6 @@ pub use descriptor::*;
 use super::{Component, Rgba, Vec2f};
 use crate::Renderable;
 use cgmath::{Deg, Matrix2, Rad, Vector2};
-use std::num::NonZero;
 use vibe_audio::{
     fetcher::{Fetcher, SystemAudioFetcher},
     BarProcessor, SampleProcessor,
@@ -104,14 +103,14 @@ pub struct Radial {
     left: PipelineCtx,
     right: Option<PipelineCtx>,
 
-    amount_bars: NonZero<u16>,
+    total_amount_bars: usize,
 }
 
 impl Radial {
     pub fn new<F: Fetcher>(desc: &RadialDescriptor<F>) -> Self {
         let device = desc.renderer.device();
-        let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.processor, desc.audio_conf.clone());
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let vertex_params_buffer = {
             let position_offset = {
@@ -188,15 +187,18 @@ impl Radial {
 
             let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Radial: Left freq buffer"),
-                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                    as wgpu::BufferAddress,
+                size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
 
             let rotations_buffer = {
-                let rotations =
-                    compute_rotations(circle_part, amount_bars, desc.init_rotation, Direction::Ccw);
+                let rotations = compute_rotations(
+                    circle_part,
+                    total_amount_bars,
+                    desc.init_rotation,
+                    Direction::Ccw,
+                );
 
                 device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                     label: Some("Radial: `left rotations` buffer"),
@@ -265,7 +267,7 @@ impl Radial {
             vertex_entry_point.map(|vertex_entry_point| {
                 let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Radial: Right freq buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
+                    size: (std::mem::size_of::<f32>() * total_amount_bars)
                         as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
@@ -278,7 +280,7 @@ impl Radial {
                 let rotations_buffer = {
                     let rotations = compute_rotations(
                         circle_part,
-                        amount_bars,
+                        total_amount_bars,
                         desc.init_rotation,
                         Direction::Cw,
                     );
@@ -333,7 +335,7 @@ impl Radial {
             left,
             right,
 
-            amount_bars,
+            total_amount_bars,
         }
     }
 }
@@ -345,13 +347,13 @@ impl Renderable for Radial {
         // render the left half of the circle
         pass.set_bind_group(1, &self.left.bind_group1, &[]);
         pass.set_pipeline(&self.left.pipeline);
-        pass.draw(0..4, 0..u32::from(self.amount_bars.get()));
+        pass.draw(0..4, 0..self.total_amount_bars as u32);
 
         // render the right half of the circle
         if let Some(right) = &self.right {
             pass.set_bind_group(1, &right.bind_group1, &[]);
             pass.set_pipeline(&right.pipeline);
-            pass.draw(0..4, 0..u32::from(self.amount_bars.get()));
+            pass.draw(0..4, 0..self.total_amount_bars as u32);
         }
     }
 }
@@ -407,7 +409,7 @@ enum Direction {
 
 fn compute_rotations(
     circle_part: CirclePart,
-    amount_bars: NonZero<u16>,
+    amount_bars: usize,
     init_rotation_deg: Deg<f32>,
     dir: Direction,
 ) -> Box<[[f32; 4]]> {
@@ -416,7 +418,7 @@ fn compute_rotations(
             Direction::Cw => -1f32,
             Direction::Ccw => 1f32,
         };
-        Rad(sign * circle_part.radians() / amount_bars.get() as f32)
+        Rad(sign * circle_part.radians() / amount_bars as f32)
     };
 
     // example: Assuming `amount_bars` is `1`, we don't want to let the bar be at radiant `PI`, it should be at `PI/2` instead
@@ -428,15 +430,15 @@ fn compute_rotations(
         Matrix2::from_angle(center_bars_radians) * Matrix2::from_angle(init_rotation_deg);
 
     let mut rotation = init_rotation;
-    let mut rotations = Vec::with_capacity(amount_bars.get() as usize);
+    let mut rotations = vec![[0f32; 4]; amount_bars].into_boxed_slice();
 
-    for _offset in 0..amount_bars.get() {
+    for idx in 0..amount_bars {
         let rotation_as_array = *<Matrix2<f32> as AsRef<[f32; 4]>>::as_ref(&rotation);
-        rotations.push(rotation_as_array);
+        rotations[idx] = rotation_as_array;
         rotation = bar_rotation * rotation;
     }
 
-    rotations.into_boxed_slice()
+    rotations
 }
 
 fn create_pipeline(
