@@ -57,10 +57,7 @@ impl ChannelCtx {
             let amount_supporting_points = data.supporting_points.len();
 
             if let Some(padding) = &config.padding {
-                dbg!(data.supporting_points.last());
                 data = data.apply_padding(padding);
-
-                dbg!(data.supporting_points.last());
 
                 if !data.supporting_points.is_empty() {
                     assert!(data.supporting_points.last().unwrap().x < u16::MAX as usize,
