@@ -45,6 +45,7 @@ impl Circle {
         let device = desc.renderer.device();
         let bar_processor =
             vibe_audio::BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let data = {
             let (spike_sensitivity, color) = match &desc.variant {
@@ -64,8 +65,7 @@ impl Circle {
             Data {
                 radius: desc.radius,
                 spike_sensitivity,
-                freq_radiant_step: std::f32::consts::PI
-                    / (u16::from(desc.audio_conf.amount_bars) as f32 + 0.99),
+                freq_radiant_step: std::f32::consts::PI / (total_amount_bars as f32 + 0.99),
                 resolution: Resolution::default(),
                 position_offset,
                 color,
@@ -82,8 +82,7 @@ impl Circle {
 
         let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Circle: `freqs` buffer"),
-            size: (std::mem::size_of::<f32>() * desc.audio_conf.amount_bars.get() as usize)
-                as wgpu::BufferAddress,
+            size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });

@@ -1,15 +1,13 @@
 //! Everything related to the interpolation calculation.
 mod context;
 mod cubic_spline;
-mod descriptor;
 mod linear;
 mod nothing;
 
 use context::InterpolationCtx;
-use std::slice::IterMut;
+use std::{ops::Range, slice::IterMut};
 
 pub use cubic_spline::CubicSplineInterpolation;
-pub use descriptor::*;
 pub use linear::LinearInterpolation;
 pub use nothing::NothingInterpolation;
 
@@ -25,9 +23,15 @@ pub trait Interpolater {
         self.get_ctx().total_amount_bars()
     }
 
-    fn supporting_points_unpadded_mut(&mut self) -> IterMut<'_, SupportingPoint> {
-        self.get_ctx_mut().supporting_points_unpadded_mut()
+    fn supporting_points_mut(&mut self, range: Range<usize>) -> IterMut<'_, SupportingPoint> {
+        self.get_ctx_mut().supporting_points_mut(range)
     }
+}
+
+/// Descriptor to create new interpolations.
+#[derive(Default)]
+pub struct InterpolatorDescriptor {
+    pub supporting_points: Box<[SupportingPoint]>,
 }
 
 /// Trait to create new interpolations.
