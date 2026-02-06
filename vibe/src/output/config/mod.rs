@@ -1,12 +1,10 @@
 pub mod component;
 
-use std::{ffi::OsStr, io, path::PathBuf};
-
+use crate::output::config::component::ComponentConfig;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
-
-use crate::output::config::component::ComponentConfig;
+use std::{ffi::OsStr, io, path::PathBuf};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {

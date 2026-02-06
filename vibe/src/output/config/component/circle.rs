@@ -28,7 +28,7 @@ impl ComponentConfig for CircleConfig {
                 color,
             } => CircleVariant::Graph {
                 spike_sensitivity: *spike_sensitivity,
-                color: color.as_f32(),
+                color: color.as_f32()?,
             },
         };
 
