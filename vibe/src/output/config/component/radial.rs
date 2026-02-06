@@ -27,10 +27,10 @@ impl ComponentConfig for RadialConfig {
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let variant = match &self.variant {
-            RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()),
+            RadialVariantConfig::Color(rgba) => RadialVariant::Color(rgba.as_f32()?),
             RadialVariantConfig::HeightGradient { inner, outer } => RadialVariant::HeightGradient {
-                inner: inner.as_f32(),
-                outer: outer.as_f32(),
+                inner: inner.as_f32()?,
+                outer: outer.as_f32()?,
             },
         };
 

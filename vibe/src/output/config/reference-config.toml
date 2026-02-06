@@ -13,7 +13,7 @@ amount_bars = 6
 sensitivity = 4.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Bars.variant]
-Color = [0, 255, 255, 255]
+Color = "#00ffffff"
 
 ## Bars - Horizontal gradient
 [[components]]
@@ -26,8 +26,8 @@ amount_bars = 6
 sensitivity = 4.0
 freq_range = "Bass"
 [components.Bars.variant.HorizontalGradient]
-left = [0, 0, 255, 255]
-right = [255, 0, 0, 255]
+left = "#00ffffff"
+right = "#ff0000ff"
 
 ## Bars - Vertical Gradient
 [[components]]
@@ -40,8 +40,8 @@ amount_bars = 6
 sensitivity = 4.0
 freq_range = "Mid"
 [components.Bars.variant.VerticalGradient]
-top = [0, 0, 255, 255]
-bottom = [255, 0, 0, 255]
+top = "#00ffffff"
+bottom = "#ff0000ff"
 
 ## Bars - Presence gradient
 [[components]]
@@ -54,8 +54,8 @@ amount_bars = 6
 sensitivity = 4.0
 freq_range = "Treble"
 [components.Bars.variant.PresenceGradient]
-high_presence = [0, 0, 255, 255]
-low_presence = [255, 0, 0, 255]
+high_presence = "#00ffffff"
+low_presence = "#ff0000ff"
 
 # Fragment canvas
 
@@ -140,7 +140,7 @@ path = "/tmp/fragment_code.wgsl"
 ## Aurodio
 [[components]]
 [components.Aurodio]
-base_color = [0, 122, 122]
+base_color = "#ffffff"
 movement_speed = 0.009999999776482582
 
 [components.Aurodio.audio_conf]
@@ -165,7 +165,7 @@ sensitivity = 0.1
 freq_range.Custom = { start = 50, end = 5000 }
 amount_bars = 150
 [components.Graph.variant]
-Color = [0, 0, 255, 255]
+Color = "#00ffffff"
 
 ## Graph - Horizontal Gradient
 [[components]]
@@ -177,8 +177,8 @@ format = "BassTrebleBass"
 sensitivity = 3.0
 freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.HorizontalGradient]
-left = [255, 0, 0, 255]
-right = [0, 0, 255, 255]
+left = "#00ffffff"
+right = "#ff0000ff"
 
 ## Graph - Vertical Gradient
 [[components]]
@@ -190,8 +190,8 @@ format = "TrebleBassTreble"
 sensitivity = 8.0
 freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
-top = [3, 185, 191, 255]
-bottom = [2, 111, 114, 255]
+top = "#00ffffff"
+bottom = "#ff0000ff"
 
 ## Graph - Vertical Gradient - Custom placement
 [[components]]
@@ -206,8 +206,8 @@ amount_bars = 500
 sensitivity = 8.0
 freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
-top = [3, 185, 191, 255]
-bottom = [2, 111, 114, 255]
+top = "#00ffffff"
+bottom = "#ff0000ff"
 
 # Circle
 
@@ -223,7 +223,7 @@ sensitivity = 10.5
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Circle.variant.Graph]
 spike_sensitivity = 0.2
-color = [255, 255, 255, 255]
+color = "#00ffffff"
 
 # Radial
 
@@ -241,7 +241,7 @@ amount_bars = 60
 sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant]
-Color = [0, 255, 0, 255]
+Color = "#00ffffff"
 
 ## Radial - HeightGradientVariant
 [[components]]
@@ -257,8 +257,8 @@ amount_bars = 60
 sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant.HeightGradient]
-inner = [255, 0, 0, 255]
-outer = [255, 255, 255, 255]
+inner = "#00ffffff"
+outer = "#ff000000"
 
 # Chessy
 

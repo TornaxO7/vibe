@@ -1,5 +1,7 @@
 //! Type wrappers of types which are used in the wgsl language.
 
+use std::ops::{Index, IndexMut};
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 pub struct Vec2f([f32; 2]);
@@ -32,6 +34,20 @@ impl From<cgmath::Vector3<f32>> for Vec3f {
     }
 }
 
+impl Index<usize> for Vec3f {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.0.index(index)
+    }
+}
+
+impl IndexMut<usize> for Vec3f {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.0.index_mut(index)
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 pub struct Vec4f([f32; 4]);
@@ -45,6 +61,20 @@ impl From<[f32; 4]> for Vec4f {
 impl From<cgmath::Vector4<f32>> for Vec4f {
     fn from(value: cgmath::Vector4<f32>) -> Self {
         Self(value.into())
+    }
+}
+
+impl Index<usize> for Vec4f {
+    type Output = f32;
+
+    fn index(&self, index: usize) -> &Self::Output {
+        self.0.index(index)
+    }
+}
+
+impl IndexMut<usize> for Vec4f {
+    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
+        self.0.index_mut(index)
     }
 }
 

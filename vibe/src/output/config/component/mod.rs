@@ -7,9 +7,11 @@ mod fragment_canvas;
 mod graph;
 mod light_sources;
 mod radial;
+mod util;
 
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, ops::Range, path::PathBuf};
+use util::Rgba;
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{components::ComponentAudio, Renderer};
 
@@ -22,9 +24,6 @@ pub use fragment_canvas::*;
 pub use graph::*;
 pub use light_sources::*;
 pub use radial::*;
-
-/// Gamma-correction constant for the color correction from u8 => f32
-const GAMMA: f32 = 2.2;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FreqRange {
@@ -70,6 +69,9 @@ pub enum ConfigError {
 
     #[error("It looks like as if you've tried to access `iSampler` or `iTexture` in your shader code but you didn't set `texture_path` in the 'FragmentCanvas' config.")]
     MissingTexture,
+
+    #[error(transparent)]
+    ColorFormat(#[from] util::ColorFormatError),
 }
 
 pub trait ComponentConfig {
@@ -151,45 +153,5 @@ impl ComponentConfig for Config {
             Config::WallpaperPulseEdges(config) => config.external_paths(),
             Config::WallpaperLightSources(config) => config.external_paths(),
         }
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Rgba(pub [u8; 4]);
-
-impl Rgba {
-    pub const TURQUOISE: Self = Self([0, 255, 255, 255]);
-
-    pub fn as_f32(&self) -> vibe_renderer::components::Rgba {
-        let mut rgba_f32 = [0f32; 4];
-        for (idx, value) in self.0.iter().enumerate() {
-            rgba_f32[idx] = (*value as f32) / 255f32;
-        }
-
-        // apply gamma correction
-        for value in rgba_f32[0..3].iter_mut() {
-            *value = value.powf(GAMMA);
-        }
-
-        rgba_f32.into()
-    }
-}
-
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct Rgb(pub [u8; 3]);
-
-impl Rgb {
-    pub fn as_f32(&self) -> [f32; 3] {
-        let mut rgba_f32 = [0f32; 3];
-        for (idx, value) in self.0.iter().enumerate() {
-            rgba_f32[idx] = (*value as f32) / 255f32;
-        }
-
-        // apply gamma correction
-        for value in rgba_f32[0..2].iter_mut() {
-            *value = value.powf(GAMMA);
-        }
-
-        rgba_f32
     }
 }

@@ -25,23 +25,23 @@ impl ComponentConfig for BarsConfig {
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let variant = match &self.variant {
-            BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
+            BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()?),
             BarsVariantConfig::PresenceGradient {
                 high_presence,
                 low_presence,
             } => BarVariant::PresenceGradient {
-                high: high_presence.as_f32(),
-                low: low_presence.as_f32(),
+                high: high_presence.as_f32()?,
+                low: low_presence.as_f32()?,
             },
             BarsVariantConfig::HorizontalGradient { left, right } => {
                 BarVariant::HorizontalGradient {
-                    left: left.as_f32(),
-                    right: right.as_f32(),
+                    left: left.as_f32()?,
+                    right: right.as_f32()?,
                 }
             }
             BarsVariantConfig::VerticalGradient { bottom, top } => BarVariant::VerticalGradient {
-                top: top.as_f32(),
-                bottom: bottom.as_f32(),
+                top: top.as_f32()?,
+                bottom: bottom.as_f32()?,
             },
         };
 
@@ -66,6 +66,7 @@ impl ComponentConfig for BarsConfig {
 
 impl Default for BarsConfig {
     fn default() -> Self {
+        let turquoise = Rgba::new("#00FFFFFF");
         Self {
             audio_conf: BarsAudioConfig {
                 amount_bars: NonZero::new(60).unwrap(),
@@ -75,7 +76,7 @@ impl Default for BarsConfig {
                 sensitivity: 4.0,
             },
             max_height: 0.75,
-            variant: BarsVariantConfig::Color(Rgba::TURQUOISE),
+            variant: BarsVariantConfig::Color(turquoise),
             placement: BarsPlacementConfig::Bottom,
             format: BarsFormatConfig::BassTreble,
         }
