@@ -14,7 +14,6 @@ type BaseColor = Vec3f;
 type Time = f32;
 type Resolution = Vec2f;
 type MovementSpeed = f32;
-type PointsWidth = u32;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
@@ -23,7 +22,7 @@ struct FragmentParams {
     time: Time,
     resolution: Resolution,
     movement_speed: MovementSpeed,
-    points_width: PointsWidth,
+    _padding: u32,
 }
 
 pub struct Aurodio {
@@ -31,9 +30,7 @@ pub struct Aurodio {
 
     bind_group0: wgpu::BindGroup,
     fragment_params_buffer: wgpu::Buffer,
-    _points_buffer: wgpu::Buffer,
     _zoom_factors_buffer: wgpu::Buffer,
-    _random_seeds_buffer: wgpu::Buffer,
     freqs_buffer: wgpu::Buffer,
 
     bar_values_buffer: Box<[f32]>,
@@ -63,31 +60,20 @@ impl Aurodio {
             bar_processors.into_boxed_slice()
         };
 
-        let (fragment_params_buffer, points_buffer) = {
-            let (points, points_width) = get_points(amount_layers * 2);
-
+        let fragment_params_buffer = {
             let fragment_params = FragmentParams {
                 base_color: desc.base_color,
                 time: Time::default(),
                 resolution: Resolution::default(),
                 movement_speed: desc.movement_speed,
-                points_width,
+                ..Default::default()
             };
 
-            let fragment_params_buffer =
-                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                    label: Some("Aurodio: Fragment params buffer"),
-                    contents: bytemuck::bytes_of(&fragment_params),
-                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-                });
-
-            let points_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Aurodio: `points` buffer"),
-                contents: bytemuck::cast_slice(&points),
-                usage: wgpu::BufferUsages::STORAGE,
-            });
-
-            (fragment_params_buffer, points_buffer)
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Aurodio: Fragment params buffer"),
+                contents: bytemuck::bytes_of(&fragment_params),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
         };
 
         let zoom_factors_buffer = {
@@ -97,15 +83,6 @@ impl Aurodio {
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Aurodio: `zoom_factors` buffer"),
                 contents: bytemuck::cast_slice(&zoom_factors),
-                usage: wgpu::BufferUsages::STORAGE,
-            })
-        };
-
-        let random_seeds_buffer = {
-            let random_seeds: Vec<f32> = get_random_seeds(amount_layers);
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Aurodio: `random_seeds` buffer"),
-                contents: bytemuck::cast_slice(&random_seeds),
                 usage: wgpu::BufferUsages::STORAGE,
             })
         };
@@ -121,14 +98,14 @@ impl Aurodio {
             texture_size: 256,
             octaves: 7,
         });
-        let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
-            label: Some("Aurodio: Value noise sampler"),
+        let sampler_nearest = device.create_sampler(&wgpu::SamplerDescriptor {
+            label: Some("Aurodio: Sampler nearest"),
             address_mode_u: wgpu::AddressMode::MirrorRepeat,
             address_mode_v: wgpu::AddressMode::MirrorRepeat,
             address_mode_w: wgpu::AddressMode::MirrorRepeat,
-            mipmap_filter: wgpu::MipmapFilterMode::Linear,
-            min_filter: wgpu::FilterMode::Linear,
-            mag_filter: wgpu::FilterMode::Linear,
+            mipmap_filter: wgpu::MipmapFilterMode::Nearest,
+            min_filter: wgpu::FilterMode::Nearest,
+            mag_filter: wgpu::FilterMode::Nearest,
             ..Default::default()
         });
 
@@ -172,28 +149,20 @@ impl Aurodio {
                 },
                 wgpu::BindGroupEntry {
                     binding: 1,
-                    resource: points_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
                     resource: zoom_factors_buffer.as_entire_binding(),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 3,
-                    resource: random_seeds_buffer.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 4,
+                    binding: 2,
                     resource: wgpu::BindingResource::TextureView(
                         &value_noise_texture.create_view(&wgpu::TextureViewDescriptor::default()),
                     ),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 5,
-                    resource: wgpu::BindingResource::Sampler(&sampler),
+                    binding: 3,
+                    resource: wgpu::BindingResource::Sampler(&sampler_nearest),
                 },
                 wgpu::BindGroupEntry {
-                    binding: 6,
+                    binding: 4,
                     resource: freqs_buffer.as_entire_binding(),
                 },
             ],
@@ -206,9 +175,7 @@ impl Aurodio {
 
             bind_group0,
             fragment_params_buffer,
-            _points_buffer: points_buffer,
             _zoom_factors_buffer: zoom_factors_buffer,
-            _random_seeds_buffer: random_seeds_buffer,
             freqs_buffer,
             bar_values_buffer,
 
@@ -266,37 +233,4 @@ impl Component for Aurodio {
     }
 
     fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
-}
-
-fn get_points(amount_layers: usize) -> (Vec<[f32; 2]>, u32) {
-    let mut points = Vec::with_capacity(amount_layers);
-
-    let width = amount_layers + 2; // `+2` one square for the left/top and right/bottom
-    let height = width;
-    let mut rng = fastrand::Rng::new();
-    for _y in 0..height {
-        for _x in 0..width {
-            let mut point = [0u8; 2];
-            rng.fill(&mut point[..]);
-
-            points.push([
-                (point[0] as f32 / u8::MAX as f32),
-                (point[1] as f32 / u8::MAX as f32),
-            ]);
-        }
-    }
-
-    (points, width as u32)
-}
-
-fn get_random_seeds(amount_layers: usize) -> Vec<f32> {
-    let mut seeds = Vec::with_capacity(amount_layers);
-    let mut rng = fastrand::Rng::new();
-
-    for _ in 0..amount_layers {
-        // range: 0..100
-        seeds.push(rng.f32() * 100.);
-    }
-
-    seeds
 }
