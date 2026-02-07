@@ -7,6 +7,7 @@ const HEX_FORMAT: &str = "#RRGGBB";
 pub struct Rgb(String);
 
 impl Rgb {
+    /// Converts the internal hex-rgb color into the gamma-corrected color value which within the range `[0, 1]`.
     pub fn as_f32(&self) -> Result<vibe_renderer::components::Rgb, ColorFormatError> {
         let hex = if self.is_hex() {
             self.0.clone()
@@ -25,10 +26,12 @@ impl Rgb {
         parse_hex(hex)
     }
 
+    /// Returns `true` if the struct contains a hex color as a string, otherwise `false`.
     fn is_hex(&self) -> bool {
         self.0.starts_with('#')
     }
 
+    /// Returns `true` if the struct contains an environment variable as a string, otherwise `false`.
     fn is_env(&self) -> bool {
         self.0.starts_with('$')
     }
