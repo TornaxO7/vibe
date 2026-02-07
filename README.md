@@ -37,7 +37,7 @@ See [USAGE.md](./USAGE.md).
 
 # Configs
 
-See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki/Config).
+See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki).
 
 # Similar projects
 
