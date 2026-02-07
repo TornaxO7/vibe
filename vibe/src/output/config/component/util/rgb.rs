@@ -11,7 +11,10 @@ impl Rgb {
         let hex = if self.is_hex() {
             self.0.clone()
         } else if self.is_env() {
-            std::env::var(&self.0)?
+            std::env::var(&self.0[1..]).map_err(|err| ColorFormatError::EnvVar {
+                var_name: self.0.clone(),
+                err,
+            })?
         } else {
             return Err(ColorFormatError::InvalidFormat {
                 color: self.0.clone(),
