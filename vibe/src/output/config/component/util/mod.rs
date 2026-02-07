@@ -27,6 +27,9 @@ pub enum ColorFormatError {
         err: ParseIntError,
     },
 
-    #[error("Couldn't read color value from environment variable: {0}")]
-    EnvVar(#[from] std::env::VarError),
+    #[error("Couldn't read color value from environment variable '{var_name}': {err}")]
+    EnvVar {
+        var_name: String,
+        err: std::env::VarError,
+    },
 }
