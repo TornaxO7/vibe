@@ -5,10 +5,9 @@ mod state;
 mod types;
 mod window;
 
-use std::{path::PathBuf, sync::OnceLock};
-
 use clap::Parser;
 use state::State;
+use std::{path::PathBuf, sync::OnceLock};
 use tracing::{error, info};
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -20,6 +19,24 @@ const OUTPUT_CONFIG_DIR_NAME: &str = "output_configs";
 const CONFIG_FILE_NAME: &str = "config.toml";
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
+
+/// Returns the general `xdg` management for the app.
+fn get_xdg() -> &'static BaseDirectories {
+    XDG.get_or_init(|| BaseDirectories::with_prefix(APP_NAME))
+}
+
+/// Returns the path to the directory where the config files of each output lies.
+/// Each config file has the form `<output-name>.toml`.
+pub fn get_output_config_dir() -> PathBuf {
+    get_xdg()
+        .create_config_directory(OUTPUT_CONFIG_DIR_NAME)
+        .unwrap()
+}
+
+/// Returns the path to the config file of `vibe`.
+pub fn get_config_path() -> PathBuf {
+    get_xdg().place_config_file(CONFIG_FILE_NAME).unwrap()
+}
 
 fn main() -> anyhow::Result<()> {
     init_logging();
@@ -82,21 +99,4 @@ fn init_logging() {
         .init();
 
     tracing::debug!("Debug logging enabled");
-}
-
-fn get_xdg() -> &'static BaseDirectories {
-    XDG.get_or_init(|| BaseDirectories::with_prefix(APP_NAME))
-}
-
-/// Returns the path to the directory where the config files of each output lies.
-/// Each config file has the form `<output-name>.toml`.
-pub fn get_output_config_dir() -> PathBuf {
-    get_xdg()
-        .create_config_directory(OUTPUT_CONFIG_DIR_NAME)
-        .unwrap()
-}
-
-/// Returns the path to the config file of `vibe`.
-pub fn get_config_path() -> PathBuf {
-    get_xdg().place_config_file(CONFIG_FILE_NAME).unwrap()
 }
