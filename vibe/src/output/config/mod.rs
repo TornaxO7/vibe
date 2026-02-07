@@ -6,9 +6,13 @@ use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
 use std::{ffi::OsStr, io, path::PathBuf};
 
+/// Represents the config file of an output.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OutputConfig {
+    /// If the config should be loaded or not.
     pub enable: bool,
+
+    /// The list of components which should be used for the output.
     pub components: Vec<component::Config>,
 }
 
@@ -25,6 +29,7 @@ impl OutputConfig {
         Ok(new)
     }
 
+    /// Saves the current state of the config to the config file of the output.
     pub fn save(&self, name: impl AsRef<str>) -> io::Result<()> {
         let string = toml::to_string(self).unwrap();
         let save_path = {

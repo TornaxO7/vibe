@@ -7,12 +7,11 @@ mod window;
 
 use clap::Parser;
 use state::State;
+use std::{path::PathBuf, sync::OnceLock};
 use tracing::{error, info};
 use tracing_indicatif::IndicatifLayer;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
 use wayland_client::{globals::registry_queue_init, Connection};
-
-use std::{path::PathBuf, sync::OnceLock};
 use xdg::BaseDirectories;
 
 const APP_NAME: &str = env!("CARGO_PKG_NAME");
