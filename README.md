@@ -31,11 +31,12 @@ However I can't promise to work on every suggestion/bug :>
 
 **Note:** I'm unsure if I'd declare the config file format(s) of `vibe` as "stable", so for the time being: Be prepared for breaking changes.
 
-# Usage
+# Start using `vibe`
+`vibe` won't work out of the box probably. Some steps are required.
 
-See [USAGE.md](./USAGE.md).
+See [USAGE.md](./USAGE.md) for more information.
 
-# Configs
+# Configure `vibe`
 
 See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki).
 
