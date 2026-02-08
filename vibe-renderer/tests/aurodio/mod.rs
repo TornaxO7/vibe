@@ -23,5 +23,10 @@ fn test() {
         seed: Some(NICE),
     });
 
-    tester.evaluate(&mut aurodio, include_bytes!("./reference.png"), "aurodio");
+    tester.evaluate(
+        &mut aurodio,
+        include_bytes!("./reference.png"),
+        "aurodio",
+        0.5,
+    );
 }

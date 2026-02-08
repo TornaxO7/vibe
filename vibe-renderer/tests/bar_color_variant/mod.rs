@@ -22,5 +22,6 @@ fn test() {
         &mut bars,
         include_bytes!("./reference.png"),
         "bar-color-variant",
+        0.9,
     );
 }

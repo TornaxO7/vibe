@@ -187,7 +187,13 @@ impl<'a> Tester<'a> {
         component: &mut C,
         reference: &'static [u8],
         id: &str,
+        threshold: f32,
     ) {
+        assert!(
+            0. <= threshold && threshold <= 1.,
+            "The threshold must be within the range [0, 1]!"
+        );
+
         component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
         component.update_audio(&self.renderer.queue(), &self.sample_processor);
         let test_img = self.render(component);
@@ -235,7 +241,7 @@ impl<'a> Tester<'a> {
         let pool = nv_flip::FlipPool::from_image(&error_map);
 
         assert!(
-            pool.mean() > 0.5,
+            pool.mean() > threshold,
             "Got mean of {}. Set the `{}` variable to see the diffs in `{}`.",
             pool.mean(),
             DIFF_ENV.yellow(),
