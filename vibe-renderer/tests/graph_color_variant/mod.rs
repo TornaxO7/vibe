@@ -1,16 +1,14 @@
-use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{Graph, GraphDescriptor, GraphFormat, GraphVariant};
-
 use crate::{Tester, RED};
+use vibe_audio::BarProcessorConfig;
+use vibe_renderer::components::{Graph, GraphDescriptor, GraphFormat, GraphVariant};
 
 #[test]
 fn test() {
     let tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut graph = Graph::new(&GraphDescriptor {
         renderer: &tester.renderer,
-        sample_processor: &sample_processor,
+        sample_processor: &tester.sample_processor,
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
@@ -19,7 +17,12 @@ fn test() {
         format: GraphFormat::BassTreble,
     });
 
-    let _img = tester.render(&mut graph);
+    tester.evaluate(
+        &mut graph,
+        include_bytes!("./reference.png"),
+        "graph-color-variant",
+        0.05, // dunno why, but somehow the background is different
+    );
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro
