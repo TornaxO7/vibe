@@ -19,9 +19,8 @@ fn load_img() -> DynamicImage {
 fn wgsl_passes_without_img() {
     let tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
-        sample_processor: &sample_processor,
+        sample_processor: &tester.sample_processor,
         audio_conf: BarProcessorConfig::default(),
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
@@ -48,9 +47,8 @@ fn wgsl_passes_without_img() {
 fn wgsl_passes_with_img() {
     let tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
-        sample_processor: &sample_processor,
+        sample_processor: &tester.sample_processor,
         audio_conf: BarProcessorConfig::default(),
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
@@ -65,14 +63,12 @@ fn wgsl_passes_with_img() {
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
-    frag_canvas.update_time(tester.renderer.queue(), 100.);
-
-    let img = tester.render(&mut frag_canvas);
-
-    for &pixel in img.pixels() {
-        let pixel_is_not_empty = pixel.0.iter().all(|value| *value != 0);
-        assert!(pixel_is_not_empty);
-    }
+    tester.evaluate(
+        &mut frag_canvas,
+        include_bytes!("./wgsl_with_img_reference.png"),
+        "fragment-canvas-wgsl-with-img",
+        0.577,
+    );
 }
 
 #[test]
