@@ -2,12 +2,9 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Vec2f, Vec3f};
-use crate::{texture_generation::ValueNoise, Renderable};
+use crate::{components::ComponentAudio, texture_generation::ValueNoise, Renderable};
 use std::num::NonZero;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 type BaseColor = Vec3f;
@@ -192,12 +189,8 @@ impl Renderable for Aurodio {
     }
 }
 
-impl Component for Aurodio {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Aurodio {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &vibe_audio::SampleProcessor<F>) {
         for (idx, bar_processor) in self.bar_processors.iter_mut().enumerate() {
             // we only have one bar
             self.bar_values_buffer[idx] = bar_processor.process_bars(processor)[0][0];
@@ -209,7 +202,9 @@ impl Component for Aurodio {
             bytemuck::cast_slice(&self.bar_values_buffer),
         );
     }
+}
 
+impl Component for Aurodio {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         let offset = std::mem::size_of::<BaseColor>();
 

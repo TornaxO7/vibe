@@ -3,7 +3,7 @@ pub mod components;
 pub mod texture_generation;
 pub mod util;
 
-pub use components::Component;
+pub use components::{Component, ComponentAudio};
 
 use crate::texture_generation::TextureGenerator;
 use pollster::FutureExt;

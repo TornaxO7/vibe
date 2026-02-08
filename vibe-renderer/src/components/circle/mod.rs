@@ -1,10 +1,10 @@
 mod descriptor;
 
 pub use descriptor::*;
-use vibe_audio::fetcher::{Fetcher, SystemAudioFetcher};
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 use super::{Component, Mat2x2, Rgba, Vec2f};
-use crate::{util::SimpleRenderPipelineDescriptor, Renderable};
+use crate::{components::ComponentAudio, util::SimpleRenderPipelineDescriptor, Renderable};
 use cgmath::Matrix2;
 use wgpu::{include_wgsl, util::DeviceExt};
 
@@ -154,17 +154,15 @@ impl Renderable for Circle {
     }
 }
 
-impl Component for Circle {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Circle {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(&self.freq_buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
+}
 
+impl Component for Circle {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {

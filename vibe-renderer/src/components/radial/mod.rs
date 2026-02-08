@@ -3,12 +3,9 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Rgba, Vec2f};
-use crate::Renderable;
+use crate::{components::ComponentAudio, Renderable};
 use cgmath::{Deg, Matrix2, Rad, Vector2};
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// Entrypoints for the vertex shader
@@ -358,12 +355,8 @@ impl Renderable for Radial {
     }
 }
 
-impl Component for Radial {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Radial {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(
@@ -376,7 +369,9 @@ impl Component for Radial {
             queue.write_buffer(&right.freq_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
+}
 
+impl Component for Radial {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {

@@ -22,7 +22,7 @@ use crate::{Renderable, Renderer};
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, path::PathBuf};
 use utils::wgsl_types::*;
-use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 // rgba values are each directly set in the fragment shader
 pub type Rgba = Vec4f;
@@ -33,17 +33,16 @@ pub type Pixels<N> = NonZero<N>;
 /// It provides methods to update its internal state regarding the current
 /// audio and time for example.
 pub trait Component: Renderable {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    );
-
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32);
 
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
 
     fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32));
+}
+
+/// An extended version of `Component` which includes methods related to audio.
+pub trait ComponentAudio<F: Fetcher>: Component {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>);
 }
 
 impl Renderable for Box<dyn Component> {

@@ -23,7 +23,7 @@ impl ComponentConfig for BarsConfig {
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let variant = match &self.variant {
             BarsVariantConfig::Color(rgba) => BarVariant::Color(rgba.as_f32()),
             BarsVariantConfig::PresenceGradient {

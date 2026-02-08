@@ -3,13 +3,10 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Pixels, Rgba, ShaderCodeError, Vec2f};
-use crate::Renderable;
+use crate::{components::ComponentAudio, Renderable};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// The x coords goes from -1 to 1.
@@ -350,12 +347,8 @@ impl Renderable for Bars {
     }
 }
 
-impl Component for Bars {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Bars {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(
@@ -368,7 +361,9 @@ impl Component for Bars {
             queue.write_buffer(&right.freq_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
+}
 
+impl Component for Bars {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
