@@ -17,6 +17,8 @@ pub struct AurodioDescriptor<'a, F: Fetcher> {
     pub base_color: Rgb,
     // should be very low (recommended: 0.001)
     pub movement_speed: f32,
+    // The random seed for the background noise
+    pub seed: Option<u64>,
 
     // audio config
     pub layers: &'a [AurodioLayerDescriptor],

@@ -38,6 +38,7 @@ impl ComponentConfig for AurodioConfig {
             movement_speed: self.movement_speed,
             sensitivity: self.audio_conf.sensitivity,
             layers: &layers,
+            seed: None,
         })))
     }
 

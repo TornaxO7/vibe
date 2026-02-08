@@ -1,8 +1,9 @@
 use crate::Tester;
 use std::num::NonZero;
-use vibe_renderer::components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor, Component};
+use vibe_renderer::components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 
 const BLUE: [f32; 3] = [0., 0., 1.];
+const NICE: u64 = 69;
 
 #[test]
 fn test() {
@@ -19,12 +20,8 @@ fn test() {
             zoom_factor: 5.,
         }],
         sensitivity: 0.2,
+        seed: Some(NICE),
     });
 
-    aurodio.update_resolution(&tester.renderer, [255, 255]);
-
-    let _img = tester.render(&aurodio);
-
-    // we don't do anything else because all bars are at the bottom
-    // but the fragment shader should work... trust me bro
+    tester.evaluate(&mut aurodio, include_bytes!("./reference.png"), "aurodio");
 }

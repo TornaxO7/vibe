@@ -20,9 +20,9 @@ use vibe_renderer::{
         live_wallpaper::pulse_edges::{PulseEdges, PulseEdgesDescriptor},
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
-        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        CircleVariant, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
-        ShaderCode, ShaderCodeError,
+        ShaderCode,
     },
     texture_generation::{SdfMask, SdfPattern, ValueNoise},
     ComponentAudio, Renderer,
@@ -107,6 +107,7 @@ impl<'a> State<'a> {
                 base_color: [0., 0.5, 0.5].into(),
                 movement_speed: 0.005,
                 sensitivity: 0.2,
+                seed: None,
             })) as Box<dyn ComponentAudio<_>>),
             ComponentName::BarsColorVariant => Bars::new(&BarsDescriptor {
                 renderer: &renderer,
@@ -311,6 +312,7 @@ impl<'a> State<'a> {
                 let texture = renderer.generate(&ValueNoise {
                     texture_size: 256,
                     octaves: 7,
+                    seed: None,
                 });
 
                 Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {

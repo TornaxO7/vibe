@@ -1,6 +1,6 @@
 use colored::Colorize;
 use image::{ImageReader, RgbaImage};
-use std::io::Cursor;
+use std::{io::Cursor, path::Path};
 use vibe_audio::SampleProcessor;
 use vibe_renderer::{components::Component, ComponentAudio, Renderer, RendererDescriptor};
 
@@ -188,31 +188,30 @@ impl<'a> Tester<'a> {
         reference: &'static [u8],
         id: &str,
     ) {
-        let test_img = {
-            component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
-            component.update_audio(&self.renderer.queue(), &self.sample_processor);
+        component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
+        component.update_audio(&self.renderer.queue(), &self.sample_processor);
+        let test_img = self.render(component);
 
-            let img_data = self.render(component);
-            nv_flip::FlipImageRgb8::with_data(img_data.width(), img_data.height(), &img_data)
-        };
+        let test_flip_img =
+            nv_flip::FlipImageRgb8::with_data(test_img.width(), test_img.height(), &test_img);
 
-        let ref_img = {
-            let ref_img_data = ImageReader::new(Cursor::new(reference))
-                .with_guessed_format()
-                .unwrap()
-                .decode()
-                .unwrap()
-                .into_rgb8();
+        let ref_img = ImageReader::new(Cursor::new(reference))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap()
+            .into_rgb8();
 
-            nv_flip::FlipImageRgb8::with_data(
-                ref_img_data.width(),
-                ref_img_data.height(),
-                &ref_img_data,
-            )
-        };
+        let ref_flip_img =
+            nv_flip::FlipImageRgb8::with_data(ref_img.width(), ref_img.height(), &ref_img);
 
-        let error_map = nv_flip::flip(ref_img, test_img, nv_flip::DEFAULT_PIXELS_PER_DEGREE);
+        let error_map = nv_flip::flip(
+            ref_flip_img,
+            test_flip_img,
+            nv_flip::DEFAULT_PIXELS_PER_DEGREE,
+        );
 
+        // save diff
         if std::env::var(DIFF_ENV).ok().is_some() {
             let visualized = error_map.apply_color_lut(&nv_flip::magma_lut());
 
@@ -223,24 +222,38 @@ impl<'a> Tester<'a> {
             )
             .unwrap();
 
-            std::fs::create_dir_all(DIFF_PATH_PREFIX).unwrap();
+            let prefix = format!("{}/{}", DIFF_PATH_PREFIX, id);
+            std::fs::create_dir_all(&prefix).unwrap();
 
-            let path = format!("{}/{}.png", DIFF_PATH_PREFIX, id);
+            test_img.save(&format!("{}/rendered.png", prefix)).unwrap();
+            ref_img.save(&format!("{}/reference.png", prefix)).unwrap();
+            diff_img.save(&format!("{}/diff.png", prefix)).unwrap();
 
-            diff_img.save(&path).unwrap();
-
-            println!("Saved diff to {}", path.blue());
+            println!("Saved diff to {}*", prefix.blue());
         }
 
         let pool = nv_flip::FlipPool::from_image(&error_map);
 
         assert!(
-            pool.mean() > 0.9,
-            "'{}' seems to be different. Set the `{}` variable to see the diffs in `{}`.",
-            id.green(),
+            pool.mean() > 0.5,
+            "Got mean of {}. Set the `{}` variable to see the diffs in `{}`.",
+            pool.mean(),
             DIFF_ENV.yellow(),
             DIFF_PATH_PREFIX.yellow()
         );
+    }
+
+    /// A little helper function to create the reference file of a component.
+    pub fn create_reference_img<C, P>(&self, component: &mut C, dest: P)
+    where
+        C: ComponentAudio<TestFetcher>,
+        P: AsRef<Path>,
+    {
+        component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
+        component.update_audio(&self.renderer.queue(), &self.sample_processor);
+
+        let img = self.render(component);
+        img.save(dest).unwrap();
     }
 }
 

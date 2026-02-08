@@ -94,6 +94,7 @@ impl Aurodio {
         let value_noise_texture = desc.renderer.generate(&ValueNoise {
             texture_size: 256,
             octaves: 7,
+            seed: desc.seed,
         });
         let sampler_nearest = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Aurodio: Sampler nearest"),
