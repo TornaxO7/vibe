@@ -5,7 +5,7 @@ use crate::{Tester, WHITE};
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let circle = Circle::new(&CircleDescriptor {
@@ -22,7 +22,7 @@ fn test() {
         position: (0.5, 0.5),
     });
 
-    let _img = tester.render(circle);
+    let _img = tester.render(&circle);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

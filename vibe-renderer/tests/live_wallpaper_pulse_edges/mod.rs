@@ -8,7 +8,7 @@ use crate::Tester;
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
 
@@ -35,7 +35,7 @@ fn test() {
     })
     .unwrap();
 
-    let _img = tester.render(pulse_edges);
+    let _img = tester.render(&pulse_edges);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

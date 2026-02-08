@@ -10,7 +10,7 @@ use crate::Tester;
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
 
@@ -37,7 +37,7 @@ fn test() {
         debug_sources: false,
     });
 
-    let _img = tester.render(light_sources);
+    let _img = tester.render(&light_sources);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

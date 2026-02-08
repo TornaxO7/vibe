@@ -3,9 +3,8 @@
 mod dummy;
 mod system_audio;
 
-use std::sync::{Arc, Mutex};
-
 use cpal::SampleRate;
+use std::sync::{Arc, Mutex};
 
 pub use dummy::DummyFetcher;
 pub use system_audio::{

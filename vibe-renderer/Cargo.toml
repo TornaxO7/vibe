@@ -19,8 +19,8 @@ vibe-audio.workspace = true
 wgpu.workspace = true
 xdg.workspace = true
 tracing-indicatif.workspace = true
+bytemuck.workspace = true
 
-bytemuck = "1.25"
 fastrand = "2.3"
 pollster = "0.4"
 
@@ -28,5 +28,7 @@ pollster = "0.4"
 anyhow.workspace = true
 clap.workspace = true
 tracing-subscriber.workspace = true
+colored.workspace = true
 
 winit = "0.30"
+nv-flip = "0.1"

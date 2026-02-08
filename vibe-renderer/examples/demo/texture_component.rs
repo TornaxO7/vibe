@@ -1,4 +1,5 @@
-use vibe_renderer::{Component, Renderable};
+use vibe_audio::fetcher::Fetcher;
+use vibe_renderer::{Component, ComponentAudio, Renderable};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 #[repr(C)]
@@ -113,14 +114,11 @@ impl Renderable for TextureComponent {
     }
 }
 
-impl Component for TextureComponent {
-    fn update_audio(
-        &mut self,
-        _queue: &wgpu::Queue,
-        _processor: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
-    }
+impl<F: Fetcher> ComponentAudio<F> for TextureComponent {
+    fn update_audio(&mut self, _queue: &wgpu::Queue, _processor: &vibe_audio::SampleProcessor<F>) {}
+}
 
+impl Component for TextureComponent {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &vibe_renderer::Renderer, new_resolution: [u32; 2]) {

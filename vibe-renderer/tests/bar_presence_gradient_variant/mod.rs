@@ -5,7 +5,7 @@ use crate::{Tester, BLUE, RED};
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let bars = Bars::new(&BarsDescriptor {
@@ -23,7 +23,7 @@ fn test() {
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
-    let _img = tester.render(bars);
+    let _img = tester.render(&bars);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

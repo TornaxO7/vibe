@@ -5,7 +5,7 @@ use crate::{Tester, RED};
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let radial = Radial::new(&RadialDescriptor {
@@ -23,7 +23,7 @@ fn test() {
         format: vibe_renderer::components::RadialFormat::BassTreble,
     });
 
-    let _img = tester.render(radial);
+    let _img = tester.render(&radial);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

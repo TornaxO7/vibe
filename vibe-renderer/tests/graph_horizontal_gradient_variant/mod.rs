@@ -7,7 +7,7 @@ use crate::{Tester, BLUE, RED};
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let graph = Graph::new(&GraphDescriptor {
@@ -28,7 +28,7 @@ fn test() {
         format: vibe_renderer::components::GraphFormat::BassTrebleBass,
     });
 
-    let _img = tester.render(graph);
+    let _img = tester.render(&graph);
     //
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro
