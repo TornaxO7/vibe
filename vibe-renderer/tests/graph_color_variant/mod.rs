@@ -20,7 +20,7 @@ fn test() {
     tester.evaluate(
         &mut graph,
         include_bytes!("./reference.png"),
-        "graph-color-variant",
+        "graph-color",
         0.05, // dunno why, but somehow the background is different
     );
 
