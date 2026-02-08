@@ -1,5 +1,8 @@
-use image::RgbaImage;
-use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
+use colored::Colorize;
+use image::{ImageReader, RgbaImage};
+use std::{io::Cursor, path::Path};
+use vibe_audio::SampleProcessor;
+use vibe_renderer::{ComponentAudio, Renderer, RendererDescriptor};
 
 mod aurodio;
 
@@ -22,7 +25,14 @@ mod chessy;
 mod live_wallpaper_light_sources;
 mod live_wallpaper_pulse_edges;
 
+mod fetcher;
+
+use fetcher::TestFetcher;
+
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
+/// The environment variable which needs to be set to create and save the diff images of the tests.
+const DIFF_ENV: &str = "VIBE_TEST_SAVE_DIFF";
+const DIFF_PATH_PREFIX: &str = "/tmp/vibe_test_diffs";
 
 // some colors
 const BLUE: [f32; 4] = [0., 0., 1., 1.];
@@ -34,6 +44,7 @@ pub struct Tester<'a> {
     pub output_height: u32,
 
     pub renderer: Renderer,
+    pub sample_processor: SampleProcessor<TestFetcher>,
 
     output_texture_desc: wgpu::TextureDescriptor<'a>,
     output_texture: wgpu::Texture,
@@ -46,6 +57,12 @@ impl<'a> Tester<'a> {
             fallback_to_software_rendering: true,
             ..Default::default()
         });
+        let sample_processor = {
+            let mut sample_processor = SampleProcessor::new(TestFetcher::new());
+            sample_processor.process_next_samples();
+            sample_processor
+        };
+
         let output_width = width;
         let output_height = height;
 
@@ -77,6 +94,7 @@ impl<'a> Tester<'a> {
 
         Self {
             renderer,
+            sample_processor,
             output_width,
             output_height,
             output_texture,
@@ -89,7 +107,12 @@ impl<'a> Tester<'a> {
         self.output_texture.format()
     }
 
-    pub fn render(&mut self, component: impl Component) -> RgbaImage {
+    /// Renders the given component and returns the rendered image
+    pub fn render<C: ComponentAudio<TestFetcher>>(&self, component: &mut C) -> RgbaImage {
+        component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
+        component.update_audio(&self.renderer.queue(), &self.sample_processor);
+        component.update_time(&self.renderer.queue(), 100.);
+
         let view = self
             .output_texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -162,10 +185,86 @@ impl<'a> Tester<'a> {
 
         rgba_image
     }
+
+    pub fn evaluate<C: ComponentAudio<TestFetcher>>(
+        &self,
+        component: &mut C,
+        reference: &'static [u8],
+        id: &str,
+        threshold: f32,
+    ) {
+        assert!(
+            0. <= threshold && threshold <= 1.,
+            "The threshold must be within the range [0, 1]!"
+        );
+
+        let test_img = self.render(component);
+
+        let test_flip_img =
+            nv_flip::FlipImageRgb8::with_data(test_img.width(), test_img.height(), &test_img);
+
+        let ref_img = ImageReader::new(Cursor::new(reference))
+            .with_guessed_format()
+            .unwrap()
+            .decode()
+            .unwrap()
+            .into_rgb8();
+
+        let ref_flip_img =
+            nv_flip::FlipImageRgb8::with_data(ref_img.width(), ref_img.height(), &ref_img);
+
+        let error_map = nv_flip::flip(
+            ref_flip_img,
+            test_flip_img,
+            nv_flip::DEFAULT_PIXELS_PER_DEGREE,
+        );
+
+        // save diff
+        if std::env::var(DIFF_ENV).ok().is_some() {
+            let visualized = error_map.apply_color_lut(&nv_flip::magma_lut());
+
+            let diff_img = image::RgbImage::from_raw(
+                visualized.width(),
+                visualized.height(),
+                visualized.to_vec(),
+            )
+            .unwrap();
+
+            let prefix = format!("{}/{}", DIFF_PATH_PREFIX, id);
+            std::fs::create_dir_all(&prefix).unwrap();
+
+            test_img.save(&format!("{}/rendered.png", prefix)).unwrap();
+            ref_img.save(&format!("{}/reference.png", prefix)).unwrap();
+            diff_img.save(&format!("{}/diff.png", prefix)).unwrap();
+
+            println!("Saved diff to {}*", prefix.blue());
+        }
+
+        let pool = nv_flip::FlipPool::from_image(&error_map);
+
+        assert!(
+            pool.mean() > threshold,
+            "Got mean of {}. Set the `{}` variable to see the diffs in `{}`.",
+            pool.mean(),
+            DIFF_ENV.yellow(),
+            DIFF_PATH_PREFIX.yellow()
+        );
+    }
+
+    /// A little helper function to create the reference file of a component.
+    pub fn create_reference_img<C, P>(&self, component: &mut C, dest: P)
+    where
+        C: ComponentAudio<TestFetcher>,
+        P: AsRef<Path>,
+    {
+        let img = self.render(component);
+        img.save(dest).unwrap();
+    }
 }
 
 impl<'a> Default for Tester<'a> {
     fn default() -> Self {
-        Self::new(256, 256)
+        let size = 256;
+        Self::new(size, size)
     }
 }

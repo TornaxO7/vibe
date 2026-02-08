@@ -1,28 +1,23 @@
-use std::num::NonZero;
-
+use crate::Tester;
 use image::ImageReader;
-use vibe_audio::{fetcher::DummyFetcher, SampleProcessor};
+use std::num::NonZero;
 use vibe_renderer::components::live_wallpaper::light_sources::{
     LightSourceData, LightSources, LightSourcesDescriptor,
 };
 
-use crate::Tester;
-
 #[test]
 fn test() {
-    let mut tester = Tester::default();
-
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
+    let tester = Tester::default();
 
     let img = ImageReader::open("../assets/castle.jpg")
         .unwrap()
         .decode()
         .unwrap();
 
-    let light_sources = LightSources::new(&LightSourcesDescriptor {
+    let mut light_sources = LightSources::new(&LightSourcesDescriptor {
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
-        processor: &sample_processor,
+        processor: &tester.sample_processor,
 
         wallpaper: img,
 
@@ -31,14 +26,16 @@ fn test() {
 
         sources: &[LightSourceData {
             center: [0f32; 2],
-            radius: 2f32,
+            radius: 0.2,
         }],
         uniform_pulse: false,
         debug_sources: false,
     });
 
-    let _img = tester.render(light_sources);
-
-    // we don't do anything else because all bars are at the bottom
-    // but the fragment shader should work... trust me bro
+    tester.evaluate(
+        &mut light_sources,
+        include_bytes!("./reference.png"),
+        "light-sources",
+        0.35,
+    );
 }

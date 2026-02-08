@@ -4,10 +4,11 @@ pub use descriptor::*;
 
 use super::{Component, Vec2f};
 use crate::{
+    components::ComponentAudio,
     texture_generation::{SdfMask, SdfPattern},
     Renderable,
 };
-use vibe_audio::{fetcher::Fetcher, BarProcessor};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 // this texture size seems good enough for a 1920x1080 screen.
@@ -170,17 +171,15 @@ impl Renderable for Chessy {
     }
 }
 
-impl Component for Chessy {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Chessy {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(&self.freqs_buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
+}
 
+impl Component for Chessy {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         let resolution_size = 8;
 

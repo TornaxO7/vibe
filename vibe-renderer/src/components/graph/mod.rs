@@ -3,13 +3,10 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Rgba, Vec2f};
-use crate::{Renderable, Renderer};
+use crate::{components::ComponentAudio, Renderable, Renderer};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// Each graph is put inside a box with 4 vertices.
@@ -314,12 +311,8 @@ impl Renderable for Graph {
     }
 }
 
-impl Component for Graph {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Graph {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(
@@ -332,7 +325,9 @@ impl Component for Graph {
             queue.write_buffer(&right.freqs_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
+}
 
+impl Component for Graph {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]) {

@@ -1,28 +1,28 @@
-use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
+use crate::Tester;
+use vibe_audio::BarProcessorConfig;
 use vibe_renderer::{
     components::{Chessy, ChessyDescriptor},
     texture_generation::SdfPattern,
 };
 
-use crate::Tester;
-
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
-    let chessy = Chessy::new(&ChessyDescriptor {
+    let mut chessy = Chessy::new(&ChessyDescriptor {
         renderer: &tester.renderer,
-        sample_processor: &sample_processor,
+        sample_processor: &tester.sample_processor,
         audio_config: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
-        movement_speed: 0.01,
+        movement_speed: 0.1,
         pattern: SdfPattern::Heart,
-        zoom_factor: 0.1,
+        zoom_factor: 2.,
     });
 
-    let _img = tester.render(chessy);
-
-    // we don't do anything else because all bars are at the bottom
-    // but the fragment shader should work... trust me bro
+    tester.evaluate(
+        &mut chessy,
+        include_bytes!("./reference.png"),
+        "chessy",
+        0.9,
+    );
 }

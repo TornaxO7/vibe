@@ -32,7 +32,7 @@ impl ComponentConfig for LightSourcesConfig {
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, ConfigError> {
         let img = ImageReader::open(&self.wallpaper_path)
             .map_err(|err| ConfigError::OpenFile {
                 path: self.wallpaper_path.to_string_lossy().to_string(),

@@ -1,16 +1,14 @@
-use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{Circle, CircleDescriptor, CircleVariant};
-
 use crate::{Tester, WHITE};
+use vibe_audio::BarProcessorConfig;
+use vibe_renderer::components::{Circle, CircleDescriptor, CircleVariant};
 
 #[test]
 fn test() {
-    let mut tester = Tester::default();
+    let tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
-    let circle = Circle::new(&CircleDescriptor {
+    let mut circle = Circle::new(&CircleDescriptor {
         renderer: &tester.renderer,
-        sample_processor: &sample_processor,
+        sample_processor: &tester.sample_processor,
         audio_conf: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
         variant: CircleVariant::Graph {
@@ -22,8 +20,10 @@ fn test() {
         position: (0.5, 0.5),
     });
 
-    let _img = tester.render(circle);
-
-    // we don't do anything else because all bars are at the bottom
-    // but the fragment shader should work... trust me bro
+    tester.evaluate(
+        &mut circle,
+        include_bytes!("./reference.png"),
+        "circle-graph",
+        0.06,
+    );
 }

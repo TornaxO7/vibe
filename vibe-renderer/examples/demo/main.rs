@@ -20,12 +20,12 @@ use vibe_renderer::{
         live_wallpaper::pulse_edges::{PulseEdges, PulseEdgesDescriptor},
         Aurodio, AurodioDescriptor, AurodioLayerDescriptor, BarVariant, Bars, BarsDescriptor,
         BarsFormat, BarsPlacement, Chessy, ChessyDescriptor, Circle, CircleDescriptor,
-        CircleVariant, Component, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
+        CircleVariant, FragmentCanvas, FragmentCanvasDescriptor, Graph, GraphDescriptor,
         GraphFormat, GraphVariant, Radial, RadialDescriptor, RadialFormat, RadialVariant,
         ShaderCode,
     },
     texture_generation::{SdfMask, SdfPattern, ValueNoise},
-    Renderer,
+    ComponentAudio, Renderer,
 };
 use winit::{
     application::ApplicationHandler,
@@ -50,7 +50,7 @@ struct State<'a> {
     window: Arc<Window>,
     time: Instant,
 
-    component: Box<dyn Component>,
+    component: Box<dyn ComponentAudio<SystemAudioFetcher>>,
 }
 
 impl<'a> State<'a> {
@@ -85,7 +85,7 @@ impl<'a> State<'a> {
 
         surface.configure(renderer.device(), &surface_config);
 
-        let component = match component_name {
+        let component: Box<dyn ComponentAudio<SystemAudioFetcher>> = match component_name {
             ComponentName::Aurodio => Ok(Box::new(Aurodio::new(&AurodioDescriptor {
                 renderer: &renderer,
                 sample_processor: &processor,
@@ -107,7 +107,8 @@ impl<'a> State<'a> {
                 base_color: [0., 0.5, 0.5].into(),
                 movement_speed: 0.005,
                 sensitivity: 0.2,
-            })) as Box<dyn Component>),
+                seed: None,
+            })) as Box<dyn ComponentAudio<_>>),
             ComponentName::BarsColorVariant => Bars::new(&BarsDescriptor {
                 renderer: &renderer,
                 sample_processor: &processor,
@@ -127,7 +128,7 @@ impl<'a> State<'a> {
                 placement: BarsPlacement::Bottom,
                 format: BarsFormat::BassTreble,
             })
-            .map(|bars| Box::new(bars) as Box<dyn Component>),
+            .map(|bars| Box::new(bars) as Box<dyn ComponentAudio<_>>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
                 renderer: &renderer,
                 sample_processor: &processor,
@@ -150,7 +151,7 @@ impl<'a> State<'a> {
                 },
                 format: BarsFormat::TrebleBassTreble,
             })
-            .map(|bars| Box::new(bars) as Box<dyn Component>),
+            .map(|bars| Box::new(bars) as Box<dyn ComponentAudio<_>>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {
                 renderer: &renderer,
                 sample_processor: processor,
@@ -167,7 +168,7 @@ impl<'a> State<'a> {
                 radius: 0.1,
                 rotation: cgmath::Deg(90.),
                 position: (0.5, 0.5),
-            })) as Box<dyn Component>),
+            })) as Box<dyn ComponentAudio<_>>),
             ComponentName::FragmentCanvas => {
                 let fragment_source = ShaderCode {
                     language: vibe_renderer::components::ShaderLanguage::Wgsl,
@@ -192,7 +193,7 @@ impl<'a> State<'a> {
                     img: None,
                     fragment_code: fragment_source,
                 })
-                .map(|canvas| Box::new(canvas) as Box<dyn Component>)
+                .map(|fc| Box::new(fc) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::GraphColorVariant => Ok(Box::new(Graph::new(&GraphDescriptor {
                 renderer: &renderer,
@@ -208,7 +209,7 @@ impl<'a> State<'a> {
                     rotation: Deg(-45.),
                     amount_bars: NonZero::new(500).unwrap(),
                 },
-            })) as Box<dyn Component>),
+            })) as Box<dyn ComponentAudio<_>>),
             ComponentName::GraphHorizontalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
                     renderer: &renderer,
@@ -225,7 +226,7 @@ impl<'a> State<'a> {
                     max_height: 0.5,
                     format: GraphFormat::BassTreble,
                     placement: vibe_renderer::components::GraphPlacement::Bottom,
-                })) as Box<dyn Component>)
+                })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::GraphVerticalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
@@ -248,7 +249,7 @@ impl<'a> State<'a> {
                     //     bottom_left_corner: [0.5, 0.2],
                     //     rotation: Deg(-45.),
                     // },
-                })) as Box<dyn Component>)
+                })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {
                 renderer: &renderer,
@@ -268,7 +269,7 @@ impl<'a> State<'a> {
                 bar_width: 0.015,
                 position: (0.5, 0.5),
                 format: RadialFormat::TrebleBass,
-            })) as Box<dyn Component>),
+            })) as Box<dyn ComponentAudio<_>>),
 
             ComponentName::RadialHeightGradientVariant => {
                 Ok(Box::new(Radial::new(&RadialDescriptor {
@@ -292,7 +293,7 @@ impl<'a> State<'a> {
                     bar_width: 0.02,
                     position: (0.5, 0.5),
                     format: RadialFormat::TrebleBass,
-                })) as Box<dyn Component>)
+                })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::ChessyBoxVariant => Ok(Box::new(Chessy::new(&ChessyDescriptor {
                 renderer: &renderer,
@@ -305,19 +306,20 @@ impl<'a> State<'a> {
                 movement_speed: 0.1,
                 pattern: SdfPattern::Box,
                 zoom_factor: 4.,
-            })) as Box<dyn Component>),
+            })) as Box<dyn ComponentAudio<_>>),
 
             ComponentName::TextureValueNoise => {
                 let texture = renderer.generate(&ValueNoise {
                     texture_size: 256,
                     octaves: 7,
+                    seed: None,
                 });
 
                 Ok(Box::new(TextureComponent::new(&TextureComponentDescriptor {
                     device: renderer.device(),
                     texture,
                     format: surface_config.format,
-                })) as Box<dyn Component>)
+                })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::TextureSdf => {
                 let texture = renderer.generate(&SdfMask {
@@ -329,7 +331,7 @@ impl<'a> State<'a> {
                     device: renderer.device(),
                     texture,
                     format: surface_config.format,
-                })) as Box<dyn Component>)
+                })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::WallpaperPulseEdges => Ok(Box::new(
                 PulseEdges::new(&PulseEdgesDescriptor {
@@ -353,7 +355,7 @@ impl<'a> State<'a> {
                     kernel_size: 49,
                 })
                 .unwrap(),
-            ) as Box<dyn Component>),
+            ) as Box<dyn ComponentAudio<_>>),
         }?;
 
         Ok(Self {
@@ -392,7 +394,7 @@ impl<'a> State<'a> {
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
 
-        self.renderer.render(&view, &[&self.component]);
+        self.renderer.render(&view, &[self.component.as_ref()]);
 
         surface_texture.present();
         Ok(())

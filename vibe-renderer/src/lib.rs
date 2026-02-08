@@ -3,7 +3,7 @@ pub mod components;
 pub mod texture_generation;
 pub mod util;
 
-pub use components::Component;
+pub use components::{Component, ComponentAudio};
 
 use crate::texture_generation::TextureGenerator;
 use pollster::FutureExt;
@@ -18,7 +18,7 @@ use xdg::BaseDirectories;
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
-const APP_NAME: &str = env!("CARGO_PKG_NAME");
+pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 // const DISTANCE_MAP_DIR: &str = "distance-maps";
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].

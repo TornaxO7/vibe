@@ -3,10 +3,10 @@ mod descriptor;
 use std::num::NonZero;
 
 pub use descriptor::*;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
-use crate::{Component, Renderable};
+use crate::{components::ComponentAudio, Component, Renderable};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
@@ -185,12 +185,8 @@ impl Renderable for LightSources {
     }
 }
 
-impl Component for LightSources {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for LightSources {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let channels = self.bar_processor.process_bars(processor);
         let bars = &channels[0];
 
@@ -217,7 +213,9 @@ impl Component for LightSources {
             }
         }
     }
+}
 
+impl Component for LightSources {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {

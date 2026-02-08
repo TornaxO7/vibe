@@ -1,11 +1,8 @@
 use super::{Component, ShaderCode, ShaderCodeError};
-use crate::{Renderable, Renderer};
+use crate::{components::ComponentAudio, Renderable, Renderer};
 use pollster::FutureExt;
 use std::borrow::Cow;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::include_wgsl;
 
 const ENTRYPOINT: &str = "main";
@@ -290,6 +287,14 @@ impl Renderable for FragmentCanvas {
     }
 }
 
+impl<F: Fetcher> ComponentAudio<F> for FragmentCanvas {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
+        let bar_values = self.bar_processor.process_bars(processor);
+
+        queue.write_buffer(&self.freqs, 0, bytemuck::cast_slice(&bar_values[0]));
+    }
+}
+
 impl Component for FragmentCanvas {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
@@ -299,16 +304,6 @@ impl Component for FragmentCanvas {
             0,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
-    }
-
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
-        let bar_values = self.bar_processor.process_bars(processor);
-
-        queue.write_buffer(&self.freqs, 0, bytemuck::cast_slice(&bar_values[0]));
     }
 
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {

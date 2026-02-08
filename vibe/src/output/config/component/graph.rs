@@ -24,7 +24,7 @@ impl ComponentConfig for GraphConfig {
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let variant = GraphVariant::from(&self.variant);
         let placement = GraphPlacement::from(&self.placement);
 
