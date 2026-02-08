@@ -17,7 +17,7 @@ fn test() {
         .decode()
         .unwrap();
 
-    let pulse_edges = PulseEdges::new(&PulseEdgesDescriptor {
+    let mut pulse_edges = PulseEdges::new(&PulseEdgesDescriptor {
         renderer: &tester.renderer,
         sample_processor: &sample_processor,
         texture_format: tester.output_texture_format(),
@@ -35,7 +35,7 @@ fn test() {
     })
     .unwrap();
 
-    let _img = tester.render(&pulse_edges);
+    let _img = tester.render(&mut pulse_edges);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

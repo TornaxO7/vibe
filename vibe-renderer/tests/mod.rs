@@ -2,7 +2,7 @@ use colored::Colorize;
 use image::{ImageReader, RgbaImage};
 use std::{io::Cursor, path::Path};
 use vibe_audio::SampleProcessor;
-use vibe_renderer::{components::Component, ComponentAudio, Renderer, RendererDescriptor};
+use vibe_renderer::{ComponentAudio, Renderer, RendererDescriptor};
 
 mod aurodio;
 
@@ -108,7 +108,11 @@ impl<'a> Tester<'a> {
     }
 
     /// Renders the given component and returns the rendered image
-    pub fn render<C: Component>(&self, component: &C) -> RgbaImage {
+    pub fn render<C: ComponentAudio<TestFetcher>>(&self, component: &mut C) -> RgbaImage {
+        component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
+        component.update_audio(&self.renderer.queue(), &self.sample_processor);
+        component.update_time(&self.renderer.queue(), 100.);
+
         let view = self
             .output_texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -194,8 +198,6 @@ impl<'a> Tester<'a> {
             "The threshold must be within the range [0, 1]!"
         );
 
-        component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
-        component.update_audio(&self.renderer.queue(), &self.sample_processor);
         let test_img = self.render(component);
 
         let test_flip_img =
@@ -255,9 +257,6 @@ impl<'a> Tester<'a> {
         C: ComponentAudio<TestFetcher>,
         P: AsRef<Path>,
     {
-        component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
-        component.update_audio(&self.renderer.queue(), &self.sample_processor);
-
         let img = self.render(component);
         img.save(dest).unwrap();
     }

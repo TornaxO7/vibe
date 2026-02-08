@@ -8,7 +8,7 @@ fn test() {
     let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
-    let graph = Graph::new(&GraphDescriptor {
+    let mut graph = Graph::new(&GraphDescriptor {
         renderer: &tester.renderer,
         sample_processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
@@ -22,7 +22,7 @@ fn test() {
         format: vibe_renderer::components::GraphFormat::TrebleBassTreble,
     });
 
-    let _img = tester.render(&graph);
+    let _img = tester.render(&mut graph);
     //
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

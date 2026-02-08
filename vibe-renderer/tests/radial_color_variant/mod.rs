@@ -8,7 +8,7 @@ fn test() {
     let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
-    let radial = Radial::new(&RadialDescriptor {
+    let mut radial = Radial::new(&RadialDescriptor {
         renderer: &tester.renderer,
         processor: &sample_processor,
         audio_conf: BarProcessorConfig::default(),
@@ -23,7 +23,7 @@ fn test() {
         format: vibe_renderer::components::RadialFormat::BassTreble,
     });
 
-    let _img = tester.render(&radial);
+    let _img = tester.render(&mut radial);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

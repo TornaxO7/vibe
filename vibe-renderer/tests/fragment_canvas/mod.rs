@@ -38,7 +38,7 @@ fn wgsl_passes_without_img() {
 
     frag_canvas.update_time(tester.renderer.queue(), 100.);
 
-    let img = tester.render(&frag_canvas);
+    let img = tester.render(&mut frag_canvas);
 
     for &pixel in img.pixels() {
         let pixel_is_not_empty = pixel.0.iter().all(|value| *value != 0);
@@ -69,7 +69,7 @@ fn wgsl_passes_with_img() {
 
     frag_canvas.update_time(tester.renderer.queue(), 100.);
 
-    let img = tester.render(&frag_canvas);
+    let img = tester.render(&mut frag_canvas);
 
     for &pixel in img.pixels() {
         let pixel_is_not_empty = pixel.0.iter().all(|value| *value != 0);
@@ -100,7 +100,7 @@ fn glsl_passes_without_img() {
 
     frag_canvas.update_time(tester.renderer.queue(), 100.);
 
-    let img = tester.render(&frag_canvas);
+    let img = tester.render(&mut frag_canvas);
 
     for &pixel in img.pixels() {
         let pixel_is_not_empty = pixel.0.iter().all(|value| *value != 0);
@@ -131,7 +131,7 @@ fn glsl_passes_with_img() {
 
     frag_canvas.update_time(tester.renderer.queue(), 100.);
 
-    let img = tester.render(&frag_canvas);
+    let img = tester.render(&mut frag_canvas);
 
     for &pixel in img.pixels() {
         let pixel_is_not_empty = pixel.0.iter().all(|value| *value != 0);

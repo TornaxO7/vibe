@@ -11,7 +11,7 @@ fn test() {
     let tester = Tester::default();
 
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
-    let chessy = Chessy::new(&ChessyDescriptor {
+    let mut chessy = Chessy::new(&ChessyDescriptor {
         renderer: &tester.renderer,
         sample_processor: &sample_processor,
         audio_config: BarProcessorConfig::default(),
@@ -21,7 +21,7 @@ fn test() {
         zoom_factor: 0.1,
     });
 
-    let _img = tester.render(&chessy);
+    let _img = tester.render(&mut chessy);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro

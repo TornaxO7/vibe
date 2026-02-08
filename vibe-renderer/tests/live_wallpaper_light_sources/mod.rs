@@ -19,7 +19,7 @@ fn test() {
         .decode()
         .unwrap();
 
-    let light_sources = LightSources::new(&LightSourcesDescriptor {
+    let mut light_sources = LightSources::new(&LightSourcesDescriptor {
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
         processor: &sample_processor,
@@ -37,7 +37,7 @@ fn test() {
         debug_sources: false,
     });
 
-    let _img = tester.render(&light_sources);
+    let _img = tester.render(&mut light_sources);
 
     // we don't do anything else because all bars are at the bottom
     // but the fragment shader should work... trust me bro
