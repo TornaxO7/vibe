@@ -14,9 +14,9 @@ fn test() {
         variant: RadialVariant::Color(RED.into()),
 
         init_rotation: cgmath::Deg(90.0),
-        circle_radius: 0.01,
-        bar_height_sensitivity: 0.3,
-        bar_width: 0.1,
+        circle_radius: 0.2,
+        bar_height_sensitivity: 1.0,
+        bar_width: 0.01,
         position: (0.5, 0.5),
         format: vibe_renderer::components::RadialFormat::BassTreble,
     });
