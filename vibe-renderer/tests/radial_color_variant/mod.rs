@@ -1,16 +1,14 @@
-use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
-use vibe_renderer::components::{Radial, RadialDescriptor, RadialVariant};
-
 use crate::{Tester, RED};
+use vibe_audio::BarProcessorConfig;
+use vibe_renderer::components::{Radial, RadialDescriptor, RadialVariant};
 
 #[test]
 fn test() {
     let tester = Tester::default();
 
-    let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut radial = Radial::new(&RadialDescriptor {
         renderer: &tester.renderer,
-        processor: &sample_processor,
+        processor: &tester.sample_processor,
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
         variant: RadialVariant::Color(RED.into()),
@@ -23,8 +21,10 @@ fn test() {
         format: vibe_renderer::components::RadialFormat::BassTreble,
     });
 
-    let _img = tester.render(&mut radial);
-
-    // we don't do anything else because all bars are at the bottom
-    // but the fragment shader should work... trust me bro
+    tester.evaluate(
+        &mut radial,
+        include_bytes!("./reference.png"),
+        "radial-color",
+        0.9,
+    );
 }
