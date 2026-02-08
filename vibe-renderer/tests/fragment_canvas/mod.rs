@@ -36,14 +36,12 @@ fn wgsl_passes_without_img() {
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
-    frag_canvas.update_time(tester.renderer.queue(), 100.);
-
-    let img = tester.render(&mut frag_canvas);
-
-    for &pixel in img.pixels() {
-        let pixel_is_not_empty = pixel.0.iter().all(|value| *value != 0);
-        assert!(pixel_is_not_empty);
-    }
+    tester.evaluate(
+        &mut frag_canvas,
+        include_bytes!("./wgsl_without_img_reference.png"),
+        "fragment-canvas-wgsl-without-img",
+        0.9,
+    );
 }
 
 #[test]
