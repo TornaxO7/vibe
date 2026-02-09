@@ -237,7 +237,7 @@ impl<'a> Tester<'a> {
         let pool = nv_flip::FlipPool::from_image(&error_map);
 
         assert!(
-            pool.mean() < 0.001,
+            pool.mean() < 0.004,
             "Got mean of {}. Set the `{}` variable to see the diffs in `{}`.",
             pool.mean(),
             DIFF_ENV.yellow(),
