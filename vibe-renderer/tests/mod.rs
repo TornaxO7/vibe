@@ -110,8 +110,8 @@ impl<'a> Tester<'a> {
     /// Renders the given component and returns the rendered image
     pub fn render<C: ComponentAudio<TestFetcher>>(&self, component: &mut C) -> RgbaImage {
         component.update_resolution(&self.renderer, [self.output_width, self.output_height]);
-        component.update_audio(&self.renderer.queue(), &self.sample_processor);
-        component.update_time(&self.renderer.queue(), 100.);
+        component.update_audio(self.renderer.queue(), &self.sample_processor);
+        component.update_time(self.renderer.queue(), 100.);
 
         let view = self
             .output_texture
@@ -194,7 +194,7 @@ impl<'a> Tester<'a> {
         threshold: f32,
     ) {
         assert!(
-            0. <= threshold && threshold <= 1.,
+            (0. ..=1.).contains(&threshold),
             "The threshold must be within the range [0, 1]!"
         );
 

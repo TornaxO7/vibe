@@ -38,3 +38,9 @@ impl Fetcher for TestFetcher {
         2
     }
 }
+
+impl Default for TestFetcher {
+    fn default() -> Self {
+        Self::new()
+    }
+}
