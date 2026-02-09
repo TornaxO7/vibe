@@ -1,5 +1,5 @@
 use colored::Colorize;
-use image::{ImageReader, RgbaImage};
+use image::{buffer::ConvertBuffer, ImageReader, RgbaImage};
 use std::{io::Cursor, path::Path};
 use vibe_audio::SampleProcessor;
 use vibe_renderer::{ComponentAudio, Renderer, RendererDescriptor};
@@ -198,7 +198,7 @@ impl<'a> Tester<'a> {
             "The threshold must be within the range [0, 1]!"
         );
 
-        let test_img = self.render(component);
+        let test_img: image::RgbImage = self.render(component).convert();
 
         let test_flip_img =
             nv_flip::FlipImageRgb8::with_data(test_img.width(), test_img.height(), &test_img);
@@ -243,7 +243,7 @@ impl<'a> Tester<'a> {
         let pool = nv_flip::FlipPool::from_image(&error_map);
 
         assert!(
-            pool.mean() > threshold,
+            pool.mean() < 0.001,
             "Got mean of {}. Set the `{}` variable to see the diffs in `{}`.",
             pool.mean(),
             DIFF_ENV.yellow(),
