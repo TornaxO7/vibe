@@ -39,7 +39,6 @@ fn wgsl_passes_without_img() {
         &mut frag_canvas,
         include_bytes!("./without_img_reference.png"),
         "fragment-canvas-wgsl-without-img",
-        0.9,
     );
 }
 
@@ -67,7 +66,6 @@ fn wgsl_passes_with_img() {
         &mut frag_canvas,
         include_bytes!("./with_img_reference.png"),
         "fragment-canvas-wgsl-with-img",
-        0.577,
     );
 }
 
@@ -95,7 +93,6 @@ fn glsl_passes_without_img() {
         &mut frag_canvas,
         include_bytes!("./without_img_reference.png"),
         "fragment-canvas-glsl-without-img",
-        0.9,
     );
 }
 
@@ -124,6 +121,5 @@ fn glsl_passes_with_img() {
         &mut frag_canvas,
         include_bytes!("./with_img_reference.png"),
         "fragment-canvas-glsl-with-img",
-        0.577,
     );
 }

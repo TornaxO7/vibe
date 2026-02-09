@@ -191,13 +191,7 @@ impl<'a> Tester<'a> {
         component: &mut C,
         reference: &'static [u8],
         id: &str,
-        threshold: f32,
     ) {
-        assert!(
-            (0. ..=1.).contains(&threshold),
-            "The threshold must be within the range [0, 1]!"
-        );
-
         let test_img: image::RgbImage = self.render(component).convert();
 
         let test_flip_img =

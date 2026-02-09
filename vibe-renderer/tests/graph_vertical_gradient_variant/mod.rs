@@ -24,6 +24,5 @@ fn test() {
         &mut graph,
         include_bytes!("./reference.png"),
         "graph-vertical-gradient",
-        0.13,
     );
 }

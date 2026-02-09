@@ -17,13 +17,5 @@ fn test() {
         format: GraphFormat::BassTreble,
     });
 
-    tester.evaluate(
-        &mut graph,
-        include_bytes!("./reference.png"),
-        "graph-color",
-        0.05, // dunno why, but somehow the background is different
-    );
-
-    // we don't do anything else because all bars are at the bottom
-    // but the fragment shader should work... trust me bro
+    tester.evaluate(&mut graph, include_bytes!("./reference.png"), "graph-color");
 }

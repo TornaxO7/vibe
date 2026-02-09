@@ -25,6 +25,5 @@ fn test() {
         &mut radial,
         include_bytes!("./reference.png"),
         "radial-color",
-        0.9,
     );
 }

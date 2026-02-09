@@ -34,6 +34,5 @@ fn test() {
         &mut pulse_edges,
         include_bytes!("./reference.png"),
         "pulse-edges",
-        0.68,
     );
 }

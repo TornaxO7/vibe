@@ -24,6 +24,5 @@ fn test() {
         &mut circle,
         include_bytes!("./reference.png"),
         "circle-graph",
-        0.06,
     );
 }
