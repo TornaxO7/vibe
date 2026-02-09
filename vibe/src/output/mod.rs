@@ -110,6 +110,17 @@ impl OutputCtx {
             component.update_mouse_position(queue, normalized_pos);
         }
     }
+
+    pub fn update_mouse_click(&mut self, queue: &wgpu::Queue, pos: (f64, f64), time: f32) {
+        let normalized_pos = (
+            pos.0 as f32 / self.surface_config.width as f32,
+            pos.1 as f32 / self.surface_config.height as f32,
+        );
+
+        for component in self.components.iter_mut() {
+            component.update_mouse_click(queue, normalized_pos, time);
+        }
+    }
 }
 
 // getters

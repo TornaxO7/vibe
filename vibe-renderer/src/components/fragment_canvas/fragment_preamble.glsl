@@ -46,6 +46,12 @@ layout(set = 0, binding = 6) uniform sampler iSampler;
 // `vec3 texel = texture(sampler2D(iTexture, iSampler), vec2(.0, .5)).rgb;`
 layout(set = 0, binding = 7) uniform texture2D iTexture;
 
+// Contains the last mouse click position and time.
+//   - xy: normalized click position (0-1), or (-1,-1) if cleared
+//   - z: time of click (seconds since start)
+//   - w: reserved (0.0)
+layout(set = 0, binding = 8) uniform vec4 iMouseClick;
+
 // The color for the fragment/pixel.
 // Needs to be set in your shader (like in shadertoy).
 layout(location = 0) out vec4 fragColor;

@@ -459,9 +459,26 @@ impl PointerHandler for State {
                 .values_mut()
                 .find(|output| &event.surface == output.layer_surface().wl_surface())
             {
-                if let PointerEventKind::Motion { .. } = event.kind {
-                    let queue = self.renderer.queue();
-                    output.update_mouse_position(queue, event.position);
+                let queue = self.renderer.queue();
+                match event.kind {
+                    PointerEventKind::Motion { .. } => {
+                        output.update_mouse_position(queue, event.position);
+                    }
+                    PointerEventKind::Press { button, .. } => {
+                        let current_time = self.time.elapsed().as_secs_f32();
+                        match button {
+                            0x110 => {
+                                // BTN_LEFT: focus on click position
+                                output.update_mouse_click(queue, event.position, current_time);
+                            }
+                            0x111 => {
+                                // BTN_RIGHT: clear focus
+                                output.update_mouse_click(queue, (-1.0, -1.0), current_time);
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => {}
                 }
             }
         }

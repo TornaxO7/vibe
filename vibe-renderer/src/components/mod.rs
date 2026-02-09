@@ -46,6 +46,8 @@ pub trait Component: Renderable {
     fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32));
 
     fn update_colors(&mut self, _queue: &wgpu::Queue, _colors: &[[f32; 3]; 4]) {}
+
+    fn update_mouse_click(&mut self, _queue: &wgpu::Queue, _pos: (f32, f32), _time: f32) {}
 }
 
 impl Renderable for Box<dyn Component> {

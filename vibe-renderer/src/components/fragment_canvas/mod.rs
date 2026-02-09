@@ -38,7 +38,11 @@ pub struct FragmentCanvas {
     imouse: wgpu::Buffer,
     ibpm: wgpu::Buffer,
     icolors: wgpu::Buffer,
+    imouseclick: wgpu::Buffer,
     _itexture: Option<TextureCtx>,
+
+    last_click_pos: (f32, f32),
+    last_click_time: f32,
 
     bind_group0: wgpu::BindGroup,
 
@@ -92,6 +96,13 @@ impl FragmentCanvas {
             label: Some("Fragment canvas: `iColors` buffer"),
             // 4 colors as vec4f (vec4 for alignment, xyz = rgb, w = unused)
             size: (std::mem::size_of::<[f32; 4]>() * 4) as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+
+        let imouseclick = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Fragment canvas: `iMouseClick` buffer"),
+            size: std::mem::size_of::<[f32; 4]>() as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -164,6 +175,17 @@ impl FragmentCanvas {
                 // iColors
                 wgpu::BindGroupLayoutEntry {
                     binding: 5,
+                    visibility: wgpu::ShaderStages::FRAGMENT,
+                    ty: wgpu::BindingType::Buffer {
+                        ty: wgpu::BufferBindingType::Uniform,
+                        has_dynamic_offset: false,
+                        min_binding_size: None,
+                    },
+                    count: None,
+                },
+                // iMouseClick
+                wgpu::BindGroupLayoutEntry {
+                    binding: 8,
                     visibility: wgpu::ShaderStages::FRAGMENT,
                     ty: wgpu::BindingType::Buffer {
                         ty: wgpu::BufferBindingType::Uniform,
@@ -294,6 +316,10 @@ impl FragmentCanvas {
                     binding: 5,
                     resource: icolors.as_entire_binding(),
                 },
+                wgpu::BindGroupEntry {
+                    binding: 8,
+                    resource: imouseclick.as_entire_binding(),
+                },
             ];
 
             if let Some(texture) = &itexture {
@@ -326,7 +352,11 @@ impl FragmentCanvas {
             imouse,
             ibpm,
             icolors,
+            imouseclick,
             _itexture: itexture,
+
+            last_click_pos: (-1.0, -1.0),
+            last_click_time: 0.0,
 
             bind_group0,
 
@@ -382,6 +412,16 @@ impl Component for FragmentCanvas {
             &self.imouse,
             0,
             bytemuck::cast_slice(&[new_pos.0, new_pos.1]),
+        );
+    }
+
+    fn update_mouse_click(&mut self, queue: &wgpu::Queue, pos: (f32, f32), time: f32) {
+        self.last_click_pos = pos;
+        self.last_click_time = time;
+        queue.write_buffer(
+            &self.imouseclick,
+            0,
+            bytemuck::cast_slice(&[pos.0, pos.1, time, 0.0]),
         );
     }
 
