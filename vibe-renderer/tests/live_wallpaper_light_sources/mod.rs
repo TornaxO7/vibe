@@ -36,6 +36,5 @@ fn test() {
         &mut light_sources,
         include_bytes!("./reference.png"),
         "light-sources",
-        0.35,
     );
 }

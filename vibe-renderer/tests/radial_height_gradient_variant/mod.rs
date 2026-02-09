@@ -29,6 +29,5 @@ fn test() {
         &mut radial,
         include_bytes!("./reference.png"),
         "radial-height-gradient",
-        0.9,
     );
 }

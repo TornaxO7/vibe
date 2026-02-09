@@ -1,7 +1,6 @@
+use crate::{Tester, BLUE, RED};
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsFormat};
-
-use crate::{Tester, BLUE, RED};
 
 #[test]
 fn test() {
@@ -26,6 +25,5 @@ fn test() {
         &mut bars,
         include_bytes!("./reference.png"),
         "bar-presence-gradient",
-        0.9,
     );
 }

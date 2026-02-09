@@ -19,10 +19,5 @@ fn test() {
         zoom_factor: 2.,
     });
 
-    tester.evaluate(
-        &mut chessy,
-        include_bytes!("./reference.png"),
-        "chessy",
-        0.9,
-    );
+    tester.evaluate(&mut chessy, include_bytes!("./reference.png"), "chessy");
 }
