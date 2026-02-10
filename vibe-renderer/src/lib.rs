@@ -18,9 +18,11 @@ use xdg::BaseDirectories;
 
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
+/// Simply contains the name of the application.
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
 
-/// A trait which marks a struct as something which can be rendered by the [Renderer].
+/// A trait which marks a struct as something which can be rendered by the [Renderer]
+/// or to be more specific: By the [Renderer::render] method.
 pub trait Renderable {
     /// The renderer will call this function on the renderable object
     /// and it can starts its preparations (for example `pass.set_vertex_buffer` etc.)
@@ -172,10 +174,10 @@ impl Renderer {
         }
     }
 
-    /// Start rendering multiple (or one) [`Renderable`].
+    /// Start rendering multiple (or one) [`Renderable`]s onto `output_texture`.
     pub fn render<'a, 'r, R: Deref<Target: Renderable> + 'r>(
         &self,
-        view: &'a wgpu::TextureView,
+        output_texture: &'a wgpu::TextureView,
         renderables: impl IntoIterator<Item = &'r R>,
     ) {
         let mut encoder = self
@@ -185,7 +187,7 @@ impl Renderer {
         {
             let mut render_pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view,
+                    view: output_texture,
                     resolve_target: None,
                     depth_slice: None,
                     ops: wgpu::Operations {
@@ -204,7 +206,10 @@ impl Renderer {
         self.queue.submit(std::iter::once(encoder.finish()));
     }
 
-    /// Creates the texture of the given [TextureGenerator].
+    /// Renders the given [TextureGenerator] into a new [wgpu::Texture] which gets returned.
+    ///
+    /// See the list of Implementors of [TextureGenerator] to see which kind of textures
+    /// you are able to generate.
     pub fn generate<G: TextureGenerator>(&self, gen: &G) -> wgpu::Texture {
         let device = self.device();
         let queue = self.queue();
