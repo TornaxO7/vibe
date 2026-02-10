@@ -33,15 +33,19 @@ pub type Pixels<N> = NonZero<N>;
 /// It provides methods to update its internal state regarding the current
 /// audio and time for example.
 pub trait Component: Renderable {
+    /// Tells the component the time.
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32);
 
+    /// Tells the component which resolution is now used.
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]);
 
+    /// Tells the component the mouse position. `(x, y)`.
     fn update_mouse_position(&mut self, queue: &wgpu::Queue, new_pos: (f32, f32));
 }
 
 /// An extended version of `Component` which includes methods related to audio.
 pub trait ComponentAudio<F: Fetcher>: Component {
+    /// Tells the component to update its bar values with the given `processor`.
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>);
 }
 
