@@ -204,6 +204,7 @@ impl Renderer {
         self.queue.submit(std::iter::once(encoder.finish()));
     }
 
+    /// Creates the texture of the given [TextureGenerator].
     pub fn generate<G: TextureGenerator>(&self, gen: &G) -> wgpu::Texture {
         let device = self.device();
         let queue = self.queue();
@@ -214,18 +215,22 @@ impl Renderer {
 
 /// Getter functions
 impl Renderer {
+    /// Returns the internal [wgpu::Instance].
     pub fn instance(&self) -> &wgpu::Instance {
         &self.instance
     }
 
+    /// Returns the internal [wgpu::Adapter].
     pub fn adapter(&self) -> &wgpu::Adapter {
         &self.adapter
     }
 
+    /// Returns the internal [wgpu::Device].
     pub fn device(&self) -> &wgpu::Device {
         &self.device
     }
 
+    /// Returns the internal [wgpu::Queue].
     pub fn queue(&self) -> &wgpu::Queue {
         &self.queue
     }
