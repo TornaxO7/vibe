@@ -1,4 +1,6 @@
 //! Some helper utilities which can be used in the whole crate.
+
+/// A simple `wgpu::SamplerDescriptor` with defaults which I think make sense... but probably really useless...
 pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDescriptor {
     label: None,
     address_mode_u: wgpu::AddressMode::MirrorRepeat,
@@ -14,7 +16,11 @@ pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDes
     border_color: None,
 };
 
+/// Basically [wgpu::RenderPipelineDescriptor] but with some attributes set with values which I really often set.
 pub struct SimpleRenderPipelineDescriptor<'a> {
+    /// The label of the pipeline descriptor.
+    ///
+    /// Yes. I want one, so no `None` here >:)
     pub label: &'static str,
     pub layout: Option<&'a wgpu::PipelineLayout>,
     pub vertex: wgpu::VertexState<'a>,
@@ -45,6 +51,11 @@ pub fn simple_pipeline_descriptor(
     }
 }
 
+/// A little helper function which loads the given image into a [wgpu::Texture] and returns it.
+///
+/// Helps you to avoid the boilerplate of
+/// 1. Creating the texture
+/// 2. Copy the data of the [image::DynamicImage] to the [wgpu::Texture]
 pub fn load_img_to_texture(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
