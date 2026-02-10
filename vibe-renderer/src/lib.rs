@@ -81,6 +81,15 @@ impl Default for RendererDescriptor {
 }
 
 /// The main renderer which renders the effects.
+///
+/// # Example
+/// ```
+/// use vibe_renderer::Renderer;
+///
+/// let renderer = Renderer::default();
+///
+/// // go wild!
+/// ```
 #[derive(Debug, Clone)]
 pub struct Renderer {
     instance: wgpu::Instance,
