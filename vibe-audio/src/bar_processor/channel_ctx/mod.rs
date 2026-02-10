@@ -54,10 +54,9 @@ impl ChannelCtx {
         .redistribute(config.bar_distribution);
 
         let unpadded_supporting_points_range = {
-            let amount_supporting_points = data.supporting_points.len();
-
             if let Some(padding) = &config.padding {
                 data = data.apply_padding(padding);
+                let amount_supporting_points = data.supporting_points.len();
 
                 if !data.supporting_points.is_empty() {
                     assert!(data.supporting_points.last().unwrap().x < u16::MAX as usize,
@@ -70,7 +69,7 @@ impl ChannelCtx {
                     PaddingSide::Both => 1..(amount_supporting_points - 1),
                 }
             } else {
-                0..amount_supporting_points
+                0..data.supporting_points.len()
             }
         };
 
