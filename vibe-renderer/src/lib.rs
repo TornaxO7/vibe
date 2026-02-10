@@ -25,6 +25,26 @@ pub trait Renderable {
     /// The renderer will call this function on the renderable object
     /// and it can starts its preparations (for example `pass.set_vertex_buffer` etc.)
     /// and call the draw command (`pass.draw(...)`).
+    ///
+    /// # Example
+    /// ```
+    /// use vibe_renderer::Renderable;
+    ///
+    /// /// Your struct which should create its own pipeline etc.
+    /// struct Triangle {
+    ///     pipeline: wgpu::RenderPipeline,
+    ///     // other things which you need
+    /// }
+    ///
+    /// impl Renderable for Triangle {
+    ///     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
+    ///          // // if you have any bind groups for example
+    ///          // pass.set_bind_group(0, &self.bind_group, &[]);
+    ///          pass.set_pipeline(&self.pipeline);
+    ///          pass.draw(0..4, 0..1);
+    ///     }
+    /// }
+    /// ```
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass);
 }
 
