@@ -71,3 +71,5 @@ impl<F: Fetcher> ComponentAudio<F> for MyComponent {
 ```
 
 4. Go wild!
+
+For more information, take a look at the docs of the traits or just create a new discussion <img src="https://emojis.tornaxo7.de/peepoBucket.png" width="30px"/>.
