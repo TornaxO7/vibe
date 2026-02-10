@@ -19,7 +19,6 @@ use xdg::BaseDirectories;
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
 pub const APP_NAME: &str = env!("CARGO_PKG_NAME");
-// const DISTANCE_MAP_DIR: &str = "distance-maps";
 
 /// A trait which marks a struct as something which can be rendered by the [Renderer].
 pub trait Renderable {
