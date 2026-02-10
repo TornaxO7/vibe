@@ -1,6 +1,6 @@
 //! Some helper utilities which can be used in the whole crate.
 
-/// A simple `wgpu::SamplerDescriptor` with defaults which I think make sense... but probably really useless...
+/// A simple [wgpu::SamplerDescriptor] with defaults which I think make sense... but probably really useless...
 pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDescriptor {
     label: None,
     address_mode_u: wgpu::AddressMode::MirrorRepeat,
@@ -27,6 +27,7 @@ pub struct SimpleRenderPipelineDescriptor<'a> {
     pub fragment: wgpu::FragmentState<'a>,
 }
 
+/// This should be probably be replaced with a [std::convert::From] for [SimpleRenderPipelineDescriptor]...
 pub fn simple_pipeline_descriptor(
     desc: SimpleRenderPipelineDescriptor,
 ) -> wgpu::RenderPipelineDescriptor {
