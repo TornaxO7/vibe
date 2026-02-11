@@ -106,13 +106,28 @@ impl Graph {
             GraphPlacement::Custom { rotation, .. } => rotation,
         };
 
-        let bar_processor = BarProcessor::new(
-            desc.sample_processor,
-            BarProcessorConfig {
-                amount_bars: amount_bars.get(),
-                ..desc.audio_conf.clone()
-            },
-        );
+        let bar_processor = {
+            let padding = match desc.format {
+                GraphFormat::BassTrebleBass => Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Right,
+                    size: vibe_audio::PaddingSize::Auto,
+                }),
+                GraphFormat::TrebleBassTreble => Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Left,
+                    size: vibe_audio::PaddingSize::Auto,
+                }),
+                GraphFormat::BassTreble | GraphFormat::TrebleBass => None,
+            };
+
+            BarProcessor::new(
+                desc.sample_processor,
+                BarProcessorConfig {
+                    amount_bars: amount_bars.get(),
+                    padding,
+                    ..desc.audio_conf.clone()
+                },
+            )
+        };
 
         let total_amount_bars = bar_processor.total_amount_bars();
 

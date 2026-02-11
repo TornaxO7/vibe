@@ -59,7 +59,7 @@ impl ChannelCtx {
                             let first = data.supporting_points[0].x;
                             let second = data.supporting_points[1].x;
 
-                            second - first
+                            (second - first) * 4
                         } else {
                             DEFAULT_PADDING_SIZE
                         }
