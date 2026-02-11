@@ -47,10 +47,6 @@ impl InterpolationCtx {
     pub fn covered_bar_range(&self) -> Range<usize> {
         if self.supporting_points.is_empty() {
             0..0
-        } else if self.supporting_points.len() == 1 {
-            let sp = self.supporting_points.first().unwrap();
-
-            sp.x..(sp.x + 1)
         } else {
             let first = self.supporting_points.first().unwrap();
             let last = self.supporting_points.last().unwrap();
