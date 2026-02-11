@@ -92,7 +92,7 @@ impl ChannelCtx {
             mem,
         };
 
-        assert!(ctx.total_amount_bars() < (u16::MAX as usize),
+        assert!(ctx.total_amount_bars() <= (u16::MAX as usize),
             "The configured amount of bars ({}) and the padding size ({}) exceeds the limit of {} bars (total amount bars: {})", config.amount_bars.get(), padding.as_ref().map(|ctx| ctx.amount_bars()).unwrap_or(0), u16::MAX, ctx.total_amount_bars());
 
         ctx
