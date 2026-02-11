@@ -110,16 +110,6 @@ mod tests {
     use crate::interpolation::InterpolatorDescriptor;
 
     #[test]
-    fn no_points_total_amount_bars() {
-        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
-            supporting_points: vec![].into(),
-            ..Default::default()
-        });
-
-        assert!(ctx.covered_bar_range().is_empty());
-    }
-
-    #[test]
     fn no_points_no_sections() {
         let ctx = InterpolationCtx::new(InterpolatorDescriptor {
             supporting_points: vec![].into(),
@@ -128,6 +118,7 @@ mod tests {
 
         assert!(ctx.supporting_points.is_empty());
         assert!(ctx.sections.is_empty());
+        assert!(ctx.covered_bar_range().is_empty());
     }
 
     #[test]
@@ -141,15 +132,6 @@ mod tests {
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert!(ctx.sections.is_empty());
-    }
-
-    #[test]
-    fn one_point_total_amount_bars() {
-        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
-            supporting_points: vec![SupportingPoint { x: 0, y: 0. }].into(),
-            ..Default::default()
-        });
-
         assert_eq!(ctx.covered_bar_range(), 0..1);
     }
 
@@ -167,6 +149,7 @@ mod tests {
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert!(ctx.sections.is_empty());
+        assert_eq!(ctx.covered_bar_range(), 0..2);
     }
 
     #[test]
@@ -189,20 +172,7 @@ mod tests {
                 amount: 4
             }]
         );
-    }
-
-    #[test]
-    fn two_points_total_amount_bars() {
-        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
-            supporting_points: vec![
-                SupportingPoint { x: 0, y: 0. },
-                SupportingPoint { x: 1, y: 0. },
-            ]
-            .into(),
-            ..Default::default()
-        });
-
-        assert_eq!(ctx.covered_bar_range(), 0..2);
+        assert_eq!(ctx.covered_bar_range(), 0..6);
     }
 
     #[test]
@@ -226,6 +196,7 @@ mod tests {
                 amount: 1
             }]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..4);
     }
 
     #[test]
@@ -249,6 +220,7 @@ mod tests {
                 amount: 1
             }]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..4);
     }
 
     #[test]
@@ -278,6 +250,7 @@ mod tests {
                 }
             ]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..5);
     }
 
     #[test]
@@ -306,20 +279,8 @@ mod tests {
                 }
             ]
         );
-    }
-
-    #[test]
-    fn two_points_with_section_and_total_amount_bars() {
-        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
-            supporting_points: vec![
-                SupportingPoint { x: 0, y: 0. },
-                SupportingPoint { x: 5, y: 0. },
-            ]
-            .into(),
-            ..Default::default()
-        });
-
-        assert_eq!(ctx.covered_bar_range(), 0..6);
+        assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
+        assert_eq!(ctx.covered_bar_range(), 0..11);
     }
 
     #[test]
