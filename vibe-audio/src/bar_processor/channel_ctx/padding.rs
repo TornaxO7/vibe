@@ -9,9 +9,9 @@ pub struct PaddingCtx {
 impl PaddingCtx {
     pub fn new(size: usize, side: PaddingSide) -> Self {
         let factors = {
-            let mut factors = vec![0f32; size as usize].into_boxed_slice();
+            let mut factors = vec![0f32; size].into_boxed_slice();
 
-            for step in 0..size as usize {
+            for step in 0..size {
                 factors[step] = compute_factor(step as f32 / size as f32);
             }
 
@@ -70,32 +70,6 @@ impl PaddingCtx {
         }
     }
 }
-
-// impl From<&PaddingConfig> for PaddingCtx {
-//     fn from(conf: &PaddingConfig) -> Self {
-//         let size = match conf.size {
-//             PaddingSize::Auto => {
-//                 todo!()
-//             }
-//             PaddingSize::Custom(size) => size.get(),
-//         };
-
-//         let factors = {
-//             let mut factors = vec![0f32; size as usize].into_boxed_slice();
-
-//             for step in 0..size as usize {
-//                 factors[step] = compute_factor(step as f32 / size as f32);
-//             }
-
-//             factors
-//         };
-
-//         PaddingCtx {
-//             side: conf.side.clone(),
-//             factors,
-//         }
-//     }
-// }
 
 fn compute_factor(x: f32) -> f32 {
     assert!((0. ..=1.).contains(&x));

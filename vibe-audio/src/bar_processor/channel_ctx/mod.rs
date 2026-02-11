@@ -69,7 +69,7 @@ impl ChannelCtx {
                 PaddingSize::Custom(size) => size.get().into(),
             };
 
-            let ctx = PaddingCtx::new(size as usize, conf.side.clone());
+            let ctx = PaddingCtx::new(size, conf.side.clone());
             ctx.adjust_supporting_points(&mut data.supporting_points);
             ctx
         });
