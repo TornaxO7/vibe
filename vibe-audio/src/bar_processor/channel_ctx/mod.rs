@@ -174,7 +174,9 @@ impl ChannelCtx {
     pub fn interpolate(&mut self, bar_values: &mut [f32]) {
         self.interpolator.interpolate(bar_values);
 
-        self.padding.as_ref().map(|ctx| ctx.apply(bar_values));
+        if let Some(ctx) = &self.padding {
+            ctx.apply(bar_values);
+        }
     }
 
     pub fn total_amount_bars(&self) -> usize {

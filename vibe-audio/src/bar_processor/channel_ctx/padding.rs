@@ -30,12 +30,7 @@ impl PaddingCtx {
         let padding_offset = self.padding_offset();
 
         if self.side.needs_left_padding() {
-            let reference_y = bar_values
-                .iter()
-                .skip(padding_offset)
-                .next()
-                .cloned()
-                .unwrap();
+            let reference_y = bar_values.get(padding_offset).cloned().unwrap();
 
             for (factor, bar_value) in self.factors.iter().cloned().zip(bar_values.iter_mut()) {
                 *bar_value = factor * reference_y;
@@ -46,8 +41,7 @@ impl PaddingCtx {
             let reference_y = bar_values
                 .iter()
                 .rev()
-                .skip(padding_offset)
-                .next()
+                .nth(padding_offset)
                 .cloned()
                 .unwrap();
 
@@ -87,7 +81,7 @@ impl From<&PaddingConfig> for PaddingCtx {
 }
 
 fn compute_factor(x: f32) -> f32 {
-    assert!(0. <= x && x <= 1.);
+    assert!((0. ..=1.).contains(&x));
 
     x.powf(2.)
 }
