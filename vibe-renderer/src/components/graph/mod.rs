@@ -110,11 +110,6 @@ impl Graph {
             desc.sample_processor,
             BarProcessorConfig {
                 amount_bars: amount_bars.get(),
-                padding: Some(vibe_audio::PaddingConfig {
-                    side: vibe_audio::PaddingSide::Both,
-                    // size: vibe_audio::PaddingSize::Custom(NonZero::new(100).unwrap()),
-                    size: vibe_audio::PaddingSize::Auto,
-                }),
                 ..desc.audio_conf.clone()
             },
         );
@@ -340,13 +335,13 @@ impl Component for Graph {
         let queue = renderer.queue();
         let device = renderer.device();
 
-        let amount_bars = match self.amount_bars {
+        let canvas_width = match self.amount_bars {
             GraphAmountBars::ScreenWidth => NonZero::new(new_resolution[0] as u16).unwrap(),
             GraphAmountBars::ScreenHeight => NonZero::new(new_resolution[1] as u16).unwrap(),
             GraphAmountBars::Custom(amount) => amount,
         };
 
-        self.bar_processor.set_amount_bars(amount_bars);
+        self.bar_processor.set_amount_bars(canvas_width);
         let total_amount_bars = self.bar_processor.total_amount_bars();
 
         // update `right` vector
@@ -356,7 +351,7 @@ impl Component for Graph {
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
-            let mut right = total_amount_bars as f32 * right_dir;
+            let mut right = canvas_width.get() as f32 * right_dir;
 
             let renders_two_audio_channel = self.right.is_some();
             if renders_two_audio_channel {
