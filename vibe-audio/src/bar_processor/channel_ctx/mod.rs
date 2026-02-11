@@ -1,14 +1,16 @@
 mod fft_out_metadata;
+mod padding;
 
 use crate::{
-    bar_processor::channel_ctx::fft_out_metadata::{FftOutMetadata, FftOutMetadataDescriptor},
     interpolation::{
         CubicSplineInterpolation, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
         LinearInterpolation, NothingInterpolation,
     },
-    BarProcessorConfig, InterpolationVariant, PaddingSide,
+    BarProcessorConfig, InterpolationVariant,
 };
 use cpal::SampleRate;
+use fft_out_metadata::{FftOutMetadata, FftOutMetadataDescriptor};
+use padding::PaddingCtx;
 use realfft::num_complex::Complex32;
 use std::ops::Range;
 
@@ -21,12 +23,7 @@ pub struct ChannelCtx {
     // Contains the index range for each supporting point within the fft output for each supporting point
     fft_out_ranges: Box<[Range<usize>]>,
 
-    // Stores the range of the supporting points within an interpolator
-    // which are _not_ added for padding.
-    //
-    // Usually it's just skipping either the first or last (or even both) supporting points
-    // depending on the padding policy
-    unpadded_supporting_points_range: Range<usize>,
+    padding: Option<PaddingCtx>,
 
     normalize_factor: f32,
     sensitivity: f32,
@@ -53,25 +50,11 @@ impl ChannelCtx {
         .fillup(config.amount_bars)
         .redistribute(config.bar_distribution);
 
-        let unpadded_supporting_points_range = {
-            if let Some(padding) = &config.padding {
-                data = data.apply_padding(padding);
-                let amount_supporting_points = data.supporting_points.len();
-
-                if !data.supporting_points.is_empty() {
-                    assert!(data.supporting_points.last().unwrap().x < u16::MAX as usize,
-                    "Currently the internals are only guaranteed to work if the total amount of bars doesn't exceed u16::MAX");
-                }
-
-                match padding.side {
-                    PaddingSide::Left => 1..amount_supporting_points,
-                    PaddingSide::Right => 0..(amount_supporting_points - 1),
-                    PaddingSide::Both => 1..(amount_supporting_points - 1),
-                }
-            } else {
-                0..data.supporting_points.len()
-            }
-        };
+        let padding = config.padding.as_ref().map(|conf| {
+            let ctx = PaddingCtx::from(conf);
+            ctx.adjust_supporting_points(&mut data.supporting_points);
+            ctx
+        });
 
         let FftOutMetadata {
             supporting_points,
@@ -88,17 +71,17 @@ impl ChannelCtx {
             }
         };
 
-        let total_amount_bars = interpolator.total_amount_bars();
+        let covered_bar_range = interpolator.covered_bar_range();
 
-        let peak = vec![0f32; total_amount_bars].into_boxed_slice();
+        let peak = vec![0f32; covered_bar_range.len()].into_boxed_slice();
         let fall = peak.clone();
         let mem = peak.clone();
         let prev = peak.clone();
 
-        Self {
+        let ctx = Self {
             interpolator,
             fft_out_ranges: supporting_points_fft_ranges,
-            unpadded_supporting_points_range,
+            padding: padding.clone(),
 
             normalize_factor: INIT_NORMALIZATION_FACTOR,
             sensitivity: config.sensitivity,
@@ -107,7 +90,12 @@ impl ChannelCtx {
             peak,
             fall,
             mem,
-        }
+        };
+
+        assert!(ctx.total_amount_bars() <= (u16::MAX as usize),
+            "The configured amount of bars ({}) and the padding size ({}) exceeds the limit of {} bars (total amount bars: {})", config.amount_bars.get(), padding.as_ref().map(|ctx| ctx.amount_bars()).unwrap_or(0), u16::MAX, ctx.total_amount_bars());
+
+        ctx
     }
 }
 
@@ -121,7 +109,8 @@ impl ChannelCtx {
 
         for (bar_idx, (supporting_point, fft_range)) in self
             .interpolator
-            .supporting_points_mut(self.unpadded_supporting_points_range.clone())
+            .supporting_points_mut()
+            .iter_mut()
             .zip(self.fft_out_ranges.iter())
             .enumerate()
         {
@@ -184,9 +173,21 @@ impl ChannelCtx {
 
     pub fn interpolate(&mut self, bar_values: &mut [f32]) {
         self.interpolator.interpolate(bar_values);
+
+        if let Some(ctx) = &self.padding {
+            ctx.apply(bar_values);
+        }
     }
 
     pub fn total_amount_bars(&self) -> usize {
-        self.interpolator.total_amount_bars()
+        let unpadded_amount = self.interpolator.covered_bar_range().len();
+
+        let padding_size = self
+            .padding
+            .as_ref()
+            .map(|ctx| ctx.amount_bars())
+            .unwrap_or(0);
+
+        unpadded_amount + padding_size
     }
 }

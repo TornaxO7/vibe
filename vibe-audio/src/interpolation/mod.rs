@@ -5,7 +5,7 @@ mod linear;
 mod nothing;
 
 use context::InterpolationCtx;
-use std::{ops::Range, slice::IterMut};
+use std::ops::Range;
 
 pub use cubic_spline::CubicSplineInterpolation;
 pub use linear::LinearInterpolation;
@@ -19,12 +19,12 @@ pub trait Interpolater {
 
     fn get_ctx_mut(&mut self) -> &mut InterpolationCtx;
 
-    fn total_amount_bars(&self) -> usize {
-        self.get_ctx().total_amount_bars()
+    fn covered_bar_range(&self) -> Range<usize> {
+        self.get_ctx().covered_bar_range()
     }
 
-    fn supporting_points_mut(&mut self, range: Range<usize>) -> IterMut<'_, SupportingPoint> {
-        self.get_ctx_mut().supporting_points_mut(range)
+    fn supporting_points_mut(&mut self) -> &mut [SupportingPoint] {
+        self.get_ctx_mut().supporting_points_mut()
     }
 }
 
