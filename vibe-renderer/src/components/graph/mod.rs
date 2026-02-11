@@ -112,8 +112,8 @@ impl Graph {
                 amount_bars: amount_bars.get(),
                 padding: Some(vibe_audio::PaddingConfig {
                     side: vibe_audio::PaddingSide::Both,
-                    size: vibe_audio::PaddingSize::Custom(NonZero::new(100).unwrap()),
-                    // size: vibe_audio::PaddingSize::Auto,
+                    // size: vibe_audio::PaddingSize::Custom(NonZero::new(100).unwrap()),
+                    size: vibe_audio::PaddingSize::Auto,
                 }),
                 ..desc.audio_conf.clone()
             },
@@ -155,6 +155,7 @@ impl Graph {
                 up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH
             };
 
+            // those values should be override anyhow due to the first update_resolution calls
             let vertex_params = VertexParams {
                 bottom_left_corner: bottom_left_corner.into(),
                 right: right.into(),
