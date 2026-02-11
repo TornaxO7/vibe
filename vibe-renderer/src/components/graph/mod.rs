@@ -110,6 +110,11 @@ impl Graph {
             desc.sample_processor,
             BarProcessorConfig {
                 amount_bars: amount_bars.get(),
+                padding: Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Both,
+                    size: vibe_audio::PaddingSize::Custom(NonZero::new(100).unwrap()),
+                    // size: vibe_audio::PaddingSize::Auto,
+                }),
                 ..desc.audio_conf.clone()
             },
         );

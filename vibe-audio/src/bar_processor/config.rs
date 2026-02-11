@@ -56,8 +56,7 @@ impl PaddingSide {
 
 #[derive(Debug, Clone)]
 pub enum PaddingSize {
-    // TODO: Add auto detection
-    // Auto,
+    Auto,
     // unit: "Bars"
     Custom(NonZero<u16>),
 }

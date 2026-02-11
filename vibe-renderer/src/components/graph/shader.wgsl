@@ -68,7 +68,7 @@ fn treble_bass(in: Input) -> Output {
 fn bass_treble_inner(in: Input) -> Output {
     // move further to the right for the second block.
     // Note: `* 0.98` due to floating point issues. Move the right block a bit to the left block so that there will be no gap.
-    var pos = vp.bottom_left_corner + (vp.right * 0.98) * f32(in.instance_idx);
+    var pos = vp.bottom_left_corner + vp.right * f32(in.instance_idx);
     var rel_pos = vec2f(0.);
 
     let is_top = in.vertex_idx <= 1;

@@ -1,4 +1,4 @@
-use crate::{interpolation::SupportingPoint, PaddingConfig, PaddingSide, PaddingSize};
+use crate::{interpolation::SupportingPoint, PaddingSide};
 
 #[derive(Debug, Clone)]
 pub struct PaddingCtx {
@@ -7,6 +7,20 @@ pub struct PaddingCtx {
 }
 
 impl PaddingCtx {
+    pub fn new(size: usize, side: PaddingSide) -> Self {
+        let factors = {
+            let mut factors = vec![0f32; size as usize].into_boxed_slice();
+
+            for step in 0..size as usize {
+                factors[step] = compute_factor(step as f32 / size as f32);
+            }
+
+            factors
+        };
+
+        PaddingCtx { side, factors }
+    }
+
     /// Returns the amount of bars which it additional creates
     pub fn amount_bars(&self) -> usize {
         let factor = self.side.amount_padding_sides();
@@ -57,28 +71,31 @@ impl PaddingCtx {
     }
 }
 
-impl From<&PaddingConfig> for PaddingCtx {
-    fn from(conf: &PaddingConfig) -> Self {
-        let size = match conf.size {
-            PaddingSize::Custom(size) => size.get(),
-        };
+// impl From<&PaddingConfig> for PaddingCtx {
+//     fn from(conf: &PaddingConfig) -> Self {
+//         let size = match conf.size {
+//             PaddingSize::Auto => {
+//                 todo!()
+//             }
+//             PaddingSize::Custom(size) => size.get(),
+//         };
 
-        let factors = {
-            let mut factors = vec![0f32; size as usize].into_boxed_slice();
+//         let factors = {
+//             let mut factors = vec![0f32; size as usize].into_boxed_slice();
 
-            for step in 0..size as usize {
-                factors[step] = compute_factor(step as f32 / size as f32);
-            }
+//             for step in 0..size as usize {
+//                 factors[step] = compute_factor(step as f32 / size as f32);
+//             }
 
-            factors
-        };
+//             factors
+//         };
 
-        PaddingCtx {
-            side: conf.side.clone(),
-            factors,
-        }
-    }
-}
+//         PaddingCtx {
+//             side: conf.side.clone(),
+//             factors,
+//         }
+//     }
+// }
 
 fn compute_factor(x: f32) -> f32 {
     assert!((0. ..=1.).contains(&x));
