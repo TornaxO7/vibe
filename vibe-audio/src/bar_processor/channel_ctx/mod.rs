@@ -197,6 +197,8 @@ impl ChannelCtx {
         }
     }
 
+    /// Returns the total amount of bars which are going to be rendered which includes
+    /// the configured amount of bars _and_ the amount of padded bars.
     pub fn total_amount_bars(&self) -> usize {
         let unpadded_amount = self.interpolator.covered_bar_range().len();
 
@@ -207,5 +209,69 @@ impl ChannelCtx {
             .unwrap_or(0);
 
         unpadded_amount + padding_size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod total_amount_bars {
+        use crate::PaddingConfig;
+
+        use super::*;
+        use std::num::NonZero;
+
+        const DUMMY_FFT_SIZE: usize = 2048;
+
+        #[test]
+        fn one_bar_no_padding() {
+            let ctx = ChannelCtx::new(
+                &BarProcessorConfig {
+                    amount_bars: NonZero::new(1).unwrap(),
+                    ..Default::default()
+                },
+                crate::DEFAULT_SAMPLE_RATE,
+                DUMMY_FFT_SIZE,
+            );
+
+            assert_eq!(ctx.total_amount_bars(), 1);
+        }
+
+        #[test]
+        fn one_bar_with_oneside_padding() {
+            let ctx = ChannelCtx::new(
+                &BarProcessorConfig {
+                    amount_bars: NonZero::new(1).unwrap(),
+                    padding: Some(PaddingConfig {
+                        side: crate::PaddingSide::Left,
+                        size: PaddingSize::Custom(NonZero::new(10).unwrap()),
+                    }),
+                    ..Default::default()
+                },
+                crate::DEFAULT_SAMPLE_RATE,
+                DUMMY_FFT_SIZE,
+            );
+
+            assert_eq!(ctx.total_amount_bars(), 11);
+        }
+
+        #[test]
+        fn one_bar_with_twoside_padding() {
+            let ctx = ChannelCtx::new(
+                &BarProcessorConfig {
+                    amount_bars: NonZero::new(1).unwrap(),
+                    padding: Some(PaddingConfig {
+                        side: crate::PaddingSide::Both,
+                        size: PaddingSize::Custom(NonZero::new(10).unwrap()),
+                    }),
+                    ..Default::default()
+                },
+                crate::DEFAULT_SAMPLE_RATE,
+                DUMMY_FFT_SIZE,
+            );
+
+            assert_eq!(ctx.total_amount_bars(), 21);
+        }
     }
 }
