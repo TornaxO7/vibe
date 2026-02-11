@@ -37,6 +37,23 @@ pub enum PaddingSide {
     Both,
 }
 
+impl PaddingSide {
+    pub fn needs_left_padding(&self) -> bool {
+        [Self::Left, Self::Both].contains(self)
+    }
+
+    pub fn needs_right_padding(&self) -> bool {
+        [Self::Right, Self::Both].contains(self)
+    }
+
+    pub fn amount_padding_sides(&self) -> u8 {
+        match self {
+            PaddingSide::Left | PaddingSide::Right => 1,
+            PaddingSide::Both => 2,
+        }
+    }
+}
+
 #[derive(Debug, Clone)]
 pub enum PaddingSize {
     // TODO: Add auto detection

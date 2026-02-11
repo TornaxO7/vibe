@@ -1,5 +1,5 @@
 use super::{InterpolationSection, SupportingPoint};
-use std::{ops::Range, slice::IterMut};
+use std::ops::Range;
 
 #[derive(Clone)]
 pub struct InterpolationCtx {
@@ -11,15 +11,6 @@ pub struct InterpolationCtx {
 /// Constructing stuff
 impl InterpolationCtx {
     pub fn new(desc: super::InterpolatorDescriptor) -> Self {
-        if let Some(sp) = desc.supporting_points.first() {
-            // For now, just panic
-            debug_assert!(
-                sp.x == 0,
-                "First supporting point must start at 0 but first supporting point starts at '{}'",
-                sp.x
-            );
-        }
-
         let supporting_points = desc.supporting_points;
 
         let sections = {
@@ -53,22 +44,24 @@ impl InterpolationCtx {
         ctx
     }
 
-    pub fn total_amount_bars(&self) -> usize {
+    pub fn covered_bar_range(&self) -> Range<usize> {
         if self.supporting_points.is_empty() {
-            0
+            0..0
         } else if self.supporting_points.len() == 1 {
-            1
+            let sp = self.supporting_points.first().unwrap();
+
+            sp.x..(sp.x + 1)
         } else {
             let first = self.supporting_points.first().unwrap();
             let last = self.supporting_points.last().unwrap();
 
-            (last.x - first.x) + 1
+            first.x..(last.x + 1)
         }
     }
 
     /// Returns all supporting points excluding the padded ones.
-    pub fn supporting_points_mut(&mut self, range: Range<usize>) -> IterMut<'_, SupportingPoint> {
-        self.supporting_points[range].iter_mut()
+    pub fn supporting_points_mut(&mut self) -> &mut [SupportingPoint] {
+        &mut self.supporting_points
     }
 }
 
@@ -121,24 +114,13 @@ mod tests {
     use crate::interpolation::InterpolatorDescriptor;
 
     #[test]
-    #[should_panic]
-    fn first_support_point_not_starting_at_0() {
-        let supporting_points = vec![SupportingPoint { x: 1, y: 0. }];
-
-        InterpolationCtx::new(InterpolatorDescriptor {
-            supporting_points: supporting_points.into(),
-            ..Default::default()
-        });
-    }
-
-    #[test]
     fn no_points_total_amount_bars() {
         let ctx = InterpolationCtx::new(InterpolatorDescriptor {
             supporting_points: vec![].into(),
             ..Default::default()
         });
 
-        assert_eq!(ctx.total_amount_bars(), 0);
+        assert!(ctx.covered_bar_range().is_empty());
     }
 
     #[test]
@@ -172,7 +154,7 @@ mod tests {
             ..Default::default()
         });
 
-        assert_eq!(ctx.total_amount_bars(), 1);
+        assert_eq!(ctx.covered_bar_range(), 0..1);
     }
 
     #[test]
@@ -224,7 +206,7 @@ mod tests {
             ..Default::default()
         });
 
-        assert_eq!(ctx.total_amount_bars(), 2);
+        assert_eq!(ctx.covered_bar_range(), 0..2);
     }
 
     #[test]
@@ -341,7 +323,7 @@ mod tests {
             ..Default::default()
         });
 
-        assert_eq!(ctx.total_amount_bars(), 6);
+        assert_eq!(ctx.covered_bar_range(), 0..6);
     }
 
     #[test]

@@ -1,6 +1,6 @@
 use crate::{
-    bar_processor::config::BarDistribution, interpolation::SupportingPoint, PaddingConfig,
-    PaddingSide, PaddingSize, MAX_HUMAN_FREQUENCY, MIN_HUMAN_FREQUENCY,
+    bar_processor::config::BarDistribution, interpolation::SupportingPoint, MAX_HUMAN_FREQUENCY,
+    MIN_HUMAN_FREQUENCY,
 };
 use cpal::SampleRate;
 use std::{num::NonZero, ops::Range};
@@ -129,46 +129,6 @@ impl FftOutMetadata {
             BarDistribution::Natural => {}
         }
 
-        self
-    }
-
-    pub fn apply_padding(mut self, padding: &PaddingConfig) -> Self {
-        let mut supporting_points = self.supporting_points.to_vec();
-
-        if !supporting_points.is_empty() {
-            let padding_size: usize = match padding.size {
-                PaddingSize::Custom(amount) => amount.get() as usize,
-            };
-
-            let requires_left_padding =
-                [PaddingSide::Left, PaddingSide::Both].contains(&padding.side);
-
-            if requires_left_padding {
-                let mut new_supporting_points = Vec::with_capacity(supporting_points.len() + 1);
-                new_supporting_points.push(SupportingPoint { x: 0, y: 0. });
-
-                for mut sp in supporting_points {
-                    sp.x += padding_size;
-                    new_supporting_points.push(sp);
-                }
-
-                supporting_points = new_supporting_points;
-            }
-
-            let requires_right_padding =
-                [PaddingSide::Both, PaddingSide::Right].contains(&padding.side);
-
-            if requires_right_padding {
-                let x = match supporting_points.last() {
-                    Some(last) => last.x + padding_size,
-                    None => padding_size,
-                };
-
-                supporting_points.push(SupportingPoint { x, y: 0. });
-            }
-        }
-
-        self.supporting_points = supporting_points.into_boxed_slice();
         self
     }
 
