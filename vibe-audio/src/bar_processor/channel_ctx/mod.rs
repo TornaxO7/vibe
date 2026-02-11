@@ -6,7 +6,7 @@ use crate::{
         CubicSplineInterpolation, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
         LinearInterpolation, NothingInterpolation,
     },
-    BarProcessorConfig, InterpolationVariant,
+    BarProcessorConfig, InterpolationVariant, PaddingSize,
 };
 use cpal::SampleRate;
 use fft_out_metadata::{FftOutMetadata, FftOutMetadataDescriptor};
@@ -15,6 +15,7 @@ use realfft::num_complex::Complex32;
 use std::ops::Range;
 
 const INIT_NORMALIZATION_FACTOR: f32 = 1.;
+const DEFAULT_PADDING_SIZE: usize = 5;
 
 /// Contains every additional information for a channel to be processed.
 pub struct ChannelCtx {
@@ -51,7 +52,24 @@ impl ChannelCtx {
         .redistribute(config.bar_distribution);
 
         let padding = config.padding.as_ref().map(|conf| {
-            let ctx = PaddingCtx::from(conf);
+            let size = match conf.size {
+                PaddingSize::Auto => match config.bar_distribution {
+                    crate::BarDistribution::Uniform => {
+                        if data.supporting_points.len() > 1 {
+                            let first = data.supporting_points[0].x;
+                            let second = data.supporting_points[1].x;
+
+                            (second - first) * 4
+                        } else {
+                            DEFAULT_PADDING_SIZE
+                        }
+                    }
+                    crate::BarDistribution::Natural => DEFAULT_PADDING_SIZE,
+                },
+                PaddingSize::Custom(size) => size.get().into(),
+            };
+
+            let ctx = PaddingCtx::new(size, conf.side.clone());
             ctx.adjust_supporting_points(&mut data.supporting_points);
             ctx
         });
@@ -179,6 +197,8 @@ impl ChannelCtx {
         }
     }
 
+    /// Returns the total amount of bars which are going to be rendered which includes
+    /// the configured amount of bars _and_ the amount of padded bars.
     pub fn total_amount_bars(&self) -> usize {
         let unpadded_amount = self.interpolator.covered_bar_range().len();
 
@@ -189,5 +209,69 @@ impl ChannelCtx {
             .unwrap_or(0);
 
         unpadded_amount + padding_size
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    mod total_amount_bars {
+        use crate::PaddingConfig;
+
+        use super::*;
+        use std::num::NonZero;
+
+        const DUMMY_FFT_SIZE: usize = 2048;
+
+        #[test]
+        fn one_bar_no_padding() {
+            let ctx = ChannelCtx::new(
+                &BarProcessorConfig {
+                    amount_bars: NonZero::new(1).unwrap(),
+                    ..Default::default()
+                },
+                crate::DEFAULT_SAMPLE_RATE,
+                DUMMY_FFT_SIZE,
+            );
+
+            assert_eq!(ctx.total_amount_bars(), 1);
+        }
+
+        #[test]
+        fn one_bar_with_oneside_padding() {
+            let ctx = ChannelCtx::new(
+                &BarProcessorConfig {
+                    amount_bars: NonZero::new(1).unwrap(),
+                    padding: Some(PaddingConfig {
+                        side: crate::PaddingSide::Left,
+                        size: PaddingSize::Custom(NonZero::new(10).unwrap()),
+                    }),
+                    ..Default::default()
+                },
+                crate::DEFAULT_SAMPLE_RATE,
+                DUMMY_FFT_SIZE,
+            );
+
+            assert_eq!(ctx.total_amount_bars(), 11);
+        }
+
+        #[test]
+        fn one_bar_with_twoside_padding() {
+            let ctx = ChannelCtx::new(
+                &BarProcessorConfig {
+                    amount_bars: NonZero::new(1).unwrap(),
+                    padding: Some(PaddingConfig {
+                        side: crate::PaddingSide::Both,
+                        size: PaddingSize::Custom(NonZero::new(10).unwrap()),
+                    }),
+                    ..Default::default()
+                },
+                crate::DEFAULT_SAMPLE_RATE,
+                DUMMY_FFT_SIZE,
+            );
+
+            assert_eq!(ctx.total_amount_bars(), 21);
+        }
     }
 }

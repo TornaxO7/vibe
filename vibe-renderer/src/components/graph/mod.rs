@@ -106,13 +106,28 @@ impl Graph {
             GraphPlacement::Custom { rotation, .. } => rotation,
         };
 
-        let bar_processor = BarProcessor::new(
-            desc.sample_processor,
-            BarProcessorConfig {
-                amount_bars: amount_bars.get(),
-                ..desc.audio_conf.clone()
-            },
-        );
+        let bar_processor = {
+            let padding = match desc.format {
+                GraphFormat::BassTrebleBass => Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Right,
+                    size: vibe_audio::PaddingSize::Auto,
+                }),
+                GraphFormat::TrebleBassTreble => Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Left,
+                    size: vibe_audio::PaddingSize::Auto,
+                }),
+                GraphFormat::BassTreble | GraphFormat::TrebleBass => None,
+            };
+
+            BarProcessor::new(
+                desc.sample_processor,
+                BarProcessorConfig {
+                    amount_bars: amount_bars.get(),
+                    padding,
+                    ..desc.audio_conf.clone()
+                },
+            )
+        };
 
         let total_amount_bars = bar_processor.total_amount_bars();
 
@@ -150,6 +165,7 @@ impl Graph {
                 up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH
             };
 
+            // those values should be override anyhow due to the first update_resolution calls
             let vertex_params = VertexParams {
                 bottom_left_corner: bottom_left_corner.into(),
                 right: right.into(),
@@ -334,13 +350,13 @@ impl Component for Graph {
         let queue = renderer.queue();
         let device = renderer.device();
 
-        let amount_bars = match self.amount_bars {
+        let canvas_width = match self.amount_bars {
             GraphAmountBars::ScreenWidth => NonZero::new(new_resolution[0] as u16).unwrap(),
             GraphAmountBars::ScreenHeight => NonZero::new(new_resolution[1] as u16).unwrap(),
             GraphAmountBars::Custom(amount) => amount,
         };
 
-        self.bar_processor.set_amount_bars(amount_bars);
+        self.bar_processor.set_amount_bars(canvas_width);
         let total_amount_bars = self.bar_processor.total_amount_bars();
 
         // update `right` vector
@@ -350,7 +366,7 @@ impl Component for Graph {
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
-            let mut right = total_amount_bars as f32 * right_dir;
+            let mut right = canvas_width.get() as f32 * right_dir;
 
             let renders_two_audio_channel = self.right.is_some();
             if renders_two_audio_channel {
