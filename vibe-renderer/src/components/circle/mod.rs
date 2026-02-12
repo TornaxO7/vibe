@@ -1,10 +1,10 @@
 mod descriptor;
 
 pub use descriptor::*;
-use vibe_audio::fetcher::{Fetcher, SystemAudioFetcher};
+use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 
 use super::{Component, Mat2x2, Rgba, Vec2f};
-use crate::{util::SimpleRenderPipelineDescriptor, Renderable};
+use crate::{components::ComponentAudio, util::SimpleRenderPipelineDescriptor, Renderable};
 use cgmath::Matrix2;
 use wgpu::{include_wgsl, util::DeviceExt};
 
@@ -45,6 +45,7 @@ impl Circle {
         let device = desc.renderer.device();
         let bar_processor =
             vibe_audio::BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let data = {
             let (spike_sensitivity, color) = match &desc.variant {
@@ -64,8 +65,7 @@ impl Circle {
             Data {
                 radius: desc.radius,
                 spike_sensitivity,
-                freq_radiant_step: std::f32::consts::PI
-                    / (u16::from(desc.audio_conf.amount_bars) as f32 + 0.99),
+                freq_radiant_step: std::f32::consts::PI / (total_amount_bars as f32 + 0.99),
                 resolution: Resolution::default(),
                 position_offset,
                 color,
@@ -82,8 +82,7 @@ impl Circle {
 
         let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Circle: `freqs` buffer"),
-            size: (std::mem::size_of::<f32>() * desc.audio_conf.amount_bars.get() as usize)
-                as wgpu::BufferAddress,
+            size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
@@ -155,17 +154,15 @@ impl Renderable for Circle {
     }
 }
 
-impl Component for Circle {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Circle {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(&self.freq_buffer, 0, bytemuck::cast_slice(&bar_values[0]));
     }
+}
 
+impl Component for Circle {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {

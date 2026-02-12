@@ -11,13 +11,13 @@ use smithay_client_toolkit::{
 };
 use tracing::error;
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
-use vibe_renderer::{components::Component, Renderer};
+use vibe_renderer::{ComponentAudio, Renderer};
 use wayland_client::QueueHandle;
 use wgpu::{PresentMode, Surface, SurfaceConfiguration};
 
 /// Contains every relevant information for an output.
 pub struct OutputCtx {
-    pub components: Vec<Box<dyn Component>>,
+    pub components: Vec<Box<dyn ComponentAudio<SystemAudioFetcher>>>,
 
     // don't know if this is required, but better drop `surface` first before
     // `layer_surface`
@@ -50,7 +50,7 @@ impl OutputCtx {
             let mut components = Vec::with_capacity(config.components.len());
 
             for comp_conf in config.components {
-                let component: Box<dyn Component> = comp_conf
+                let component = comp_conf
                     .create_component(renderer, sample_processor, surface_config.format)
                     .unwrap_or_else(|msg| {
                         error!("{}", msg);

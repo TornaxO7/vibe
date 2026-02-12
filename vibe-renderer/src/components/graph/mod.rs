@@ -3,13 +3,10 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Rgba, Vec2f};
-use crate::{Renderable, Renderer};
+use crate::{components::ComponentAudio, Renderable, Renderer};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, BarProcessorConfig,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// Each graph is put inside a box with 4 vertices.
@@ -109,13 +106,30 @@ impl Graph {
             GraphPlacement::Custom { rotation, .. } => rotation,
         };
 
-        let bar_processor = BarProcessor::new(
-            desc.sample_processor,
-            BarProcessorConfig {
-                amount_bars: amount_bars.get(),
-                ..desc.audio_conf.clone()
-            },
-        );
+        let bar_processor = {
+            let padding = match desc.format {
+                GraphFormat::BassTrebleBass => Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Right,
+                    size: vibe_audio::PaddingSize::Auto,
+                }),
+                GraphFormat::TrebleBassTreble => Some(vibe_audio::PaddingConfig {
+                    side: vibe_audio::PaddingSide::Left,
+                    size: vibe_audio::PaddingSize::Auto,
+                }),
+                GraphFormat::BassTreble | GraphFormat::TrebleBass => None,
+            };
+
+            BarProcessor::new(
+                desc.sample_processor,
+                BarProcessorConfig {
+                    amount_bars: amount_bars.get(),
+                    padding,
+                    ..desc.audio_conf.clone()
+                },
+            )
+        };
+
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let vertex_params_buffer = {
             let bottom_left_corner = match desc.placement {
@@ -151,6 +165,7 @@ impl Graph {
                 up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH
             };
 
+            // those values should be override anyhow due to the first update_resolution calls
             let vertex_params = VertexParams {
                 bottom_left_corner: bottom_left_corner.into(),
                 right: right.into(),
@@ -189,8 +204,7 @@ impl Graph {
         let left = {
             let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Graph: Left freqs buffer"),
-                size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
-                    as wgpu::BufferAddress,
+                size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
@@ -252,8 +266,7 @@ impl Graph {
             vertex_entrypoint.map(|vertex_entrypoint| {
                 let freqs_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Graph: Right freqs buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get().get() as usize)
-                        as wgpu::BufferAddress,
+                    size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -314,12 +327,8 @@ impl Renderable for Graph {
     }
 }
 
-impl Component for Graph {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Graph {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(
@@ -332,18 +341,23 @@ impl Component for Graph {
             queue.write_buffer(&right.freqs_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
+}
 
+impl Component for Graph {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
         let device = renderer.device();
 
-        let amount_bars = match self.amount_bars {
+        let canvas_width = match self.amount_bars {
             GraphAmountBars::ScreenWidth => NonZero::new(new_resolution[0] as u16).unwrap(),
             GraphAmountBars::ScreenHeight => NonZero::new(new_resolution[1] as u16).unwrap(),
             GraphAmountBars::Custom(amount) => amount,
         };
+
+        self.bar_processor.set_amount_bars(canvas_width);
+        let total_amount_bars = self.bar_processor.total_amount_bars();
 
         // update `right` vector
         {
@@ -352,7 +366,7 @@ impl Component for Graph {
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
-            let mut right = amount_bars.get() as f32 * right_dir;
+            let mut right = canvas_width.get() as f32 * right_dir;
 
             let renders_two_audio_channel = self.right.is_some();
             if renders_two_audio_channel {
@@ -366,11 +380,9 @@ impl Component for Graph {
             );
         }
 
-        self.bar_processor.set_amount_bars(amount_bars);
-
         let buffer_desc = wgpu::BufferDescriptor {
             label: None,
-            size: (std::mem::size_of::<f32>() * amount_bars.get() as usize) as wgpu::BufferAddress,
+            size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
             usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         };

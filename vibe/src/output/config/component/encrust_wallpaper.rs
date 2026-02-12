@@ -27,7 +27,7 @@ impl ComponentConfig for WallpaperPulseEdgesConfig {
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let img = ImageReader::open(&self.wallpaper_path)
             .map_err(|err| super::ConfigError::OpenFile {
                 path: self.wallpaper_path.to_string_lossy().to_string(),

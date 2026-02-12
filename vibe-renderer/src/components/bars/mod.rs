@@ -3,13 +3,10 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Pixels, Rgba, ShaderCodeError, Vec2f};
-use crate::Renderable;
+use crate::{components::ComponentAudio, Renderable};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
-use vibe_audio::{
-    fetcher::{Fetcher, SystemAudioFetcher},
-    BarProcessor, SampleProcessor,
-};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// The x coords goes from -1 to 1.
@@ -115,8 +112,8 @@ pub struct Bars {
 impl Bars {
     pub fn new<F: Fetcher>(desc: &BarsDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.renderer.device();
-        let amount_bars = desc.audio_conf.amount_bars;
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let total_amount_bars = bar_processor.total_amount_bars();
 
         let (bottom_left_corner, angle, width) = match desc.placement {
             BarsPlacement::Bottom => (Vector2::from([-1., -1.]), Deg(0.), BarsWidth::ScreenWidth),
@@ -168,7 +165,7 @@ impl Bars {
                 column_direction: column_direction.into(),
                 max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
                 height_mirrored,
-                amount_bars: amount_bars.get() as AmountBars,
+                amount_bars: total_amount_bars as AmountBars,
                 _padding1: 0,
             }
         };
@@ -220,8 +217,7 @@ impl Bars {
         let left = {
             let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                 label: Some("Bars: Left freq buffer"),
-                size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                    as wgpu::BufferAddress,
+                size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                 usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                 mapped_at_creation: false,
             });
@@ -285,8 +281,7 @@ impl Bars {
             vertex_entrypoint.map(|vertex_entrypoint| {
                 let freq_buffer = device.create_buffer(&wgpu::BufferDescriptor {
                     label: Some("Bars: Right freq buffer"),
-                    size: (std::mem::size_of::<f32>() * amount_bars.get() as usize)
-                        as wgpu::BufferAddress,
+                    size: (std::mem::size_of::<f32>() * total_amount_bars) as wgpu::BufferAddress,
                     usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
                     mapped_at_creation: false,
                 });
@@ -316,7 +311,7 @@ impl Bars {
         };
 
         Ok(Self {
-            amount_bars,
+            amount_bars: NonZero::new(total_amount_bars as u16).unwrap(),
             bar_processor,
 
             bind_group0,
@@ -352,12 +347,8 @@ impl Renderable for Bars {
     }
 }
 
-impl Component for Bars {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for Bars {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bar_values = self.bar_processor.process_bars(processor);
 
         queue.write_buffer(
@@ -370,7 +361,9 @@ impl Component for Bars {
             queue.write_buffer(&right.freq_buffer, 0, bytemuck::cast_slice(&bar_values[1]));
         }
     }
+}
 
+impl Component for Bars {
     fn update_time(&mut self, _queue: &wgpu::Queue, _new_time: f32) {}
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {

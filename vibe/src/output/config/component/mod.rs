@@ -11,7 +11,7 @@ mod radial;
 use serde::{Deserialize, Serialize};
 use std::{num::NonZero, ops::Range, path::PathBuf};
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
-use vibe_renderer::{components::Component, Renderer};
+use vibe_renderer::{components::ComponentAudio, Renderer};
 
 pub use aurodio::*;
 pub use bars::*;
@@ -79,7 +79,7 @@ pub trait ComponentConfig {
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn Component>, ConfigError>;
+    ) -> Result<Box<dyn ComponentAudio<F>>, ConfigError>;
 
     /// Returns a `vec` of paths which are stored in this component config.
     ///
@@ -115,7 +115,7 @@ impl ComponentConfig for Config {
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn Component>, ConfigError> {
+    ) -> Result<Box<dyn ComponentAudio<F>>, ConfigError> {
         match self {
             Self::Bars(config) => config.create_component(renderer, processor, texture_format),
             Self::FragmentCanvas(config) => {

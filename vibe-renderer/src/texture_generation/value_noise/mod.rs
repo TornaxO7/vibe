@@ -7,13 +7,14 @@ const WORKGROUP_SIZE: u32 = 16;
 pub struct ValueNoise {
     pub texture_size: u32,
     pub octaves: u32,
+    pub seed: Option<u64>,
 }
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
 struct DataBinding {
     octaves: u32,
-    seed: f32,
+    random_noise: f32,
     canvas_size: f32,
 }
 
@@ -40,7 +41,12 @@ impl TextureGenerator for ValueNoise {
                 octaves: self.octaves,
                 canvas_size: self.texture_size as f32,
                 // range: [15, 35]
-                seed: fastrand::f32() * 20. + 15.,
+                random_noise: self
+                    .seed
+                    .map(|seed| fastrand::Rng::with_seed(seed).f32())
+                    .unwrap_or(fastrand::f32())
+                    * 20.
+                    + 15.,
             }),
             usage: wgpu::BufferUsages::UNIFORM,
         });
@@ -113,6 +119,7 @@ mod tests {
         renderer.generate(&ValueNoise {
             texture_size: 50,
             octaves: 7,
+            seed: None,
         });
     }
 }

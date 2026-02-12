@@ -1,4 +1,6 @@
 //! Some helper utilities which can be used in the whole crate.
+
+/// A simple [wgpu::SamplerDescriptor] with defaults which I think make sense... but probably really useless...
 pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDescriptor {
     label: None,
     address_mode_u: wgpu::AddressMode::MirrorRepeat,
@@ -14,13 +16,18 @@ pub const DEFAULT_SAMPLER_DESCRIPTOR: wgpu::SamplerDescriptor = wgpu::SamplerDes
     border_color: None,
 };
 
+/// Basically [wgpu::RenderPipelineDescriptor] but with some attributes set with values which I really often set.
 pub struct SimpleRenderPipelineDescriptor<'a> {
+    /// The label of the pipeline descriptor.
+    ///
+    /// Yes. I want one, so no `None` here >:)
     pub label: &'static str,
     pub layout: Option<&'a wgpu::PipelineLayout>,
     pub vertex: wgpu::VertexState<'a>,
     pub fragment: wgpu::FragmentState<'a>,
 }
 
+/// This should be probably be replaced with a [std::convert::From] for [SimpleRenderPipelineDescriptor]...
 pub fn simple_pipeline_descriptor(
     desc: SimpleRenderPipelineDescriptor,
 ) -> wgpu::RenderPipelineDescriptor {
@@ -45,46 +52,11 @@ pub fn simple_pipeline_descriptor(
     }
 }
 
-/// A little helper function to create a bind group layout entry for buffers.
-pub const fn buffer(
-    binding: u32,
-    visibility: wgpu::ShaderStages,
-    ty: wgpu::BufferBindingType,
-) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility,
-        ty: wgpu::BindingType::Buffer {
-            ty,
-            has_dynamic_offset: false,
-            min_binding_size: None,
-        },
-        count: None,
-    }
-}
-
-pub const fn texture(binding: u32, visibility: wgpu::ShaderStages) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility,
-        ty: wgpu::BindingType::Texture {
-            sample_type: wgpu::TextureSampleType::Float { filterable: true },
-            view_dimension: wgpu::TextureViewDimension::D2,
-            multisampled: false,
-        },
-        count: None,
-    }
-}
-
-pub const fn sampler(binding: u32, visibility: wgpu::ShaderStages) -> wgpu::BindGroupLayoutEntry {
-    wgpu::BindGroupLayoutEntry {
-        binding,
-        visibility,
-        ty: wgpu::BindingType::Sampler(wgpu::SamplerBindingType::Filtering),
-        count: None,
-    }
-}
-
+/// A little helper function which loads the given image into a [wgpu::Texture] and returns it.
+///
+/// Helps you to avoid the boilerplate of
+/// 1. Creating the texture
+/// 2. Copy the data of the [image::DynamicImage] to the [wgpu::Texture]
 pub fn load_img_to_texture(
     device: &wgpu::Device,
     queue: &wgpu::Queue,

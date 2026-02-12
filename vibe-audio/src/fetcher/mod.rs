@@ -3,9 +3,8 @@
 mod dummy;
 mod system_audio;
 
-use std::sync::{Arc, Mutex};
-
 use cpal::SampleRate;
+use std::sync::{Arc, Mutex};
 
 pub use dummy::DummyFetcher;
 pub use system_audio::{
@@ -21,7 +20,7 @@ pub trait Fetcher {
     fn channels(&self) -> u16;
 }
 
-/// Holds the audio samples
+/// Holds the audio samples which gets filled by the fetcher
 #[derive(Debug, Clone)]
 pub struct SampleBuffer {
     buffer: Box<[f32]>,

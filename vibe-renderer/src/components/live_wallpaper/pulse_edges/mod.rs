@@ -3,11 +3,12 @@ mod descriptor;
 pub use descriptor::*;
 
 use crate::{
+    components::ComponentAudio,
     texture_generation::{edge_distance_map::EdgeDistanceMap, GaussianBlur},
     Component, Renderable,
 };
 use std::num::NonZero;
-use vibe_audio::{fetcher::Fetcher, BarProcessor};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
 use wgpu::include_wgsl;
 
 #[repr(C)]
@@ -237,12 +238,8 @@ impl Renderable for PulseEdges {
     }
 }
 
-impl Component for PulseEdges {
-    fn update_audio(
-        &mut self,
-        queue: &wgpu::Queue,
-        processor: &vibe_audio::SampleProcessor<vibe_audio::fetcher::SystemAudioFetcher>,
-    ) {
+impl<F: Fetcher> ComponentAudio<F> for PulseEdges {
+    fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bars = self.bar_processor.process_bars(processor);
 
         self.data_binding.freq = bars[0][0];
@@ -253,7 +250,9 @@ impl Component for PulseEdges {
             bytemuck::bytes_of(&self.data_binding),
         );
     }
+}
 
+impl Component for PulseEdges {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         self.data_binding.time = new_time;
 

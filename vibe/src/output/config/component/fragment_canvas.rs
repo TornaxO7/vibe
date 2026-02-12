@@ -33,7 +33,7 @@ impl ComponentConfig for FragmentCanvasConfig {
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, ConfigError> {
         let img = match &self.texture {
             None => None,
             Some(texture) => match texture.load() {

@@ -8,7 +8,7 @@ use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
 use tracing::{error, warn};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
-use vibe_renderer::{components::Component, Renderer, RendererDescriptor};
+use vibe_renderer::{components::ComponentAudio, Renderer, RendererDescriptor};
 use winit::{
     application::ApplicationHandler, dpi::PhysicalPosition, event::WindowEvent,
     event_loop::EventLoop, keyboard::Key, window::Window,
@@ -28,7 +28,7 @@ struct State<'a> {
     surface_config: wgpu::SurfaceConfiguration,
     window: Arc<Window>,
 
-    components: Vec<Box<dyn Component>>,
+    components: Vec<Box<dyn ComponentAudio<SystemAudioFetcher>>>,
 }
 
 impl State<'_> {

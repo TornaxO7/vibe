@@ -31,13 +31,18 @@ However I can't promise to work on every suggestion/bug :>
 
 **Note:** I'm unsure if I'd declare the config file format(s) of `vibe` as "stable", so for the time being: Be prepared for breaking changes.
 
-# Usage
+# Start using `vibe`
+`vibe` won't work out of the box probably. Some steps are required.
 
-See [USAGE.md](./USAGE.md).
+See [USAGE.md](./USAGE.md) for more information.
 
-# Configs
+# Configure `vibe`
 
-See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki/Config).
+See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki).
+
+# Similar projects
+
+- [WayVes]: OpenGL-based Visualiser Framework for Wayland 
 
 [shady-toy]: https://github.com/TornaxO7/shady/tree/main/shady-toy
 [glava]: https://github.com/jarcode-foss/glava
@@ -45,3 +50,4 @@ See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki/Config).
 [wgsl]: https://www.w3.org/TR/WGSL/
 [glsl]: https://www.khronos.org/opengl/wiki/Core_Language_(GLSL)
 [`wlr-layer-shell`]: https://wayland.app/protocols/wlr-layer-shell-unstable-v1
+[WayVes]: https://github.com/Roonil/WayVes

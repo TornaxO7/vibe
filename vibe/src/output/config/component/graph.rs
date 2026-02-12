@@ -24,7 +24,7 @@ impl ComponentConfig for GraphConfig {
         renderer: &vibe_renderer::Renderer,
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let variant = GraphVariant::from(&self.variant);
         let placement = GraphPlacement::from(&self.placement);
 
@@ -49,14 +49,20 @@ impl ComponentConfig for GraphConfig {
 pub struct GraphAudioConfig {
     pub freq_range: FreqRange,
     pub sensitivity: f32,
+    // pub padding: Option<NonZero<u16>>,
 }
 
 impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
+        // let padding = conf.padding.map(|amount| PaddingConfig {
+        //     side: PaddingSide::Both,
+        //     size: PaddingSize::Custom(amount),
+        // });
+
         Self {
             freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
-
+            // padding,
             ..Default::default()
         }
     }

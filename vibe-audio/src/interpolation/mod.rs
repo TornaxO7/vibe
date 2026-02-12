@@ -1,31 +1,52 @@
 //! Everything related to the interpolation calculation.
-
 mod context;
 mod cubic_spline;
 mod linear;
 mod nothing;
 
-use std::slice::IterMut;
+use context::InterpolationCtx;
+use std::ops::Range;
 
 pub use cubic_spline::CubicSplineInterpolation;
 pub use linear::LinearInterpolation;
 pub use nothing::NothingInterpolation;
 
+/// Methods for the actual interpolating process.
 pub trait Interpolater {
     fn interpolate(&mut self, buffer: &mut [f32]);
 
-    fn supporting_points_mut(&mut self) -> IterMut<'_, SupportingPoint>;
-}
+    fn get_ctx(&self) -> &InterpolationCtx;
 
-pub trait InterpolationInner: Interpolater + Sized {
-    fn new(supporting_points: impl IntoIterator<Item = SupportingPoint>) -> Self;
+    fn get_ctx_mut(&mut self) -> &mut InterpolationCtx;
 
-    fn boxed(supporting_points: impl IntoIterator<Item = SupportingPoint>) -> Box<Self> {
-        Box::new(Self::new(supporting_points))
+    fn covered_bar_range(&self) -> Range<usize> {
+        self.get_ctx().covered_bar_range()
+    }
+
+    fn supporting_points_mut(&mut self) -> &mut [SupportingPoint] {
+        self.get_ctx_mut().supporting_points_mut()
     }
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Descriptor to create new interpolations.
+#[derive(Default)]
+pub struct InterpolatorDescriptor {
+    pub supporting_points: Box<[SupportingPoint]>,
+}
+
+/// Trait to create new interpolations.
+pub trait InterpolatorCreation: Interpolater + Sized {
+    fn new(desc: InterpolatorDescriptor) -> Self;
+
+    /// Same as `new` but puts the interpolator in a [`Box`].
+    fn boxed(desc: InterpolatorDescriptor) -> Box<Self> {
+        Box::new(Self::new(desc))
+    }
+}
+
+// == Data structures ==
+
+#[derive(Debug, Clone, Copy, PartialEq)]
 pub struct SupportingPoint {
     /// The x value of the supporting point
     pub x: usize,
@@ -35,7 +56,7 @@ pub struct SupportingPoint {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-struct InterpolationSection {
+pub struct InterpolationSection {
     // assuming the supporting points are stored in an indexable data structure.
     // The attribute stores the index of the supporting point within the data sturcture.
     pub left_supporting_point_idx: usize,

@@ -90,20 +90,21 @@
 //!     break;
 //! }
 //! ```
-pub mod fetcher;
-pub mod util;
-
 mod bar_processor;
 mod bpm_detector;
 mod interpolation;
 mod sample_processor;
 
-pub use bar_processor::{BarProcessor, BarProcessorConfig, InterpolationVariant};
+pub mod fetcher;
+pub mod util;
+
 pub use bpm_detector::{BpmDetector, BpmDetectorConfig};
-pub use cpal;
-pub use sample_processor::SampleProcessor;
 
 use cpal::SampleRate;
+
+pub use bar_processor::*;
+pub use cpal;
+pub use sample_processor::SampleProcessor;
 
 type Hz = u16;
 

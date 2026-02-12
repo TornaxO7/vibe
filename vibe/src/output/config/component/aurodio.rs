@@ -20,7 +20,7 @@ impl ComponentConfig for AurodioConfig {
         renderer: &Renderer,
         processor: &SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
-    ) -> Result<Box<dyn vibe_renderer::Component>, super::ConfigError> {
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let layers: Vec<AurodioLayerDescriptor> = self
             .layers
             .iter()
@@ -38,6 +38,7 @@ impl ComponentConfig for AurodioConfig {
             movement_speed: self.movement_speed,
             sensitivity: self.audio_conf.sensitivity,
             layers: &layers,
+            seed: None,
         })))
     }
 

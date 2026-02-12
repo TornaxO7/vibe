@@ -8,6 +8,8 @@
 , libxkbcommon
 , wayland
 
+, flip
+
 , mesa
 , vulkan-loader
 , vulkan-validation-layers
@@ -28,7 +30,9 @@ rustPlatform.buildRustPackage rec {
   nativeBuildInputs = [
     pkg-config
     makeWrapper
+    flip
   ];
+
   buildInputs = [
     alsa-lib
 

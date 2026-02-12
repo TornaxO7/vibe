@@ -1,20 +1,17 @@
-use tracing::debug;
-
 use super::{InterpolationSection, SupportingPoint};
+use std::ops::Range;
 
 #[derive(Clone)]
 pub struct InterpolationCtx {
+    // Contains all supporting points (inclusive the ones for padding)
     pub supporting_points: Box<[SupportingPoint]>,
     pub sections: Box<[InterpolationSection]>,
 }
 
 /// Constructing stuff
 impl InterpolationCtx {
-    pub fn new(supporting_points: impl IntoIterator<Item = super::SupportingPoint>) -> Self {
-        let supporting_points = supporting_points
-            .into_iter()
-            .collect::<Vec<SupportingPoint>>()
-            .into_boxed_slice();
+    pub fn new(desc: super::InterpolatorDescriptor) -> Self {
+        let supporting_points = desc.supporting_points;
 
         let sections = {
             let mut sections = Vec::new();
@@ -42,9 +39,25 @@ impl InterpolationCtx {
             sections,
         };
 
-        debug!("{:?}", ctx);
+        tracing::debug!("{:?}", ctx);
 
         ctx
+    }
+
+    pub fn covered_bar_range(&self) -> Range<usize> {
+        if self.supporting_points.is_empty() {
+            0..0
+        } else {
+            let first = self.supporting_points.first().unwrap();
+            let last = self.supporting_points.last().unwrap();
+
+            first.x..(last.x + 1)
+        }
+    }
+
+    /// Returns all supporting points excluding the padded ones.
+    pub fn supporting_points_mut(&mut self) -> &mut [SupportingPoint] {
+        &mut self.supporting_points
     }
 }
 
@@ -94,46 +107,62 @@ impl std::fmt::Debug for InterpolationCtx {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::interpolation::InterpolatorDescriptor;
 
     #[test]
     fn no_points_no_sections() {
-        let ctx = InterpolationCtx::new([]);
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: vec![].into(),
+            ..Default::default()
+        });
 
         assert!(ctx.supporting_points.is_empty());
         assert!(ctx.sections.is_empty());
+        assert!(ctx.covered_bar_range().is_empty());
     }
 
     #[test]
     fn one_point_no_sections() {
-        let supporting_points = [SupportingPoint { x: 0, y: 0.0 }];
+        let supporting_points = vec![SupportingPoint { x: 0, y: 0.0 }];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert!(ctx.sections.is_empty());
+        assert_eq!(ctx.covered_bar_range(), 0..1);
     }
 
     #[test]
     fn two_points_no_sections() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0.0 },
             SupportingPoint { x: 1, y: 1.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert!(ctx.sections.is_empty());
+        assert_eq!(ctx.covered_bar_range(), 0..2);
     }
 
     #[test]
     fn two_points_one_section() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0.0 },
             SupportingPoint { x: 5, y: 1.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert_eq!(
@@ -143,17 +172,21 @@ mod tests {
                 amount: 4
             }]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..6);
     }
 
     #[test]
     fn three_points_one_section_at_the_beginning() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0.0 },
             SupportingPoint { x: 2, y: 0.0 },
             SupportingPoint { x: 3, y: 0.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert_eq!(
@@ -163,17 +196,21 @@ mod tests {
                 amount: 1
             }]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..4);
     }
 
     #[test]
     fn three_points_one_section_in_the_end() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0.0 },
             SupportingPoint { x: 1, y: 0.0 },
             SupportingPoint { x: 3, y: 0.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert_eq!(
@@ -183,17 +220,21 @@ mod tests {
                 amount: 1
             }]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..4);
     }
 
     #[test]
     fn three_points_two_sections() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0.0 },
             SupportingPoint { x: 2, y: 0.0 },
             SupportingPoint { x: 4, y: 0.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
         assert_eq!(
@@ -209,17 +250,21 @@ mod tests {
                 }
             ]
         );
+        assert_eq!(ctx.covered_bar_range(), 0..5);
     }
 
     #[test]
     fn three_points_two_big_sections() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 0, y: 0.0 },
             SupportingPoint { x: 5, y: 0.0 },
             SupportingPoint { x: 10, y: 0.0 },
         ];
 
-        let ctx = InterpolationCtx::new(supporting_points.clone());
+        let ctx = InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.clone().into(),
+            ..Default::default()
+        });
 
         assert_eq!(
             ctx.sections.as_ref(),
@@ -234,16 +279,21 @@ mod tests {
                 }
             ]
         );
+        assert_eq!(ctx.supporting_points.as_ref(), &supporting_points);
+        assert_eq!(ctx.covered_bar_range(), 0..11);
     }
 
     #[test]
     #[should_panic]
     fn invalid_supporting_points_ordering() {
-        let supporting_points = [
+        let supporting_points = vec![
             SupportingPoint { x: 1, y: 0.0 },
             SupportingPoint { x: 0, y: 0.0 },
         ];
 
-        InterpolationCtx::new(supporting_points);
+        InterpolationCtx::new(InterpolatorDescriptor {
+            supporting_points: supporting_points.into(),
+            ..Default::default()
+        });
     }
 }
