@@ -1,5 +1,5 @@
 [workspace]
-members = ["vibe-renderer", "vibe", "vibe-audio"]
+members = ["vibe-renderer", "vibe", "vibe-audio", "vibe-web"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -9,7 +9,6 @@ wgpu = { version = "28.0", default-features = false, features = [
   "gles",
   "parking_lot",
   "std",
-  "vulkan",
   "wgsl",
 
   # extra features
@@ -17,6 +16,14 @@ wgpu = { version = "28.0", default-features = false, features = [
   "glsl",
   "naga-ir",
 ] }
+
+# Web platform dependencies
+web-sys = "0.3"
+wasm-bindgen = "0.2"
+wasm-bindgen-futures = "0.4"
+js-sys = "0.3"
+console_error_panic_hook = "0.1"
+console_log = "1"
 
 serde = { version = "1", features = ["derive"] }
 tracing = "0.1"

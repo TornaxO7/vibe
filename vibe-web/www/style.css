@@ -1,0 +1,237 @@
+*, *::before, *::after {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    background: #000;
+    overflow: hidden;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    color: #e0e0e0;
+}
+
+/* Full-viewport canvas */
+#vibe-canvas {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    z-index: 0;
+}
+
+/* WebGPU fallback */
+.fallback {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: #111;
+    text-align: center;
+    padding: 2rem;
+}
+
+.fallback h2 {
+    font-size: 1.5rem;
+    margin-bottom: 0.5rem;
+    color: #fff;
+}
+
+.fallback p {
+    color: #999;
+    max-width: 400px;
+    line-height: 1.5;
+}
+
+/* Controls overlay */
+.controls {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 10;
+    padding: 1rem;
+    background: rgba(10, 10, 20, 0.6);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    transform: translateY(calc(100% - 3rem));
+    transition: transform 0.3s ease;
+}
+
+.controls:hover,
+.controls:focus-within {
+    transform: translateY(0);
+}
+
+/* Peek indicator */
+.controls::before {
+    content: "";
+    display: block;
+    width: 40px;
+    height: 4px;
+    border-radius: 2px;
+    background: rgba(255, 255, 255, 0.25);
+    margin: 0 auto 0.75rem;
+}
+
+.controls-inner {
+    max-width: 800px;
+    margin: 0 auto;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+}
+
+.control-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.control-group label {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #888;
+    white-space: nowrap;
+}
+
+/* Inputs */
+select, input[type="range"] {
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #e0e0e0;
+    padding: 0.3rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+select {
+    cursor: pointer;
+}
+
+select:focus, input[type="range"]:focus {
+    outline: none;
+    border-color: rgba(100, 140, 255, 0.5);
+}
+
+input[type="range"] {
+    width: 100px;
+    accent-color: #648cff;
+}
+
+#sensitivity-val {
+    font-size: 0.75rem;
+    color: #888;
+    min-width: 2em;
+    text-align: center;
+}
+
+/* Buttons */
+.btn-primary {
+    background: #648cff;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    padding: 0.4rem 1.2rem;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-primary:hover {
+    background: #4a6fe0;
+}
+
+.btn-secondary {
+    background: rgba(255, 255, 255, 0.1);
+    color: #ccc;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 4px;
+    padding: 0.3rem 0.8rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-secondary:hover {
+    background: rgba(255, 255, 255, 0.18);
+}
+
+.btn-icon {
+    background: none;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #ccc;
+    font-size: 1rem;
+    padding: 0.3rem 0.5rem;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.btn-icon:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.file-name {
+    font-size: 0.75rem;
+    color: #888;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Shader editor */
+#shader-editor {
+    width: 100%;
+    min-width: 300px;
+    background: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 4px;
+    color: #c8d0e0;
+    font-family: "JetBrains Mono", "Fira Code", monospace;
+    font-size: 0.75rem;
+    padding: 0.5rem;
+    resize: vertical;
+    tab-size: 4;
+}
+
+#shader-editor:focus {
+    outline: none;
+    border-color: rgba(100, 140, 255, 0.5);
+}
+
+#shader-editor-wrap {
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.control-actions {
+    margin-left: auto;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+    .controls-inner {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .control-actions {
+        margin-left: 0;
+        justify-content: center;
+    }
+
+    input[type="range"] {
+        width: 100%;
+        flex: 1;
+    }
+}

@@ -17,12 +17,21 @@ toml.workspace = true
 tracing.workspace = true
 vibe-audio.workspace = true
 wgpu.workspace = true
-xdg.workspace = true
+xdg = { workspace = true, optional = true }
 tracing-indicatif.workspace = true
 bytemuck.workspace = true
 
 fastrand = "2.3"
-pollster = "0.4"
+pollster = { version = "0.4", optional = true }
+
+[features]
+default = ["native"]
+native = ["xdg", "pollster"]
+
+[target.'cfg(target_arch = "wasm32")'.dependencies]
+wasm-bindgen = { workspace = true }
+wasm-bindgen-futures = { workspace = true }
+web-sys = { workspace = true, features = ["Window", "Document", "HtmlCanvasElement", "Element"] }
 
 [dev-dependencies]
 anyhow.workspace = true

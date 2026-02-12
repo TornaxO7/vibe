@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>vibe</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body { background: #000; overflow: hidden; }
+        canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; }
+        #no-webgpu { display: none; position: fixed; inset: 0; background: #111; color: #999;
+            font-family: sans-serif; justify-content: center; align-items: center; text-align: center; }
+    </style>
+</head>
+<body>
+    <canvas id="vibe-canvas"></canvas>
+    <div id="no-webgpu"><p>WebGPU not supported. Try Chrome or Edge.</p></div>
+    <script type="module" src="main.js"></script>
+</body>
+</html>

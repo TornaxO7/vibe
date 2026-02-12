@@ -1,3 +1,4 @@
+#[cfg(not(target_arch = "wasm32"))]
 pub mod cache;
 pub mod components;
 pub mod texture_generation;
@@ -6,16 +7,18 @@ pub mod util;
 pub use components::{Component, ComponentAudio};
 
 use crate::texture_generation::TextureGenerator;
-use pollster::FutureExt;
 use serde::{Deserialize, Serialize};
+use std::ops::Deref;
+#[cfg(not(target_arch = "wasm32"))]
 use std::{
-    ops::Deref,
     path::{Path, PathBuf},
     sync::OnceLock,
 };
 use tracing::{error, info};
+#[cfg(not(target_arch = "wasm32"))]
 use xdg::BaseDirectories;
 
+#[cfg(not(target_arch = "wasm32"))]
 static XDG: OnceLock<BaseDirectories> = OnceLock::new();
 
 /// Simply contains the name of the application.
@@ -75,7 +78,10 @@ impl Default for RendererDescriptor {
     fn default() -> Self {
         Self {
             power_preference: wgpu::PowerPreference::LowPower,
+            #[cfg(not(target_arch = "wasm32"))]
             backend: wgpu::Backends::VULKAN,
+            #[cfg(target_arch = "wasm32")]
+            backend: wgpu::Backends::BROWSER_WEBGPU,
             fallback_to_software_rendering: false,
             adapter_name: None,
         }
@@ -101,15 +107,8 @@ pub struct Renderer {
 }
 
 impl Renderer {
-    /// Create a new instance of this struct.
-    ///
-    /// # Example
-    /// ```rust
-    /// use vibe_renderer::{Renderer, RendererDescriptor};
-    ///
-    /// let renderer = Renderer::new(&RendererDescriptor::default());
-    /// ```
-    pub fn new(desc: &RendererDescriptor) -> Self {
+    /// Core async initialization logic shared between native and WASM.
+    async fn init_renderer(desc: &RendererDescriptor) -> Self {
         let required_features =
             wgpu::Features::FLOAT32_FILTERABLE | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
 
@@ -123,7 +122,7 @@ impl Renderer {
         );
 
         let adapter = if let Some(adapter_name) = &desc.adapter_name {
-            let adapters = instance.enumerate_adapters(desc.backend).block_on();
+            let adapters = instance.enumerate_adapters(desc.backend).await;
 
             let adapter_names: Vec<String> = adapters
                 .iter()
@@ -152,7 +151,7 @@ impl Renderer {
                     force_fallback_adapter: desc.fallback_to_software_rendering,
                     ..Default::default()
                 })
-                .block_on()
+                .await
                 .expect("Couldn't find GPU device.")
         };
 
@@ -163,7 +162,7 @@ impl Renderer {
                 required_features,
                 ..Default::default()
             })
-            .block_on()
+            .await
             .unwrap();
 
         Self {
@@ -172,6 +171,25 @@ impl Renderer {
             device,
             queue,
         }
+    }
+
+    /// Create a new instance of this struct (native only, uses pollster to block).
+    ///
+    /// # Example
+    /// ```rust
+    /// use vibe_renderer::{Renderer, RendererDescriptor};
+    ///
+    /// let renderer = Renderer::new(&RendererDescriptor::default());
+    /// ```
+    #[cfg(not(target_arch = "wasm32"))]
+    pub fn new(desc: &RendererDescriptor) -> Self {
+        pollster::block_on(Self::init_renderer(desc))
+    }
+
+    /// Create a new instance of this struct (WASM, async).
+    #[cfg(target_arch = "wasm32")]
+    pub async fn new_async(desc: &RendererDescriptor) -> Self {
+        Self::init_renderer(desc).await
     }
 
     /// Start rendering multiple (or one) [`Renderable`]s onto `output_texture`.
@@ -241,16 +259,19 @@ impl Renderer {
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 impl Default for Renderer {
     fn default() -> Self {
         Self::new(&RendererDescriptor::default())
     }
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn get_xdg() -> &'static BaseDirectories {
     XDG.get_or_init(|| BaseDirectories::with_prefix(APP_NAME))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn get_cache_dir<P: AsRef<Path>>(path: P) -> PathBuf {
     get_xdg().create_cache_directory(path).unwrap()
 }

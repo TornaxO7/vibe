@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use cpal::SampleRate;
+use crate::SampleRate;
 use realfft::{num_complex::Complex32, RealFftPlanner};
 
 use crate::fetcher::{Fetcher, SampleBuffer};

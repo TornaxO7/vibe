@@ -8,7 +8,7 @@ use crate::{
     },
     BarProcessorConfig, InterpolationVariant, PaddingSize,
 };
-use cpal::SampleRate;
+use crate::SampleRate;
 use fft_out_metadata::{FftOutMetadata, FftOutMetadataDescriptor};
 use padding::PaddingCtx;
 use realfft::num_complex::Complex32;

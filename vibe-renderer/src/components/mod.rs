@@ -92,7 +92,20 @@ impl ShaderCode {
     pub fn source(&self) -> std::io::Result<String> {
         match self.source.clone() {
             ShaderSource::Code(code) => Ok(code),
-            ShaderSource::Path(path) => std::fs::read_to_string(path),
+            ShaderSource::Path(path) => {
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    std::fs::read_to_string(path)
+                }
+                #[cfg(target_arch = "wasm32")]
+                {
+                    let _ = path;
+                    Err(std::io::Error::new(
+                        std::io::ErrorKind::Unsupported,
+                        "File paths not supported on web - use ShaderSource::Code",
+                    ))
+                }
+            }
         }
     }
 }

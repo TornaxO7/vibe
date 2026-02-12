@@ -22,7 +22,7 @@ toml.workspace = true
 tracing-subscriber.workspace = true
 tracing.workspace = true
 vibe-audio.workspace = true
-wgpu.workspace = true
+wgpu = { workspace = true, features = ["vulkan"] }
 xdg.workspace = true
 tracing-indicatif.workspace = true
 

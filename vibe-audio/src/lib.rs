@@ -96,14 +96,22 @@ mod interpolation;
 mod sample_processor;
 
 pub mod fetcher;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub mod util;
 
 pub use bpm_detector::{BpmDetector, BpmDetectorConfig};
 
-use cpal::SampleRate;
+#[cfg(not(target_arch = "wasm32"))]
+pub use cpal;
+#[cfg(not(target_arch = "wasm32"))]
+pub use cpal::SampleRate;
+
+/// On WASM, cpal is not available. SampleRate is just u32.
+#[cfg(target_arch = "wasm32")]
+pub type SampleRate = u32;
 
 pub use bar_processor::*;
-pub use cpal;
 pub use sample_processor::SampleProcessor;
 
 type Hz = u16;

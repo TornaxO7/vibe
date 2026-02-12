@@ -1,7 +1,9 @@
 use super::{Component, ShaderCode, ShaderCodeError};
 use crate::{components::ComponentAudio, Renderable, Renderer};
+#[cfg(not(target_arch = "wasm32"))]
 use pollster::FutureExt;
 use std::borrow::Cow;
+#[cfg(not(target_arch = "wasm32"))]
 use std::io::Write;
 use vibe_audio::{
     fetcher::Fetcher, BarProcessor, BarProcessorConfig, BpmDetector, BpmDetectorConfig,
@@ -247,17 +249,28 @@ impl FragmentCanvas {
                     }
                 };
 
-                let err_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
-                let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
-                    label: Some("Fragment canvas fragment module"),
-                    source: shader_source,
-                });
+                #[cfg(not(target_arch = "wasm32"))]
+                {
+                    let err_scope = device.push_error_scope(wgpu::ErrorFilter::Validation);
+                    let module = device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                        label: Some("Fragment canvas fragment module"),
+                        source: shader_source,
+                    });
 
-                if let Some(err) = err_scope.pop().block_on() {
-                    return Err(ShaderCodeError::ParseError(err));
+                    if let Some(err) = err_scope.pop().block_on() {
+                        return Err(ShaderCodeError::ParseError(err));
+                    }
+
+                    module
                 }
 
-                module
+                #[cfg(target_arch = "wasm32")]
+                {
+                    device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                        label: Some("Fragment canvas fragment module"),
+                        source: shader_source,
+                    })
+                }
             };
 
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
@@ -383,8 +396,11 @@ impl<F: Fetcher> ComponentAudio<F> for FragmentCanvas {
         queue.write_buffer(&self.ibpm, 0, bytemuck::bytes_of(&bpm));
 
         // Write BPM to file for external tools (waybar, etc.)
-        if let Ok(mut file) = std::fs::File::create("/tmp/vibe-bpm") {
-            let _ = writeln!(file, "{:.0}", bpm);
+        #[cfg(not(target_arch = "wasm32"))]
+        {
+            if let Ok(mut file) = std::fs::File::create("/tmp/vibe-bpm") {
+                let _ = writeln!(file, "{:.0}", bpm);
+            }
         }
     }
 }

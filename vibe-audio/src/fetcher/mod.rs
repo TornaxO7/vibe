@@ -1,15 +1,25 @@
 //! Each struct here can be used to fetch the audio data from various sources.
 //! Pick the one you need to fetch from.
 mod dummy;
+
+#[cfg(not(target_arch = "wasm32"))]
 mod system_audio;
 
-use cpal::SampleRate;
+#[cfg(target_arch = "wasm32")]
+mod web_audio;
+
+use crate::SampleRate;
 use std::sync::{Arc, Mutex};
 
 pub use dummy::DummyFetcher;
+
+#[cfg(not(target_arch = "wasm32"))]
 pub use system_audio::{
     Descriptor as SystemAudioFetcherDescriptor, SystemAudio as SystemAudioFetcher, SystemAudioError,
 };
+
+#[cfg(target_arch = "wasm32")]
+pub use web_audio::WebAudioFetcher;
 
 /// Interface for all structs (fetchers) which are listed in the [fetcher module](crate::fetcher).
 pub trait Fetcher {

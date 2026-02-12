@@ -2,7 +2,7 @@ use crate::{
     bar_processor::config::BarDistribution, interpolation::SupportingPoint, MAX_HUMAN_FREQUENCY,
     MIN_HUMAN_FREQUENCY,
 };
-use cpal::SampleRate;
+use crate::SampleRate;
 use std::{num::NonZero, ops::Range};
 use tracing::debug;
 

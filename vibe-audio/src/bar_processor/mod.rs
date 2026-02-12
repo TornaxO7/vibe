@@ -3,7 +3,7 @@ mod config;
 
 use crate::{fetcher::Fetcher, SampleProcessor};
 use channel_ctx::ChannelCtx;
-use cpal::SampleRate;
+use crate::SampleRate;
 use std::num::NonZero;
 
 pub use config::*;

@@ -27,6 +27,7 @@ struct DataBinding {
 
 #[derive(thiserror::Error, Debug)]
 pub enum PulseEdgesError {
+    #[cfg(not(target_arch = "wasm32"))]
     #[error(transparent)]
     Cache(#[from] crate::cache::CacheError),
 
@@ -65,6 +66,7 @@ impl PulseEdges {
         let device = renderer.device();
         let queue = renderer.queue();
 
+        #[cfg(not(target_arch = "wasm32"))]
         let distance_map = crate::cache::load(
             renderer,
             &EdgeDistanceMap {
@@ -76,6 +78,16 @@ impl PulseEdges {
                 kernel_size: desc.kernel_size,
             },
         )?;
+
+        #[cfg(target_arch = "wasm32")]
+        let distance_map = renderer.generate(&EdgeDistanceMap {
+            src: &desc.img,
+            high_threshold_ratio: desc.high_threshold_ratio,
+            low_threshold_ratio: desc.low_threshold_ratio,
+
+            sigma: desc.sigma,
+            kernel_size: desc.kernel_size,
+        });
 
         let gaussian_blur = renderer.generate(&GaussianBlur {
             src: &desc.img,

@@ -8,7 +8,6 @@ mod gray_scale;
 mod non_maximation_suppression;
 
 use crate::{
-    cache::Cacheable,
     texture_generation::{
         edge_distance_map::{
             compute_distance_map::{ComputeDistanceMap, ComputeDistanceMapDescriptor},
@@ -45,7 +44,8 @@ pub struct EdgeDistanceMap<'a> {
     pub kernel_size: usize,
 }
 
-impl<'a> Cacheable for EdgeDistanceMap<'a> {
+#[cfg(not(target_arch = "wasm32"))]
+impl<'a> crate::cache::Cacheable for EdgeDistanceMap<'a> {
     fn subpath(&self) -> std::path::PathBuf {
         let img_hash = {
             let mut hasher = DefaultHasher::new();
