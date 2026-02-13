@@ -21,6 +21,7 @@ pub struct GraphDescriptor<'a, F: Fetcher> {
     pub max_height: f32,
     pub placement: GraphPlacement,
     pub format: GraphFormat,
+    pub border: Option<GraphBorder>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -52,4 +53,10 @@ pub enum GraphFormat {
     TrebleBass,
     BassTrebleBass,
     TrebleBassTreble,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct GraphBorder {
+    pub width: f32,
+    pub color: Rgba,
 }
