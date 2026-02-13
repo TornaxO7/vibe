@@ -15,7 +15,7 @@ pub use bars::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
 pub use chessy::{Chessy, ChessyDescriptor};
 pub use circle::{Circle, CircleDescriptor, CircleVariant};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};
-pub use graph::{Graph, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant};
+pub use graph::{Graph, GraphBorder, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant};
 pub use radial::{Radial, RadialDescriptor, RadialFormat, RadialVariant};
 
 use crate::{Renderable, Renderer};

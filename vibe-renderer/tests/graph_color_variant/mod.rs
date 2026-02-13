@@ -15,6 +15,7 @@ fn test() {
         variant: GraphVariant::Color(RED.into()),
         placement: vibe_renderer::components::GraphPlacement::Bottom,
         format: GraphFormat::BassTreble,
+        border: None,
     });
 
     tester.evaluate(&mut graph, include_bytes!("./reference.png"), "graph-color");

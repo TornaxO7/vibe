@@ -209,6 +209,7 @@ impl<'a> State<'a> {
                     rotation: Deg(-45.),
                     amount_bars: NonZero::new(500).unwrap(),
                 },
+                border: None,
             })) as Box<dyn ComponentAudio<_>>),
             ComponentName::GraphHorizontalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
@@ -226,6 +227,7 @@ impl<'a> State<'a> {
                     max_height: 0.5,
                     format: GraphFormat::BassTreble,
                     placement: vibe_renderer::components::GraphPlacement::Bottom,
+                    border: None,
                 })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::GraphVerticalGradientVariant => {
@@ -249,6 +251,7 @@ impl<'a> State<'a> {
                     //     bottom_left_corner: [0.5, 0.2],
                     //     rotation: Deg(-45.),
                     // },
+                    border: None,
                 })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {

@@ -14,6 +14,8 @@ struct VertexParams {
 struct FragmentParams {
     color1: vec4f,
     color2: vec4f,
+    border_color: vec4f,
+    border_width: f32,
 }
 
 @group(0) @binding(0)
@@ -67,8 +69,7 @@ fn treble_bass(in: Input) -> Output {
 // for whatever reason, you can't call an entrypoint function... so the `bass_treble` logic goes here
 fn bass_treble_inner(in: Input) -> Output {
     // move further to the right for the second block.
-    // Note: `* 0.98` due to floating point issues. Move the right block a bit to the left block so that there will be no gap.
-    var pos = vp.bottom_left_corner + vp.right * f32(in.instance_idx);
+    var pos: vec2f = vp.bottom_left_corner + vp.right * f32(in.instance_idx);
     var rel_pos = vec2f(0.);
 
     let is_top = in.vertex_idx <= 1;
@@ -90,30 +91,51 @@ fn bass_treble_inner(in: Input) -> Output {
 }
 
 // == fragment code ==
-fn get_mask(rel_pos: vec2f) -> f32 {
+struct Mask {
+    bar: f32,
+    border: f32,
+}
+
+fn get_mask(rel_pos: vec2f) -> Mask {
+    var mask: Mask;
+
     var freq = freqs[u32(floor(rel_pos.x * f32(arrayLength(&freqs))))]*.9;
     freq = max(freq, 1e-5);
+    let gradient = fwidth(freq);
 
-    let top = smoothstep(freq, freq*.9, rel_pos.y);
-    let bottom = smoothstep(.0, .01, rel_pos.y);
-    return bottom * top;
+    var top = smoothstep(freq, freq - fp.border_width - gradient, rel_pos.y);
+    var bottom = smoothstep(.0, fp.border_width, rel_pos.y);
+    mask.bar = bottom * top;
+
+    top = smoothstep(freq + fp.border_width + gradient, freq, rel_pos.y);
+    bottom = smoothstep(max(freq - fp.border_width - gradient, 0.), freq, rel_pos.y);
+    mask.border = bottom * top;
+    return mask;
 }
 
 @fragment
 fn color(in: Output) -> @location(0) vec4f {
-    return fp.color1 * get_mask(in.rel_pos);
+    let mask = get_mask(in.rel_pos);
+
+    let bar = fp.color1 * mask.bar;
+    let border = fp.border_color * mask.border;
+    return bar + border;
 }
 
 @fragment
 fn horizontal_gradient(in: Output) -> @location(0) vec4f {
     let mask = get_mask(in.rel_pos);
-    let col = mix(fp.color1, fp.color2, in.rel_pos.x);
-    return col * mask;
+
+    let bar = mask.bar * mix(fp.color1, fp.color2, in.rel_pos.x);
+    let border = fp.border_color * mask.border;
+    return bar + border;
 }
 
 @fragment
 fn vertical_gradient(in: Output) -> @location(0) vec4f {
     let mask = get_mask(in.rel_pos);
-    let col = mix(fp.color1, fp.color2, smoothstep(0., 1., in.rel_pos.y));
-    return col * mask;
+
+    let bar = mix(fp.color1, fp.color2, smoothstep(0., 1., in.rel_pos.y)) * mask.bar;
+    let border = fp.border_color * mask.border;
+    return bar + border;
 }

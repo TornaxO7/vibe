@@ -18,6 +18,7 @@ fn test() {
         },
         placement: vibe_renderer::components::GraphPlacement::Top,
         format: vibe_renderer::components::GraphFormat::TrebleBassTreble,
+        border: None,
     });
 
     tester.evaluate(

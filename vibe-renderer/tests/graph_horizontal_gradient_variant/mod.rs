@@ -23,6 +23,7 @@ fn test() {
             amount_bars: NonZero::new(50).unwrap(),
         },
         format: vibe_renderer::components::GraphFormat::BassTrebleBass,
+        border: None,
     });
 
     tester.evaluate(

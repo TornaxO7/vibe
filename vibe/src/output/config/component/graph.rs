@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::fetcher::Fetcher;
 use vibe_renderer::components::{
-    Graph, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,
+    Graph, GraphBorder, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,6 +16,7 @@ pub struct GraphConfig {
     variant: GraphVariantConfig,
     placement: GraphPlacementConfig,
     format: GraphFormatConfig,
+    border: Option<GraphBorderConfig>,
 }
 
 impl ComponentConfig for GraphConfig {
@@ -27,6 +28,7 @@ impl ComponentConfig for GraphConfig {
     ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
         let variant = GraphVariant::from(&self.variant);
         let placement = GraphPlacement::from(&self.placement);
+        let border = self.border.as_ref().map(GraphBorder::from);
 
         Ok(Box::new(Graph::new(&GraphDescriptor {
             renderer,
@@ -37,6 +39,7 @@ impl ComponentConfig for GraphConfig {
             max_height: self.max_height,
             placement,
             format: self.format.clone().into(),
+            border,
         })))
     }
 
@@ -161,5 +164,20 @@ impl From<GraphFormatConfig> for GraphFormat {
 impl From<&GraphFormatConfig> for GraphFormat {
     fn from(conf: &GraphFormatConfig) -> Self {
         Self::from(conf.clone())
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphBorderConfig {
+    pub width: f32,
+    pub color: Rgba,
+}
+
+impl From<&GraphBorderConfig> for GraphBorder {
+    fn from(conf: &GraphBorderConfig) -> Self {
+        Self {
+            width: conf.width,
+            color: conf.color.as_f32(),
+        }
     }
 }
