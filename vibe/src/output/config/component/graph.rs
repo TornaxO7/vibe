@@ -64,20 +64,13 @@ impl ComponentConfig for GraphConfig {
 pub struct GraphAudioConfig {
     pub freq_range: FreqRange,
     pub sensitivity: f32,
-    // pub padding: Option<NonZero<u16>>,
 }
 
 impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
-        // let padding = conf.padding.map(|amount| PaddingConfig {
-        //     side: PaddingSide::Both,
-        //     size: PaddingSize::Custom(amount),
-        // });
-
         Self {
             freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
-            // padding,
             ..Default::default()
         }
     }
