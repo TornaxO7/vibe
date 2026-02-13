@@ -103,8 +103,8 @@ fn get_mask(rel_pos: vec2f) -> Mask {
     freq = max(freq, 1e-5);
     let gradient = fwidth(freq);
 
-    var top = smoothstep(freq, freq - fp.border_width - gradient, rel_pos.y);
-    var bottom = smoothstep(.0, fp.border_width, rel_pos.y);
+    var top = smoothstep(freq, freq - max(fp.border_width + gradient, .01), rel_pos.y);
+    var bottom = smoothstep(.0, max(fp.border_width, .01), rel_pos.y);
     mask.bar = bottom * top;
 
     top = smoothstep(freq + fp.border_width + gradient, freq, rel_pos.y);
