@@ -141,8 +141,8 @@ fn get_border_mask(pos: vec2f, freq: f32) -> f32 {
 
     // vertical mask
     const HEIGHT_FACTOR: f32 = .01; // found out by experimenting... seems to be fine, lol
-    let border_height_transition_start = freq - fp.border_width*HEIGHT_FACTOR - BORDER_TRANSITION_SIZE;
-    let border_height_transition_end = freq - fp.border_width*HEIGHT_FACTOR;
+    let border_height_transition_start = max(freq - fp.border_width*HEIGHT_FACTOR - BORDER_TRANSITION_SIZE, 0.);
+    let border_height_transition_end = max(freq - fp.border_width*HEIGHT_FACTOR, 0.);
     let height = smoothstep(border_height_transition_start, border_height_transition_end, pos.y);
 
     return max(width, height);
