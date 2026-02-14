@@ -6,7 +6,29 @@ use vibe_renderer::{
 };
 
 #[test]
-fn test() {
+fn r#box() {
+    test(SdfPattern::Box, include_bytes!("./box.png"), "chessy-box");
+}
+
+#[test]
+fn circle() {
+    test(
+        SdfPattern::Circle,
+        include_bytes!("./circle.png"),
+        "chessy-circle",
+    );
+}
+
+#[test]
+fn heart() {
+    test(
+        SdfPattern::Heart,
+        include_bytes!("./heart.png"),
+        "chessy-heart",
+    );
+}
+
+fn test(pattern: SdfPattern, reference: &'static [u8], id: &'static str) {
     let tester = Tester::default();
 
     let mut chessy = Chessy::new(&ChessyDescriptor {
@@ -15,9 +37,9 @@ fn test() {
         audio_config: BarProcessorConfig::default(),
         texture_format: tester.output_texture_format(),
         movement_speed: 0.1,
-        pattern: SdfPattern::Heart,
+        pattern,
         zoom_factor: 2.,
     });
 
-    tester.evaluate(&mut chessy, include_bytes!("./reference.png"), "chessy");
+    tester.evaluate(&mut chessy, reference, id);
 }
