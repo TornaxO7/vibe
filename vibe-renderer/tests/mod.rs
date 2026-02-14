@@ -15,7 +15,7 @@ mod graph_color_variant;
 mod graph_horizontal_gradient_variant;
 mod graph_vertical_gradient_variant;
 
-mod circle_graph;
+mod circle;
 
 mod radial;
 
