@@ -1,6 +1,0 @@
-[workspace]
-publish = false
-
-[[package]]
-name = "vibe-audio"
-release = false

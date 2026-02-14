@@ -2,6 +2,76 @@
 
 All notable changes to this project will be documented in this file.
 
+## 3.0.0 - 2026-02-14
+
+[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[1a6b546](1a6b5461ae85780ef9dcf775173c577c0786531d)
+
+### Bug Fixes
+
+- Forgot to update the tests after giving each descriptor the renderer ([f54a0eb](f54a0eb99dd3722278418826f52a64435d85301e))
+
+### Documentation
+
+- Add some docs about the rgb(a) methods ([73f88df](73f88df0c2b0ff148d5644d7ac9cf432370fe071))
+- Add docs for `OutputConfig` ([d618b8a](d618b8acc08352b8f829529851191add0ed8576a))
+- Add a little description for the else branch ([c14edd0](c14edd0cdebb7225528e1970e01519bdfaf4c8c2))
+
+### Features
+
+- Add warning for first time usages ([a5136b8](a5136b82e1e5bfef29ceb66e0f5bf931cb752592))
+- Introduce frequency presets ([0c1aad9](0c1aad9dcd097aa3ba45e503de704a89843d14fa)), BREAKING CHANGE:Change `freq_range = {...}` to `freq_range.Custom = {...}` or use one of the presets
+- Add environment-variable support for colors ([eae2758](eae27583358cc2bc2bff2c48e6850d032c077856)), BREAKING CHANGE:The color type has been changed from an array into a string:
+
+Before this commit:
+```
+color = [0, 0, 255, 255]
+```
+
+After this commit:
+```
+color = "#0000FFFF"
+```
+
+You can also add environment variables:
+```
+color = "$YOUR_ENV_NAME"
+```
+- Add border option ([7c1602f](7c1602f05e51d48d02cbfd75b88e4bac1348f9b1))
+- Implement border option ([db63d00](db63d004a0ba0e3cd0b062924ea472ac4200ca8b))
+
+### Miscellaneous Tasks
+
+- Make clippy happy ([a99adba](a99adbac5c72e223ff303018de4b8bf6ce5f96b2))
+
+### Refactor
+
+- Remove fragment code variant ([47b56bb](47b56bbaa11d9182759ebfa693d2f24d4c40c593))
+- Create type aliases for wgsl types ([32de1e6](32de1e66afab375fb7273c4d0d9ebc61d808e357))
+- Move each component config into its own struct ([7ebc67c](7ebc67cecda55c9b1eaa3fdb5137f8995e15aede))
+- Renaming traits and enums ([b032fcb](b032fcb5b93a23a0bea8b01d1914bb2a094b1d1e))
+- Create component config trait ([d29170a](d29170a4fc4134b0af90d2ace6b01583f400d2b3))
+- Give each descriptor the whole renderer ([c4303f1](c4303f1abafec614c7cf124751d757aad043a69b))
+- Slowly introduce padding functionality in lib ([ee7281c](ee7281c789bf175eb0ceadfeddaf28129b802d4d))
+- Introduce `ComponentAudio` to separate fetcher generic ([4ad1ba0](4ad1ba0ea3802012a2d6c5fe2fa21cef350d935a))
+- Split up vibe into a lib and binary part ([fa2edcd](fa2edcdf5eebf731630cd2f581ab6b3da46d925a))
+- Improve error message for environment variable errors ([b6d48f1](b6d48f158430fd64a73de65c155e6fb21cf0dd7d))
+- Remove `lib.rs` and merge it with `main.rs` again ([475c21b](475c21bdfbdca81311fca80a57521c13806a770b))
+- Remove comented out lines ([0b44c55](0b44c55b4452d8e5af5526e7b138828f1cce71ef))
+
+### Testing
+
+- Add missing components for external-paths-test ([fcbb426](fcbb426cd4967cda7762807e1b1c8ca67a770e9a))
+- Add more entries ([305aa6e](305aa6ed868f7a8827bca440964c6465a75fdf70))
+- Add aurodio to new test framework ([f3a979b](f3a979bc354847aa8f9201f8cb9570a94b142e0a))
+
+## ibe-v2.5.0 - 2026-01-29
+
+[4322b16](4322b165d3e444c775fede2b902b3526e4fec43e)...[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)
+
+### Miscellaneous Tasks
+
+- Release ([b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284))
+
 ## 2.5.0 - 2026-01-29
 
 [e279be1](e279be1b21f8cc07b55acbac2e23c79177b253d8)...[4322b16](4322b165d3e444c775fede2b902b3526e4fec43e)
