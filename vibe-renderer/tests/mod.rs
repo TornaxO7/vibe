@@ -17,8 +17,7 @@ mod graph_vertical_gradient_variant;
 
 mod circle_graph;
 
-mod radial_color_variant;
-mod radial_height_gradient_variant;
+mod radial;
 
 mod chessy;
 
