@@ -10,10 +10,6 @@ mod bars;
 
 mod fragment_canvas;
 
-// mod graph_border_color_variant;
-// mod graph_color_variant;
-// mod graph_horizontal_gradient_variant;
-// mod graph_vertical_gradient_variant;
 mod graph;
 
 mod circle;
