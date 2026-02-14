@@ -46,6 +46,14 @@ impl ComponentConfig for BarsConfig {
             },
         };
 
+        let border = match &self.border {
+            Some(conf) => Some(BarBorder {
+                color: conf.color.as_f32()?,
+                width: conf.width,
+            }),
+            None => None,
+        };
+
         let bars = Bars::new(&BarsDescriptor {
             renderer,
             sample_processor: processor,
@@ -55,7 +63,7 @@ impl ComponentConfig for BarsConfig {
             variant,
             placement: BarsPlacement::from(&self.placement),
             format: BarsFormat::from(&self.format),
-            border: self.border.as_ref().map(BarBorder::from),
+            border,
         })?;
 
         Ok(Box::new(bars))
@@ -209,15 +217,6 @@ impl From<&BarsFormatConfig> for BarsFormat {
 pub struct BarsBorderConfig {
     pub width: f32,
     pub color: Rgba,
-}
-
-impl From<&BarsBorderConfig> for BarBorder {
-    fn from(conf: &BarsBorderConfig) -> Self {
-        Self {
-            color: conf.color.as_f32(),
-            width: conf.width,
-        }
-    }
 }
 
 #[cfg(test)]

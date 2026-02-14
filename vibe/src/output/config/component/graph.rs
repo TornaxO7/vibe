@@ -43,7 +43,13 @@ impl ComponentConfig for GraphConfig {
         };
 
         let placement = GraphPlacement::from(&self.placement);
-        let border = self.border.as_ref().map(GraphBorder::from);
+        let border = match &self.border {
+            Some(conf) => Some(GraphBorder {
+                color: conf.color.as_f32()?,
+                width: conf.width,
+            }),
+            None => None,
+        };
 
         Ok(Box::new(Graph::new(&GraphDescriptor {
             renderer,
@@ -160,13 +166,4 @@ impl From<&GraphFormatConfig> for GraphFormat {
 pub struct GraphBorderConfig {
     pub width: f32,
     pub color: Rgba,
-}
-
-impl From<&GraphBorderConfig> for GraphBorder {
-    fn from(conf: &GraphBorderConfig) -> Self {
-        Self {
-            width: conf.width,
-            color: conf.color.as_f32(),
-        }
-    }
 }

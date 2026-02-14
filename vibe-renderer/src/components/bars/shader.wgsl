@@ -112,6 +112,7 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
         output.rel_pos.y = freq;
         output.internal_pos.y = freq;
     } else if (vp.height_mirrored == TRUE) {
+        // just move the bottom a bit more down...
         pos += -vp.up_direction * freq * vp.max_height;
     }
 
