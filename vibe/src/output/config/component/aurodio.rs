@@ -1,4 +1,4 @@
-use super::{ComponentConfig, FreqRange, Rgb};
+use super::{util::Rgb, ComponentConfig, FreqRange};
 use serde::{Deserialize, Serialize};
 use vibe_audio::{fetcher::Fetcher, SampleProcessor};
 use vibe_renderer::{
@@ -34,7 +34,7 @@ impl ComponentConfig for AurodioConfig {
             renderer,
             sample_processor: processor,
             texture_format,
-            base_color: self.base_color.as_f32().into(),
+            base_color: self.base_color.as_f32()?,
             movement_speed: self.movement_speed,
             sensitivity: self.audio_conf.sensitivity,
             layers: &layers,

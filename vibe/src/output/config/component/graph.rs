@@ -25,7 +25,22 @@ impl ComponentConfig for GraphConfig {
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
-        let variant = GraphVariant::from(&self.variant);
+        let variant = match &self.variant {
+            GraphVariantConfig::Color(color) => GraphVariant::Color(color.as_f32()?),
+            GraphVariantConfig::HorizontalGradient { left, right } => {
+                GraphVariant::HorizontalGradient {
+                    left: left.as_f32()?,
+                    right: right.as_f32()?,
+                }
+            }
+            GraphVariantConfig::VerticalGradient { top, bottom } => {
+                GraphVariant::VerticalGradient {
+                    top: top.as_f32()?,
+                    bottom: bottom.as_f32()?,
+                }
+            }
+        };
+
         let placement = GraphPlacement::from(&self.placement);
 
         Ok(Box::new(Graph::new(&GraphDescriptor {
@@ -79,32 +94,6 @@ pub enum GraphVariantConfig {
     Color(Rgba),
     HorizontalGradient { left: Rgba, right: Rgba },
     VerticalGradient { top: Rgba, bottom: Rgba },
-}
-
-impl From<GraphVariantConfig> for GraphVariant {
-    fn from(conf: GraphVariantConfig) -> Self {
-        match conf {
-            GraphVariantConfig::Color(rgba) => GraphVariant::Color(rgba.as_f32()),
-            GraphVariantConfig::HorizontalGradient { left, right } => {
-                GraphVariant::HorizontalGradient {
-                    left: left.as_f32(),
-                    right: right.as_f32(),
-                }
-            }
-            GraphVariantConfig::VerticalGradient { top, bottom } => {
-                GraphVariant::VerticalGradient {
-                    top: top.as_f32(),
-                    bottom: bottom.as_f32(),
-                }
-            }
-        }
-    }
-}
-
-impl From<&GraphVariantConfig> for GraphVariant {
-    fn from(conf: &GraphVariantConfig) -> Self {
-        Self::from(conf.clone())
-    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
