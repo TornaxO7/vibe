@@ -13,8 +13,10 @@ struct VertexParams {
 struct FragmentParams {
     color1: vec4f,
     color2: vec4f,
-};
 
+    border_color: vec4f,
+    border_width: f32,
+};
 
 @group(0) @binding(0)
 var<uniform> vp: VertexParams;
@@ -36,8 +38,15 @@ struct Input {
 struct Output {
     @builtin(position) pos: vec4<f32>,
     @location(0) freq: f32,
+    // The relative position within the spectrum.
     // `pos` but `x` and `y` are normalized (aka. they are in the range [0, 1])
     @location(1) rel_pos: vec2f,
+    // An internal "coordinate-system" of the bar:
+    // - (-1., 0)      => bottom left corner of the bar
+    // - (-1., <freq>) => top left corner of the bar
+    // - (1. , 0.)     => bottom right corner of the bar
+    // - (1. , <freq>) => top right corner of the bar
+    @location(2) internal_pos: vec2f,
 };
 
 // Assuming:
@@ -78,6 +87,7 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
     var pos = vp.bottom_left_corner;
     if (is_bar_left_side) {
         pos += f32(instance_idx) * vp.column_direction + padding;
+        output.internal_pos.x = -1.;
 
         if (is_left_channel) {
             output.rel_pos.x = f32(instance_idx) / f32(vp.amount_bars);
@@ -86,6 +96,7 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
         }
     } else {
         pos += f32(instance_idx + 1) * vp.column_direction - padding;
+        output.internal_pos.x = 1.;
 
         if (is_left_channel) {
             output.rel_pos.x = f32(instance_idx + 1) / f32(vp.amount_bars);
@@ -98,7 +109,8 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
     let is_top_vertex = vertex_idx <= 1; 
     if (is_top_vertex) {
         pos += vp.up_direction * freq * vp.max_height;
-        output.rel_pos.y = f32(freq);
+        output.rel_pos.y = freq;
+        output.internal_pos.y = freq;
     } else if (vp.height_mirrored == TRUE) {
         pos += -vp.up_direction * freq * vp.max_height;
     }
@@ -109,23 +121,52 @@ fn inner(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
 }
 
 // == fragment ==
+// Idea: Create a function which returns a value from [0., 1.]:
+// - 0. => Use bar color
+// - 1. => Use border color
+//
+// Basically something like a SDF for the bar
+//
+// Assumptions:
+// - Bar x coord is within [-1, 1]
+// - Height is within range [0, freq]
+fn get_border_mask(pos: vec2f, freq: f32) -> f32 {
+    // let border_width = .1;
+    const BORDER_TRANSITION_SIZE: f32 = .01;
+
+    // horizontal mask
+    let border_width_transition_start = clamp(1. - fp.border_width, 0., 1.);
+    let border_width_transition_end = border_width_transition_start + BORDER_TRANSITION_SIZE;
+    let width = smoothstep(border_width_transition_start, border_width_transition_end, abs(pos.x));
+
+    // vertical mask
+    const HEIGHT_FACTOR: f32 = .01; // found out by experimenting... seems to be fine, lol
+    let border_height_transition_start = freq - fp.border_width*HEIGHT_FACTOR - BORDER_TRANSITION_SIZE;
+    let border_height_transition_end = freq - fp.border_width*HEIGHT_FACTOR;
+    let height = smoothstep(border_height_transition_start, border_height_transition_end, pos.y);
+
+    return max(width, height);
+}
 
 @fragment
-fn fs_color() -> @location(0) vec4f {
-    return fp.color1;
+fn fs_color(in: Output) -> @location(0) vec4f {
+    return mix(fp.color1, fp.border_color, get_border_mask(in.internal_pos, in.freq));
 }
 
 @fragment
 fn fs_presence(in: Output) -> @location(0) vec4f {
-    return mix(fp.color1, fp.color2, smoothstep(0., 1., in.freq));
+    let bar_color = mix(fp.color1, fp.color2, smoothstep(0., 1., in.freq));
+    return mix(bar_color, fp.border_color, get_border_mask(in.internal_pos, in.freq));
 }
 
 @fragment
 fn fs_horizontal_gradient(in: Output) -> @location(0) vec4f {
-    return mix(fp.color1, fp.color2, in.rel_pos.x);
+    let bar_color = mix(fp.color1, fp.color2, in.rel_pos.x);
+    return mix(bar_color, fp.border_color, get_border_mask(in.internal_pos, in.freq));
 }
 
 @fragment
 fn fs_vertical_gradient(in: Output) -> @location(0) vec4f {
-    return mix(fp.color1, fp.color2, smoothstep(0., .8, in.rel_pos.y));
+    let bar_color = mix(fp.color1, fp.color2, smoothstep(0., .8, in.rel_pos.y));
+    return mix(bar_color, fp.border_color, get_border_mask(in.internal_pos, in.freq));
 }

@@ -11,7 +11,7 @@ mod radial;
 mod utils;
 
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
-pub use bars::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
+pub use bars::{BarBorder, BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
 pub use chessy::{Chessy, ChessyDescriptor};
 pub use circle::{Circle, CircleDescriptor, CircleVariant};
 pub use fragment_canvas::{FragmentCanvas, FragmentCanvasDescriptor};

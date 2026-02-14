@@ -127,6 +127,7 @@ impl<'a> State<'a> {
                 // },
                 placement: BarsPlacement::Bottom,
                 format: BarsFormat::BassTreble,
+                border: None,
             })
             .map(|bars| Box::new(bars) as Box<dyn ComponentAudio<_>>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
@@ -150,6 +151,7 @@ impl<'a> State<'a> {
                     height_mirrored: true,
                 },
                 format: BarsFormat::TrebleBassTreble,
+                border: None,
             })
             .map(|bars| Box::new(bars) as Box<dyn ComponentAudio<_>>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {

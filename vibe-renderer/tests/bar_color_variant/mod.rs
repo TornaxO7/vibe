@@ -15,6 +15,7 @@ fn test() {
         variant: BarVariant::Color(RED.into()),
         placement: BarsPlacement::Bottom,
         format: BarsFormat::BassTreble,
+        border: None,
     })
     .unwrap_or_else(|msg| panic!("{}", msg));
 
