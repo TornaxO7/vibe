@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 ## 3.0.0 - 2026-02-14
 
-[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[1a6b546](1a6b5461ae85780ef9dcf775173c577c0786531d)
+[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[cac332c](cac332c518fd4d022ba28ef75d5b7b80b966b17d)
 
 ### Bug Fixes
 
@@ -42,6 +42,7 @@ color = "$YOUR_ENV_NAME"
 ### Miscellaneous Tasks
 
 - Make clippy happy ([a99adba](a99adbac5c72e223ff303018de4b8bf6ce5f96b2))
+- Remove release-plz ([cac332c](cac332c518fd4d022ba28ef75d5b7b80b966b17d))
 
 ### Refactor
 
