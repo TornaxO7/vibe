@@ -1,3 +1,5 @@
+use std::num::NonZero;
+
 use crate::{Tester, RED};
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
@@ -31,6 +33,20 @@ fn left() {
         BarsPlacement::Left,
         include_bytes!("./left.png"),
         "bar-left",
+    );
+}
+
+#[test]
+fn custom() {
+    test(
+        BarsPlacement::Custom {
+            bottom_left_corner: (0.1, 0.9),
+            width: NonZero::new(300).unwrap(),
+            rotation: cgmath::Deg(45.0),
+            height_mirrored: true,
+        },
+        include_bytes!("./custom.png"),
+        "bar-custom",
     );
 }
 
