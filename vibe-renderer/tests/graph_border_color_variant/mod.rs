@@ -1,6 +1,6 @@
-use crate::{Tester, BLUE, RED};
+use crate::{Tester, RED};
 use vibe_audio::BarProcessorConfig;
-use vibe_renderer::components::{Graph, GraphDescriptor, GraphVariant};
+use vibe_renderer::components::{Graph, GraphBorder, GraphDescriptor, GraphFormat, GraphVariant};
 
 #[test]
 fn test() {
@@ -12,18 +12,18 @@ fn test() {
         audio_conf: BarProcessorConfig::default(),
         output_texture_format: tester.output_texture_format(),
         max_height: 1.,
-        variant: GraphVariant::VerticalGradient {
-            top: BLUE.into(),
-            bottom: RED.into(),
-        },
-        placement: vibe_renderer::components::GraphPlacement::Top,
-        format: vibe_renderer::components::GraphFormat::TrebleBassTreble,
-        border: None,
+        variant: GraphVariant::Color(RED.into()),
+        placement: vibe_renderer::components::GraphPlacement::Bottom,
+        format: GraphFormat::BassTreble,
+        border: Some(GraphBorder {
+            width: 0.01,
+            color: super::GREEN.into(),
+        }),
     });
 
     tester.evaluate(
         &mut graph,
         include_bytes!("./reference.png"),
-        "graph-vertical-gradient",
+        "graph-border-color",
     );
 }

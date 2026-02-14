@@ -11,6 +11,7 @@ mod bar_presence_gradient_variant;
 
 mod fragment_canvas;
 
+mod graph_border_color_variant;
 mod graph_color_variant;
 mod graph_horizontal_gradient_variant;
 mod graph_vertical_gradient_variant;
@@ -38,6 +39,7 @@ const DIFF_PATH_PREFIX: &str = "/tmp/vibe_test_diffs";
 const BLUE: [f32; 4] = [0., 0., 1., 1.];
 const RED: [f32; 4] = [1., 0., 0., 1.];
 const WHITE: [f32; 4] = [1f32; 4];
+const GREEN: [f32; 4] = [0., 1., 0., 1.];
 
 pub struct Tester<'a> {
     pub output_width: u32,

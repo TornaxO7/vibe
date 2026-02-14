@@ -3,7 +3,10 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Pixels, Rgba, ShaderCodeError, Vec2f};
-use crate::{components::ComponentAudio, Renderable};
+use crate::{
+    components::{utils::wgsl_types::Vec3f, ComponentAudio},
+    Renderable,
+};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
@@ -43,10 +46,15 @@ struct VertexParams {
 }
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct FragmentParams {
     color1: Rgba,
     color2: Rgba,
+
+    border_color: Rgba,
+    border_width: f32,
+
+    _padding: Vec3f,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -170,36 +178,32 @@ impl Bars {
             }
         };
 
-        let (fragment_entrypoint, fragment_params) = match &desc.variant {
-            BarVariant::Color(rgba) => (
-                FragmentEntrypoint::Color,
-                FragmentParams {
-                    color1: *rgba,
-                    color2: *rgba,
-                },
-            ),
-            BarVariant::PresenceGradient { high, low } => (
-                FragmentEntrypoint::Presence,
-                FragmentParams {
-                    color1: *low,
-                    color2: *high,
-                },
-            ),
+        let (fragment_entrypoint, fragment_params) = {
+            let (entrypoint, color1, color2) = match &desc.variant {
+                BarVariant::Color(rgba) => (FragmentEntrypoint::Color, *rgba, *rgba),
+                BarVariant::PresenceGradient { high, low } => {
+                    (FragmentEntrypoint::Presence, *low, *high)
+                }
 
-            BarVariant::HorizontalGradient { left, right } => (
-                FragmentEntrypoint::HorizontalGradient,
-                FragmentParams {
-                    color1: *left,
-                    color2: *right,
-                },
-            ),
-            BarVariant::VerticalGradient { top, bottom } => (
-                FragmentEntrypoint::VerticalGradient,
-                FragmentParams {
-                    color1: *bottom,
-                    color2: *top,
-                },
-            ),
+                BarVariant::HorizontalGradient { left, right } => {
+                    (FragmentEntrypoint::HorizontalGradient, *left, *right)
+                }
+                BarVariant::VerticalGradient { top, bottom } => {
+                    (FragmentEntrypoint::VerticalGradient, *bottom, *top)
+                }
+            };
+
+            let border_config = desc.border.clone().unwrap_or_default();
+
+            let params = FragmentParams {
+                color1,
+                color2,
+                border_width: border_config.width,
+                border_color: border_config.color,
+                ..Default::default()
+            };
+
+            (entrypoint, params)
         };
 
         let vertex_params_buffer = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {

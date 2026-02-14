@@ -15,6 +15,7 @@ pub struct BarsDescriptor<'a, F: Fetcher> {
     // fragment shader relevant stuff
     pub variant: BarVariant,
     pub max_height: f32,
+    pub border: Option<BarBorder>,
 
     pub placement: BarsPlacement,
     pub format: BarsFormat,
@@ -52,4 +53,19 @@ pub enum BarVariant {
     PresenceGradient { high: Rgba, low: Rgba },
     HorizontalGradient { left: Rgba, right: Rgba },
     VerticalGradient { top: Rgba, bottom: Rgba },
+}
+
+#[derive(Debug, Clone)]
+pub struct BarBorder {
+    pub color: Rgba,
+    pub width: f32,
+}
+
+impl Default for BarBorder {
+    fn default() -> Self {
+        Self {
+            color: Default::default(),
+            width: 0f32,
+        }
+    }
 }

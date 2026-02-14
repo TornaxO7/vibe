@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::fetcher::Fetcher;
 use vibe_renderer::components::{
-    BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement, Pixels,
+    BarBorder, BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement, Pixels,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -15,6 +15,7 @@ pub struct BarsConfig {
     pub variant: BarsVariantConfig,
     pub placement: BarsPlacementConfig,
     pub format: BarsFormatConfig,
+    pub border: Option<BarsBorderConfig>,
 }
 
 impl ComponentConfig for BarsConfig {
@@ -45,6 +46,14 @@ impl ComponentConfig for BarsConfig {
             },
         };
 
+        let border = match &self.border {
+            Some(conf) => Some(BarBorder {
+                color: conf.color.as_f32()?,
+                width: conf.width,
+            }),
+            None => None,
+        };
+
         let bars = Bars::new(&BarsDescriptor {
             renderer,
             sample_processor: processor,
@@ -54,6 +63,7 @@ impl ComponentConfig for BarsConfig {
             variant,
             placement: BarsPlacement::from(&self.placement),
             format: BarsFormat::from(&self.format),
+            border,
         })?;
 
         Ok(Box::new(bars))
@@ -79,6 +89,7 @@ impl Default for BarsConfig {
             variant: BarsVariantConfig::Color(turquoise),
             placement: BarsPlacementConfig::Bottom,
             format: BarsFormatConfig::BassTreble,
+            border: None,
         }
     }
 }
@@ -200,6 +211,12 @@ impl From<&BarsFormatConfig> for BarsFormat {
     fn from(config: &BarsFormatConfig) -> Self {
         Self::from(config.clone())
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct BarsBorderConfig {
+    pub width: f32,
+    pub color: Rgba,
 }
 
 #[cfg(test)]

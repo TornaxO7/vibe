@@ -127,6 +127,7 @@ impl<'a> State<'a> {
                 // },
                 placement: BarsPlacement::Bottom,
                 format: BarsFormat::BassTreble,
+                border: None,
             })
             .map(|bars| Box::new(bars) as Box<dyn ComponentAudio<_>>),
             ComponentName::BarsPresenceGradientVariant => Bars::new(&BarsDescriptor {
@@ -150,6 +151,7 @@ impl<'a> State<'a> {
                     height_mirrored: true,
                 },
                 format: BarsFormat::TrebleBassTreble,
+                border: None,
             })
             .map(|bars| Box::new(bars) as Box<dyn ComponentAudio<_>>),
             ComponentName::CircleCurvedVariant => Ok(Box::new(Circle::new(&CircleDescriptor {
@@ -209,6 +211,7 @@ impl<'a> State<'a> {
                     rotation: Deg(-45.),
                     amount_bars: NonZero::new(500).unwrap(),
                 },
+                border: None,
             })) as Box<dyn ComponentAudio<_>>),
             ComponentName::GraphHorizontalGradientVariant => {
                 Ok(Box::new(Graph::new(&GraphDescriptor {
@@ -226,6 +229,7 @@ impl<'a> State<'a> {
                     max_height: 0.5,
                     format: GraphFormat::BassTreble,
                     placement: vibe_renderer::components::GraphPlacement::Bottom,
+                    border: None,
                 })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::GraphVerticalGradientVariant => {
@@ -249,6 +253,7 @@ impl<'a> State<'a> {
                     //     bottom_left_corner: [0.5, 0.2],
                     //     rotation: Deg(-45.),
                     // },
+                    border: None,
                 })) as Box<dyn ComponentAudio<_>>)
             }
             ComponentName::RadialColorVariant => Ok(Box::new(Radial::new(&RadialDescriptor {

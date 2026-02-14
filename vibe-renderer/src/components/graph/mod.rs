@@ -3,7 +3,13 @@ mod descriptor;
 pub use descriptor::*;
 
 use super::{Component, Rgba, Vec2f};
-use crate::{components::ComponentAudio, Renderable, Renderer};
+use crate::{
+    components::{
+        utils::wgsl_types::{Vec3f, Vec4f},
+        ComponentAudio,
+    },
+    Renderable, Renderer,
+};
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
@@ -71,6 +77,9 @@ struct VertexParams {
 struct FragmentParams {
     color1: Rgba,
     color2: Rgba,
+    border_color: Rgba,
+    border_width: f32,
+    _padding: Vec3f,
 }
 
 pub struct Graph {
@@ -186,7 +195,18 @@ impl Graph {
                 GraphVariant::VerticalGradient { top, bottom } => (top, bottom),
             };
 
-            let fragment_params = FragmentParams { color1, color2 };
+            let (border_color, border_width) = desc
+                .border
+                .map(|border| (border.color, border.width))
+                .unwrap_or((Vec4f::default(), 0.));
+
+            let fragment_params = FragmentParams {
+                color1,
+                color2,
+                border_color,
+                border_width,
+                ..Default::default()
+            };
 
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
                 label: Some("Graph: Fragment params buffer"),

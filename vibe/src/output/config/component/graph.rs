@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::fetcher::Fetcher;
 use vibe_renderer::components::{
-    Graph, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,
+    Graph, GraphBorder, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,
 };
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -16,6 +16,7 @@ pub struct GraphConfig {
     variant: GraphVariantConfig,
     placement: GraphPlacementConfig,
     format: GraphFormatConfig,
+    border: Option<GraphBorderConfig>,
 }
 
 impl ComponentConfig for GraphConfig {
@@ -42,6 +43,13 @@ impl ComponentConfig for GraphConfig {
         };
 
         let placement = GraphPlacement::from(&self.placement);
+        let border = match &self.border {
+            Some(conf) => Some(GraphBorder {
+                color: conf.color.as_f32()?,
+                width: conf.width,
+            }),
+            None => None,
+        };
 
         Ok(Box::new(Graph::new(&GraphDescriptor {
             renderer,
@@ -52,6 +60,7 @@ impl ComponentConfig for GraphConfig {
             max_height: self.max_height,
             placement,
             format: self.format.clone().into(),
+            border,
         })))
     }
 
@@ -64,20 +73,13 @@ impl ComponentConfig for GraphConfig {
 pub struct GraphAudioConfig {
     pub freq_range: FreqRange,
     pub sensitivity: f32,
-    // pub padding: Option<NonZero<u16>>,
 }
 
 impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
-        // let padding = conf.padding.map(|amount| PaddingConfig {
-        //     side: PaddingSide::Both,
-        //     size: PaddingSize::Custom(amount),
-        // });
-
         Self {
             freq_range: conf.freq_range.range(),
             sensitivity: conf.sensitivity,
-            // padding,
             ..Default::default()
         }
     }
@@ -158,4 +160,10 @@ impl From<&GraphFormatConfig> for GraphFormat {
     fn from(conf: &GraphFormatConfig) -> Self {
         Self::from(conf.clone())
     }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct GraphBorderConfig {
+    pub width: f32,
+    pub color: Rgba,
 }
