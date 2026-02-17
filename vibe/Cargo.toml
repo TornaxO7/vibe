@@ -25,6 +25,7 @@ vibe-audio.workspace = true
 wgpu.workspace = true
 xdg.workspace = true
 tracing-indicatif.workspace = true
+winit.workspace = true
 
 raw-window-handle = "0.6"
 
@@ -33,12 +34,5 @@ wayland-backend = { version = "0.3", features = ["client_system"] }
 smithay-client-toolkit = "0.20"
 
 vibe-renderer = { path = "../vibe-renderer" }
-
-winit = { version = "0.30", default-features = false, features = [
-  "rwh_06",
-  "wayland",
-  "wayland-csd-adwaita",
-  "wayland-dlopen",
-] }
 
 notify = { version = "8", default-features = false }

@@ -31,6 +31,12 @@ toml = "0.9"
 tracing-indicatif = "0.3"
 bytemuck = "1.25"
 colored = "3"
+winit = { version = "0.30", default-features = false, features = [
+  "rwh_06",
+  "wayland",
+  "wayland-csd-adwaita",
+  "wayland-dlopen",
+] }
 
 [profile.release-lto]
 inherits = "release"
