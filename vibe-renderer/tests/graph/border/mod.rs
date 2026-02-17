@@ -1,5 +1,6 @@
 use crate::{Tester, GREEN, RED, WHITE};
 use std::num::NonZero;
+use test_fork::test;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{
     Graph, GraphBorder, GraphDescriptor, GraphFormat, GraphPlacement, GraphVariant,

@@ -1,4 +1,5 @@
 use crate::{Tester, RED};
+use test_fork::test;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{BarVariant, Bars, BarsDescriptor, BarsFormat, BarsPlacement};
 

@@ -30,5 +30,6 @@ clap.workspace = true
 tracing-subscriber.workspace = true
 colored.workspace = true
 
+test-fork = "0.1"
 winit = "0.30"
 nv-flip = "0.1"

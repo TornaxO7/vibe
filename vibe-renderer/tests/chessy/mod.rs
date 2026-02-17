@@ -1,4 +1,5 @@
 use crate::Tester;
+use test_fork::test;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::{
     components::{Chessy, ChessyDescriptor},
