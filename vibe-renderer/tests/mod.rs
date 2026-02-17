@@ -6,20 +6,15 @@ use vibe_renderer::{ComponentAudio, Renderer, RendererDescriptor};
 
 mod aurodio;
 
-mod bar_color_variant;
-mod bar_presence_gradient_variant;
+mod bars;
 
 mod fragment_canvas;
 
-mod graph_border_color_variant;
-mod graph_color_variant;
-mod graph_horizontal_gradient_variant;
-mod graph_vertical_gradient_variant;
+mod graph;
 
-mod circle_graph;
+mod circle;
 
-mod radial_color_variant;
-mod radial_height_gradient_variant;
+mod radial;
 
 mod chessy;
 

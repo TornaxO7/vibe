@@ -1,6 +1,6 @@
-use std::io::Cursor;
-
 use image::{DynamicImage, ImageReader};
+use std::io::Cursor;
+use test_fork::test;
 use vibe_audio::{fetcher::DummyFetcher, BarProcessorConfig, SampleProcessor};
 use vibe_renderer::components::{FragmentCanvas, FragmentCanvasDescriptor, ShaderCode};
 
