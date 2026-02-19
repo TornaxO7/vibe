@@ -2,7 +2,9 @@ use super::{Component, ShaderCode, ShaderCodeError};
 use crate::{components::ComponentAudio, Renderable, Renderer};
 use pollster::FutureExt;
 use std::borrow::Cow;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
+use vibe_audio::{
+    fetcher::Fetcher, BarProcessor, BarProcessorConfig, CubicSplineInterpolation, SampleProcessor,
+};
 use wgpu::include_wgsl;
 
 const ENTRYPOINT: &str = "main";
@@ -25,7 +27,7 @@ struct TextureCtx {
 }
 
 pub struct FragmentCanvas {
-    bar_processor: BarProcessor,
+    bar_processor: BarProcessor<CubicSplineInterpolation>,
 
     iresolution: wgpu::Buffer,
     freqs: wgpu::Buffer,

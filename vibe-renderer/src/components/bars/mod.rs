@@ -9,7 +9,7 @@ use crate::{
 };
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, CubicSplineInterpolation, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// The x coords goes from -1 to 1.
@@ -101,7 +101,7 @@ struct RenderCtx {
 
 pub struct Bars {
     amount_bars: NonZero<u16>,
-    bar_processor: BarProcessor,
+    bar_processor: BarProcessor<CubicSplineInterpolation>,
 
     // `left` and `right` share the same bind group 0
     bind_group0: wgpu::BindGroup,

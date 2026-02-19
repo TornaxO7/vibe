@@ -1,6 +1,4 @@
-use super::{
-    context::InterpolationCtx, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
-};
+use super::{context::InterpolationCtx, Interpolater, InterpolatorDescriptor};
 use nalgebra::{Cholesky, DMatrix, DVector, Dyn};
 
 type Width = usize;
@@ -17,7 +15,7 @@ pub struct CubicSplineInterpolation {
     gradient_diffs: Box<[f32]>,
 }
 
-impl InterpolatorCreation for CubicSplineInterpolation {
+impl Interpolater for CubicSplineInterpolation {
     fn new(desc: InterpolatorDescriptor) -> Self {
         let ctx = InterpolationCtx::new(desc);
 
@@ -54,9 +52,6 @@ impl InterpolatorCreation for CubicSplineInterpolation {
             gradient_diffs,
         }
     }
-}
-
-impl Interpolater for CubicSplineInterpolation {
     fn interpolate(&mut self, buffer: &mut [f32]) {
         for point in self.ctx.supporting_points.iter() {
             buffer[point.x] = point.y;

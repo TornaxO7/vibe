@@ -2,11 +2,8 @@ mod fft_out_metadata;
 mod padding;
 
 use crate::{
-    interpolation::{
-        CubicSplineInterpolation, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
-        LinearInterpolation, NothingInterpolation,
-    },
-    BarProcessorConfig, InterpolationVariant, PaddingSize,
+    interpolation::{Interpolater, InterpolatorDescriptor},
+    BarProcessorConfig, PaddingSize,
 };
 use cpal::SampleRate;
 use fft_out_metadata::{FftOutMetadata, FftOutMetadataDescriptor};
@@ -18,9 +15,9 @@ const INIT_NORMALIZATION_FACTOR: f32 = 1.;
 const DEFAULT_PADDING_SIZE: usize = 5;
 
 /// Contains every additional information for a channel to be processed.
-pub struct ChannelCtx {
+pub struct ChannelCtx<I: Interpolater> {
     // The interpolation strategy for this channel
-    interpolator: Box<dyn Interpolater>,
+    interpolator: I,
     // Contains the index range for each supporting point within the fft output for each supporting point
     fft_out_ranges: Box<[Range<usize>]>,
 
@@ -40,7 +37,7 @@ pub struct ChannelCtx {
 }
 
 /// Construction relevant methods
-impl ChannelCtx {
+impl<I: Interpolater> ChannelCtx<I> {
     pub fn new(config: &BarProcessorConfig, sample_rate: SampleRate, fft_size: usize) -> Self {
         let mut data = FftOutMetadata::interpret_fft_context(FftOutMetadataDescriptor {
             amount_bars: config.amount_bars,
@@ -79,16 +76,7 @@ impl ChannelCtx {
             supporting_points_fft_ranges,
         } = data;
 
-        let interpolator: Box<dyn Interpolater> = {
-            let desc = InterpolatorDescriptor { supporting_points };
-
-            match config.interpolation {
-                InterpolationVariant::None => NothingInterpolation::boxed(desc),
-                InterpolationVariant::Linear => LinearInterpolation::boxed(desc),
-                InterpolationVariant::CubicSpline => CubicSplineInterpolation::boxed(desc),
-            }
-        };
-
+        let interpolator = I::new(InterpolatorDescriptor { supporting_points });
         let covered_bar_range = interpolator.covered_bar_range();
 
         let peak = vec![0f32; covered_bar_range.len()].into_boxed_slice();
@@ -118,7 +106,7 @@ impl ChannelCtx {
 }
 
 /// Processing relevant methods
-impl ChannelCtx {
+impl<I: Interpolater> ChannelCtx<I> {
     pub fn update_supporting_points(&mut self, fft_out: &[Complex32]) {
         let mut overshoot = false;
         let mut is_silent = true;
@@ -217,7 +205,7 @@ mod tests {
     use super::*;
 
     mod total_amount_bars {
-        use crate::PaddingConfig;
+        use crate::{NothingInterpolation, PaddingConfig};
 
         use super::*;
         use std::num::NonZero;
@@ -226,7 +214,7 @@ mod tests {
 
         #[test]
         fn one_bar_no_padding() {
-            let ctx = ChannelCtx::new(
+            let ctx: ChannelCtx<NothingInterpolation> = ChannelCtx::new(
                 &BarProcessorConfig {
                     amount_bars: NonZero::new(1).unwrap(),
                     ..Default::default()
@@ -240,7 +228,7 @@ mod tests {
 
         #[test]
         fn one_bar_with_oneside_padding() {
-            let ctx = ChannelCtx::new(
+            let ctx: ChannelCtx<NothingInterpolation> = ChannelCtx::new(
                 &BarProcessorConfig {
                     amount_bars: NonZero::new(1).unwrap(),
                     padding: Some(PaddingConfig {
@@ -258,7 +246,7 @@ mod tests {
 
         #[test]
         fn one_bar_with_twoside_padding() {
-            let ctx = ChannelCtx::new(
+            let ctx: ChannelCtx<NothingInterpolation> = ChannelCtx::new(
                 &BarProcessorConfig {
                     amount_bars: NonZero::new(1).unwrap(),
                     padding: Some(PaddingConfig {

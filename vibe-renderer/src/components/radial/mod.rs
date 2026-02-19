@@ -5,7 +5,7 @@ pub use descriptor::*;
 use super::{Component, Rgba, Vec2f};
 use crate::{components::ComponentAudio, Renderable};
 use cgmath::{Deg, Matrix2, Rad, Vector2};
-use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, CubicSplineInterpolation, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// Entrypoints for the vertex shader
@@ -90,7 +90,7 @@ struct PipelineCtx {
 }
 
 pub struct Radial {
-    bar_processor: BarProcessor,
+    bar_processor: BarProcessor<CubicSplineInterpolation>,
 
     bind_group0: wgpu::BindGroup,
     vertex_params_buffer: wgpu::Buffer,

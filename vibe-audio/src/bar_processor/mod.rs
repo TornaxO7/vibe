@@ -1,19 +1,22 @@
 mod channel_ctx;
 mod config;
 
-use crate::{fetcher::Fetcher, SampleProcessor};
+use crate::{fetcher::Fetcher, interpolation::Interpolater, SampleProcessor};
 use channel_ctx::ChannelCtx;
 use cpal::SampleRate;
 use std::num::NonZero;
 
+pub use crate::interpolation::{
+    CubicSplineInterpolation, LinearInterpolation, NothingInterpolation,
+};
 pub use config::*;
 
 // for clippy
-type Channels = Box<[ChannelCtx]>;
+type Channels<I> = Box<[ChannelCtx<I>]>;
 type BarValues = Box<[Box<[f32]>]>;
 
 /// The struct which computes the bar values of the samples of the fetcher.
-pub struct BarProcessor {
+pub struct BarProcessor<I: Interpolater> {
     // The final bar values.
     //
     // Mapping:
@@ -22,14 +25,14 @@ pub struct BarProcessor {
     bar_values: BarValues,
 
     // ctx[i] = channel context of the i-th channel
-    ctx: Channels,
+    ctx: Channels<I>,
 
     config: BarProcessorConfig,
     sample_rate: SampleRate,
     sample_len: usize,
 }
 
-impl BarProcessor {
+impl<I: Interpolater> BarProcessor<I> {
     /// Creates a new instance.
     ///
     /// See the examples of this crate to see it's usage.
@@ -78,10 +81,10 @@ impl BarProcessor {
     ///
     /// # Example
     /// ```rust
-    /// use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher};
+    /// use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher, NothingInterpolation};
     ///
     /// let mut sample_processor = SampleProcessor::new(DummyFetcher::new(1));
-    /// let mut bar_processor = BarProcessor::new(
+    /// let mut bar_processor: BarProcessor<NothingInterpolation> = BarProcessor::new(
     ///     &sample_processor,
     ///     BarProcessorConfig {
     ///         amount_bars: std::num::NonZero::new(10).unwrap(),
@@ -125,7 +128,7 @@ impl BarProcessor {
         amount_channels: NonZero<u8>,
         sample_rate: SampleRate,
         sample_len: usize,
-    ) -> (Channels, BarValues) {
+    ) -> (Channels<I>, BarValues) {
         let amount_channels = amount_channels.get() as usize;
         let channels = {
             let mut channels = Vec::with_capacity(amount_channels);
@@ -164,14 +167,14 @@ impl BarProcessor {
 
 #[cfg(test)]
 mod tests {
-    use crate::fetcher::DummyFetcher;
+    use crate::{fetcher::DummyFetcher, interpolation::NothingInterpolation};
 
     use super::*;
 
     #[test]
     fn one_channel_u16_max_bars() {
         let processor = SampleProcessor::new(DummyFetcher::new(1));
-        let mut bar_processor = BarProcessor::new(
+        let mut bar_processor: BarProcessor<NothingInterpolation> = BarProcessor::new(
             &processor,
             BarProcessorConfig {
                 amount_bars: NonZero::new(u16::MAX).unwrap(),
@@ -188,7 +191,7 @@ mod tests {
     #[test]
     fn two_channels_u16_max_bars() {
         let processor = SampleProcessor::new(DummyFetcher::new(2));
-        let mut bar_processor = BarProcessor::new(
+        let mut bar_processor: BarProcessor<NothingInterpolation> = BarProcessor::new(
             &processor,
             BarProcessorConfig {
                 amount_bars: NonZero::new(u16::MAX).unwrap(),
@@ -212,7 +215,7 @@ mod tests {
     fn one_channel_u16_max_bars_with_padding() {
         let processor = SampleProcessor::new(DummyFetcher::new(1));
 
-        BarProcessor::new(
+        BarProcessor::<NothingInterpolation>::new(
             &processor,
             BarProcessorConfig {
                 amount_bars: NonZero::new(u16::MAX).unwrap(),
@@ -230,7 +233,7 @@ mod tests {
     fn two_channels_u16_max_bars_with_padding() {
         let processor = SampleProcessor::new(DummyFetcher::new(2));
 
-        BarProcessor::new(
+        BarProcessor::<NothingInterpolation>::new(
             &processor,
             BarProcessorConfig {
                 amount_bars: NonZero::new(u16::MAX).unwrap(),

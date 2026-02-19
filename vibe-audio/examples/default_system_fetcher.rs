@@ -1,6 +1,6 @@
 use vibe_audio::{
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
-    BarProcessor, BarProcessorConfig, SampleProcessor,
+    BarProcessor, BarProcessorConfig, CubicSplineInterpolation, SampleProcessor,
 };
 
 fn main() {
@@ -8,7 +8,8 @@ fn main() {
     let descriptor = SystemAudioFetcherDescriptor::default();
 
     let mut processor = SampleProcessor::new(SystemAudioFetcher::new(&descriptor).unwrap());
-    let mut bar_processor = BarProcessor::new(&processor, BarProcessorConfig::default());
+    let mut bar_processor: BarProcessor<CubicSplineInterpolation> =
+        BarProcessor::new(&processor, BarProcessorConfig::default());
 
     // simply fetch
     processor.process_next_samples();

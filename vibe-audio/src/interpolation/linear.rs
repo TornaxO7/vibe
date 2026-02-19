@@ -1,6 +1,4 @@
-use super::{
-    context::InterpolationCtx, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
-};
+use super::{context::InterpolationCtx, Interpolater, InterpolatorDescriptor};
 use tracing::debug;
 
 /// Interpolates linearly between two supporting points.
@@ -9,15 +7,13 @@ pub struct LinearInterpolation {
     ctx: InterpolationCtx,
 }
 
-impl InterpolatorCreation for LinearInterpolation {
+impl Interpolater for LinearInterpolation {
     fn new(desc: InterpolatorDescriptor) -> Self {
         let ctx = InterpolationCtx::new(desc);
 
         Self { ctx }
     }
-}
 
-impl Interpolater for LinearInterpolation {
     fn interpolate(&mut self, buffer: &mut [f32]) {
         for point in self.ctx.supporting_points.iter() {
             buffer[point.x] = point.y;

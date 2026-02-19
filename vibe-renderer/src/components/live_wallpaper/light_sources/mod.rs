@@ -3,7 +3,9 @@ mod descriptor;
 use std::num::NonZero;
 
 pub use descriptor::*;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
+use vibe_audio::{
+    fetcher::Fetcher, BarProcessor, BarProcessorConfig, NothingInterpolation, SampleProcessor,
+};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 use crate::{components::ComponentAudio, Component, Renderable};
@@ -43,7 +45,7 @@ impl BindingLightData {
 }
 
 pub struct LightSources {
-    bar_processor: BarProcessor,
+    bar_processor: BarProcessor<NothingInterpolation>,
 
     amount_light_sources: usize,
     uniform_pulse: bool,
