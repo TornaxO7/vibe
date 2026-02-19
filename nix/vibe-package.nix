@@ -12,7 +12,7 @@
 
 , mesa
 , vulkan-loader
-, vulkan-validation-layers
+  # , vulkan-validation-layers
 , vulkan-tools
 , makeWrapper
 }:
@@ -42,7 +42,7 @@ rustPlatform.buildRustPackage rec {
     libxkbcommon
 
     vulkan-loader
-    vulkan-validation-layers
+    # vulkan-validation-layers
     vulkan-tools
   ];
 

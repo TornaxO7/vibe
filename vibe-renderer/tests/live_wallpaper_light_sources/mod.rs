@@ -1,7 +1,6 @@
 use crate::Tester;
 use image::ImageReader;
 use std::num::NonZero;
-use test_fork::test;
 use vibe_renderer::components::live_wallpaper::light_sources::{
     LightSourceData, LightSources, LightSourcesDescriptor,
 };

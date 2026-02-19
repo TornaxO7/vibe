@@ -50,11 +50,9 @@
                   #   src = pkgs.fetchFromGitHub {
                   #     owner = "KhronosGroup";
                   #     repo = "Vulkan-ValidationLayers";
-                  #     rev = "11440fc0664718ac51646c63d6e321f61195e808";
+                  #     rev = "8166b45f45f15eab64e73480de22fd3004480215";
                   #     hash = "sha256-iAOUwTAU8VdrMNDYlPHWqPKtzDZOHRxNq4nsEmDbsug=";
                   #   };
-
-                  #   cmakeFlags = old.cmakeFlags ++ [ "-DUPDATE_DEPS=false" ];
                   # });
                 })
             ];

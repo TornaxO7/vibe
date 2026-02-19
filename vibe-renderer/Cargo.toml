@@ -31,5 +31,4 @@ tracing-subscriber.workspace = true
 colored.workspace = true
 winit.workspace = true
 
-test-fork = "0.1"
 nv-flip = "0.1"

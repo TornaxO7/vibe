@@ -1,6 +1,5 @@
 use crate::Tester;
 use std::num::NonZero;
-use test_fork::test;
 use vibe_renderer::components::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
 
 const BLUE: [f32; 3] = [0., 0., 1.];

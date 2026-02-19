@@ -1,5 +1,4 @@
 use crate::{Tester, WHITE};
-use test_fork::test;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{Circle, CircleDescriptor, CircleVariant};
 
