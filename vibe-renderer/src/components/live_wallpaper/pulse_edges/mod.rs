@@ -8,7 +8,7 @@ use crate::{
     Component, Renderable,
 };
 use std::num::NonZero;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, NothingInterpolation, SampleProcessor};
 use wgpu::include_wgsl;
 
 #[repr(C)]
@@ -35,7 +35,7 @@ pub enum PulseEdgesError {
 }
 
 pub struct PulseEdges {
-    bar_processor: BarProcessor,
+    bar_processor: BarProcessor<NothingInterpolation>,
 
     data_binding_buffer: wgpu::Buffer,
 

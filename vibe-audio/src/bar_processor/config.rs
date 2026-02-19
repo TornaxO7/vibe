@@ -76,9 +76,8 @@ pub struct BarProcessorConfig {
     /// Set the frequency range which the bar processor should consider.
     pub freq_range: Range<NonZero<u16>>,
 
-    /// Decide how the bar values should be interpolated.
-    pub interpolation: InterpolationVariant,
-
+    // /// Decide how the bar values should be interpolated.
+    // pub interpolation: InterpolationVariant,
     /// Control how fast the bars should adjust to their new height.
     /// Default value: `2`.
     /// The higher the value, the "faster" the bars adjust to the new height.
@@ -94,7 +93,7 @@ pub struct BarProcessorConfig {
 impl Default for BarProcessorConfig {
     fn default() -> Self {
         Self {
-            interpolation: InterpolationVariant::CubicSpline,
+            // interpolation: InterpolationVariant::CubicSpline,
             amount_bars: NonZero::new(30).unwrap(),
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
             sensitivity: 2.,

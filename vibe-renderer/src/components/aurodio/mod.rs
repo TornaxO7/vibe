@@ -4,7 +4,7 @@ pub use descriptor::*;
 use super::{Component, Vec2f, Vec3f};
 use crate::{components::ComponentAudio, texture_generation::ValueNoise, Renderable};
 use std::num::NonZero;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, NothingInterpolation};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 type BaseColor = Vec3f;
@@ -23,7 +23,7 @@ struct FragmentParams {
 }
 
 pub struct Aurodio {
-    bar_processors: Box<[BarProcessor]>,
+    bar_processors: Box<[BarProcessor<NothingInterpolation>]>,
 
     bind_group0: wgpu::BindGroup,
     fragment_params_buffer: wgpu::Buffer,

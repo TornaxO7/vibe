@@ -12,7 +12,9 @@ use crate::{
 };
 use cgmath::{Deg, Matrix2, Vector2};
 use std::num::NonZero;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, SampleProcessor};
+use vibe_audio::{
+    fetcher::Fetcher, BarProcessor, BarProcessorConfig, CubicSplineInterpolation, SampleProcessor,
+};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 /// Each graph is put inside a box with 4 vertices.
@@ -83,7 +85,7 @@ struct FragmentParams {
 }
 
 pub struct Graph {
-    bar_processor: vibe_audio::BarProcessor,
+    bar_processor: vibe_audio::BarProcessor<CubicSplineInterpolation>,
 
     bind_group0: wgpu::BindGroup,
     vertex_params_buffer: wgpu::Buffer,

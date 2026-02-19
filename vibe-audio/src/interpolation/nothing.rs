@@ -1,6 +1,4 @@
-use super::{
-    context::InterpolationCtx, Interpolater, InterpolatorCreation, InterpolatorDescriptor,
-};
+use super::{context::InterpolationCtx, Interpolater, InterpolatorDescriptor};
 
 /// Interpolates nothing... as the name says...
 /// which basically means that it won't fill any other values.
@@ -9,15 +7,12 @@ pub struct NothingInterpolation {
     ctx: InterpolationCtx,
 }
 
-impl InterpolatorCreation for NothingInterpolation {
+impl Interpolater for NothingInterpolation {
     fn new(desc: InterpolatorDescriptor) -> Self {
         let ctx = InterpolationCtx::new(desc);
 
         Self { ctx }
     }
-}
-
-impl Interpolater for NothingInterpolation {
     fn interpolate(&mut self, buffer: &mut [f32]) {
         for point in self.ctx.supporting_points.iter() {
             buffer[point.x] = point.y;

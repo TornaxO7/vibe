@@ -8,7 +8,7 @@ use crate::{
     texture_generation::{SdfMask, SdfPattern},
     Renderable,
 };
-use vibe_audio::{fetcher::Fetcher, BarProcessor, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, LinearInterpolation, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 // this texture size seems good enough for a 1920x1080 screen.
@@ -30,7 +30,7 @@ struct Data {
 }
 
 pub struct Chessy {
-    bar_processor: BarProcessor,
+    bar_processor: BarProcessor<LinearInterpolation>,
 
     data_buffer: wgpu::Buffer,
     freqs_buffer: wgpu::Buffer,

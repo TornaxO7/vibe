@@ -1,7 +1,7 @@
 mod descriptor;
 
 pub use descriptor::*;
-use vibe_audio::{fetcher::Fetcher, SampleProcessor};
+use vibe_audio::{fetcher::Fetcher, CubicSplineInterpolation, SampleProcessor};
 
 use super::{Component, Mat2x2, Rgba, Vec2f};
 use crate::{components::ComponentAudio, util::SimpleRenderPipelineDescriptor, Renderable};
@@ -30,7 +30,7 @@ struct Data {
 }
 
 pub struct Circle {
-    bar_processor: vibe_audio::BarProcessor,
+    bar_processor: vibe_audio::BarProcessor<CubicSplineInterpolation>,
 
     data_buffer: wgpu::Buffer,
     freq_buffer: wgpu::Buffer,
