@@ -81,10 +81,10 @@ impl<I: Interpolater> BarProcessor<I> {
     ///
     /// # Example
     /// ```rust
-    /// use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher};
+    /// use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher, NothingInterpolation};
     ///
     /// let mut sample_processor = SampleProcessor::new(DummyFetcher::new(1));
-    /// let mut bar_processor = BarProcessor::new(
+    /// let mut bar_processor: BarProcessor<NothingInterpolation> = BarProcessor::new(
     ///     &sample_processor,
     ///     BarProcessorConfig {
     ///         amount_bars: std::num::NonZero::new(10).unwrap(),

@@ -1,7 +1,7 @@
 use vibe_audio::{
     fetcher::{SystemAudioFetcher, SystemAudioFetcherDescriptor},
     util::DeviceType,
-    BarProcessor, BarProcessorConfig, SampleProcessor,
+    BarProcessor, BarProcessorConfig, LinearInterpolation, SampleProcessor,
 };
 
 fn main() {
@@ -25,7 +25,8 @@ fn main() {
     };
 
     let mut sample_processor = SampleProcessor::new(SystemAudioFetcher::new(&descriptor).unwrap());
-    let mut bar_processor = BarProcessor::new(&sample_processor, BarProcessorConfig::default());
+    let mut bar_processor: BarProcessor<LinearInterpolation> =
+        BarProcessor::new(&sample_processor, BarProcessorConfig::default());
 
     // start creating the bars
     sample_processor.process_next_samples();

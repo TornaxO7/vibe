@@ -12,12 +12,12 @@
 //! ## Simple workflow
 //! A simple workflow can look like this:
 //! ```
-//! use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher};
+//! use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher, NothingInterpolation};
 //!
 //! // A fetcher with 2 channels
 //! let mut sample_processor = SampleProcessor::new(DummyFetcher::new(2));
 //! // Note: The bar procesor is intended to only work with the given sample processor.
-//! let mut bar_processor = BarProcessor::new(
+//! let mut bar_processor: BarProcessor<NothingInterpolation> = BarProcessor::new(
 //!     &sample_processor,
 //!     BarProcessorConfig {
 //!         amount_bars: std::num::NonZero::new(30).unwrap(),
@@ -48,18 +48,18 @@
 //!
 //! ```
 //! use std::num::NonZero;
-//! use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher};
+//! use vibe_audio::{SampleProcessor, BarProcessor, BarProcessorConfig, fetcher::DummyFetcher, NothingInterpolation};
 //!
 //! let mut sample_processor = SampleProcessor::new(DummyFetcher::new(2));
 //!
-//! let mut bar_processor = BarProcessor::new(
+//! let mut bar_processor: BarProcessor<NothingInterpolation> = BarProcessor::new(
 //!     &sample_processor,
 //!     BarProcessorConfig {
 //!         amount_bars: NonZero::new(20).unwrap(),
 //!         ..Default::default()
 //!     }
 //! );
-//! let mut bar_processor2 = BarProcessor::new(
+//! let mut bar_processor2: BarProcessor<NothingInterpolation> = BarProcessor::new(
 //!     &sample_processor,
 //!     BarProcessorConfig {
 //!         amount_bars: NonZero::new(11).unwrap(),
