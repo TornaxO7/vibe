@@ -37,6 +37,7 @@ struct Input {
 struct Output {
     @builtin(position) vpos: vec4f,
     @location(0) rect_pos: vec2f,
+    @location(1) freq: f32,
 };
 
 @vertex
@@ -89,6 +90,7 @@ fn vertex_main(freq: f32, vertex_idx: u32, instance_idx: u32) -> Output {
     var out: Output;
     out.vpos = vec4f(final_pos, 0., 1.);
     out.rect_pos = vec2f(rect_pos.x - vp.circle_radius, rect_pos.y);
+    out.freq = freq;
     return out;
 }
 
@@ -101,6 +103,12 @@ fn fs_color(in: Output) -> @location(0) vec4f {
 @fragment
 fn fs_height_gradient(in: Output) -> @location(0) vec4f {
     let col = mix(fp.color1, fp.color2, smoothstep(0., .5, in.rect_pos.x / vfp.bar_height_sensitivity));
+    return _fragment_smoothing(col, in.rect_pos);
+}
+
+@fragment
+fn fs_presence_gradient(in: Output) -> @location(0) vec4f {
+    let col = mix(fp.color1, fp.color2, clamp(in.freq, 0., 1.));
     return _fragment_smoothing(col, in.rect_pos);
 }
 
