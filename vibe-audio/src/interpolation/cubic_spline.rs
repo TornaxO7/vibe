@@ -74,7 +74,7 @@ impl Interpolater for CubicSplineInterpolation {
             let gradient_iter = self.gradients.iter_mut();
 
             for ((gradient, prev), next) in gradient_iter.zip(prev_iter).zip(next_iter) {
-                *gradient = (prev.y - next.y) / (prev.x as f32 - next.x as f32);
+                *gradient = (prev.y - next.y) / (prev.x - next.x) as f32;
             }
         }
 
@@ -117,13 +117,13 @@ impl Interpolater for CubicSplineInterpolation {
             let amount = section.amount;
             for interpolated_idx in 0..amount {
                 let bar_idx = interpolated_idx + 1 + left.x;
-                let x = bar_idx as f32;
+                let x = bar_idx;
 
                 let interpolated_value = left.y
-                    + (x - left.x as f32) * gradient
-                    + ((x - left.x as f32) * (x - right.x as f32)) / (6. * section_width as f32)
-                        * ((prev_gamma + 2. * next_gamma) * (x - left.x as f32)
-                            - (2. * prev_gamma + next_gamma) * (x - right.x as f32));
+                    + (x - left.x) as f32 * gradient
+                    + ((x - left.x) * (x - right.x)) as f32 / (6 * section_width) as f32
+                        * ((prev_gamma + 2. * next_gamma) * (x - left.x) as f32
+                            - (2. * prev_gamma + next_gamma) * (x - right.x) as f32);
 
                 buffer[bar_idx] = interpolated_value;
             }
