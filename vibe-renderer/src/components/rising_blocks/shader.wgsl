@@ -11,15 +11,15 @@ struct VertexParams {
     amount_columns: u32,
 };
 
-struct FragmentParams {
-};
+// struct FragmentParams {
+// };
 
-struct BlockData {
-    // The time when the block was created
-    @location(0) start_time: f32,
-    // The current height of the block
-    @location(1) height: f32,
-};
+// struct BlockData {
+//     // The time when the block was created
+//     @location(0) start_time: f32,
+//     // The current height of the block
+//     @location(1) height: f32,
+// };
 
 @group(0) @binding(0)
 var<uniform> vp: VertexParams;
@@ -31,7 +31,12 @@ struct Input {
     @builtin(vertex_index) vertex_idx: u32,
     @builtin(instance_index) instance_idx: u32,
 
-    data: BlockData,
+    // data: BlockData,
+
+    // The time when the block was created
+    @location(0) start_time: f32,
+    // The current height of the block
+    @location(1) height: f32,
 };
 
 struct Output {
@@ -85,11 +90,13 @@ fn vs_main(in: Input) -> Output {
     // -- y
     let is_bottom_vertex = in.vertex_idx >= 2;
     if (is_bottom_vertex) {
-        pos -= vp.up_direction * in.data.height;
+        // pos -= vp.up_direction * in.data.height;
+        pos -= vp.up_direction * in.height;
     }
 
     // steadily go up
-    pos += vp.up_direction * (vp.time - in.data.start_time);
+    // pos += vp.up_direction * (vp.time - in.data.start_time);
+    pos += vp.up_direction * (vp.time - in.start_time);
 
     output.pos = vec4f(pos, 0., 1.);
     return output;
