@@ -72,6 +72,10 @@ impl<I: Interpolater> BarProcessor<I> {
         &self.bar_values
     }
 
+    pub fn bars(&self) -> &[Box<[f32]>] {
+        &self.bar_values
+    }
+
     /// Returns the current config of the bar processor.
     pub fn config(&self) -> &BarProcessorConfig {
         &self.config
