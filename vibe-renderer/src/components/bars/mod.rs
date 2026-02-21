@@ -121,7 +121,7 @@ impl Bars {
     pub fn new<F: Fetcher>(desc: &BarsDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.renderer.device();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let (bottom_left_corner, angle, width) = match desc.placement {
             BarsPlacement::Bottom => (Vector2::from([-1., -1.]), Deg(0.), BarsWidth::ScreenWidth),

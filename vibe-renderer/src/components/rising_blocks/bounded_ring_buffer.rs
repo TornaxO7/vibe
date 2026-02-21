@@ -1,4 +1,7 @@
-/// A ring buffer which can only `push_back()` and `pop_front()`.
+const DEFAULT_BLOCK_AMOUNT: usize = 1024;
+
+/// A ring buffer which can only `push_back()` and `pop_front()` and has a static
+/// size.
 #[derive(Debug)]
 pub struct BoundedRingBuffer<T> {
     buffer: Box<[T]>,
@@ -14,11 +17,25 @@ pub struct BoundedRingBuffer<T> {
     is_full: bool,
 }
 
-impl<T> BoundedRingBuffer<T> {
+impl<T: Default> Default for BoundedRingBuffer<T> {
+    fn default() -> Self {
+        Self::new(DEFAULT_BLOCK_AMOUNT)
+    }
+}
+
+impl<T: Default> BoundedRingBuffer<T> {
     pub fn new(capacity: usize) -> Self {
         assert!(capacity > 0, "Code assumes a capacity > 0");
 
-        let buffer: Box<[T]> = unsafe { Box::new_uninit_slice(capacity).assume_init() };
+        let buffer: Box<[T]> = {
+            let mut buffer = Vec::with_capacity(capacity);
+
+            for _ in 0..capacity {
+                buffer.push(T::default());
+            }
+
+            buffer.into_boxed_slice()
+        };
 
         Self {
             buffer,
@@ -186,7 +203,7 @@ pub struct Iter<'a, T> {
     in_beginning: bool,
 }
 
-impl<'a, T> Iter<'a, T> {
+impl<'a, T: Default> Iter<'a, T> {
     pub fn new(buffer: &'a BoundedRingBuffer<T>) -> Self {
         Self {
             buffer,
@@ -196,7 +213,7 @@ impl<'a, T> Iter<'a, T> {
     }
 }
 
-impl<'a, T> Iterator for Iter<'a, T> {
+impl<'a, T: Default> Iterator for Iter<'a, T> {
     type Item = &'a T;
 
     fn next(&mut self) -> Option<Self::Item> {

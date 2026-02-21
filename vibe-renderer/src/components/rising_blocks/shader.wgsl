@@ -15,7 +15,9 @@ struct FragmentParams {
 };
 
 struct BlockData {
+    // The time when the block was created
     @location(0) start_time: f32,
+    // The current height of the block
     @location(1) height: f32,
 };
 
