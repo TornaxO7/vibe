@@ -1,5 +1,10 @@
 const DEFAULT_BLOCK_AMOUNT: usize = 1024;
 
+pub struct Contigious<'a, T> {
+    pub head: &'a [T],
+    pub tail: &'a [T],
+}
+
 /// A ring buffer which can only `push_back()` and `pop_front()` and has a static
 /// size.
 #[derive(Debug)]
@@ -138,6 +143,37 @@ impl<T: Default> BoundedRingBuffer<T> {
     fn head_will_wrap(&self) -> bool {
         self.head == self.capacity() - 1
     }
+
+    /// Returns two slices which, if you put `tail` after `head`, would
+    /// make the contigious array.
+    pub fn contigious(&self) -> Contigious<'_, T> {
+        if self.head <= self.tail {
+            Contigious {
+                head: &self.buffer[self.head..self.tail],
+                tail: &[],
+            }
+        } else {
+            Contigious {
+                head: &self.buffer[self.head..],
+                tail: &self.buffer[0..self.tail],
+            }
+        }
+    }
+
+    pub fn pop_while(&mut self, cond: impl Fn(&T) -> bool) {
+        loop {
+            if self.is_empty() {
+                break;
+            }
+
+            let value = &self.buffer[self.head];
+            if cond(value) {
+                self.pop_front();
+            } else {
+                break;
+            }
+        }
+    }
 }
 
 pub struct BoundedRingBufferIterator<T> {
@@ -248,6 +284,9 @@ impl<'a, T: Default> Iterator for Iter<'a, T> {
 mod tests {
     use super::*;
 
+    // TODO: Replace the comments which should show the state of the array
+    //       with assertions.
+
     #[test]
     fn empty_pop_front() {
         let mut buffer = BoundedRingBuffer::<u8>::new(1);
@@ -315,6 +354,8 @@ mod tests {
         assert_eq!(buffer.tail, 0);
         assert!(buffer.push_back(42));
 
+        assert_eq!(buffer.head, 1);
+        assert_eq!(buffer.tail, 1);
         assert!(buffer.is_full);
         assert_eq!(buffer.len(), 2);
         assert!(!buffer.is_empty());
@@ -419,6 +460,137 @@ mod tests {
             assert_eq!(iterator.next(), Some(&0));
             assert_eq!(iterator.next(), Some(&1));
             assert!(iterator.next().is_none());
+        }
+    }
+
+    mod contigious {
+        use super::*;
+
+        #[test]
+        fn empty() {
+            let buffer = BoundedRingBuffer::<u8>::new(1);
+            let c = buffer.contigious();
+            assert!(c.head.is_empty());
+            assert!(c.tail.is_empty());
+        }
+
+        #[test]
+        fn one_value() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(1);
+            // [69]
+            buffer.push_back(69);
+            let c = buffer.contigious();
+            assert_eq!(c.head, &[69]);
+            assert!(c.tail.is_empty());
+        }
+
+        #[test]
+        fn wrapped() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(3);
+
+            // [0, 1, 2]
+            for i in 0..3 {
+                buffer.push_back(i);
+            }
+            assert_eq!(buffer.buffer.as_ref(), &[0, 1, 2]);
+
+            // [?, ?, 2]
+            for _ in 0..2 {
+                buffer.pop_front();
+            }
+            assert_eq!(buffer.buffer[2], 2);
+
+            // [1, ?, 2]
+            buffer.push_back(1);
+            assert_eq!(buffer.buffer[0], 1);
+            assert_eq!(buffer.buffer[2], 2);
+
+            let c = buffer.contigious();
+            assert_eq!(c.head, &[2]);
+            assert_eq!(c.tail, &[1]);
+        }
+    }
+
+    mod pop_while {
+        use super::*;
+
+        #[test]
+        fn empty() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(1);
+            buffer.pop_while(|v| *v == 7);
+
+            assert_eq!(buffer.head, 0);
+            assert_eq!(buffer.tail, 0);
+            assert!(buffer.is_empty());
+        }
+
+        #[test]
+        fn vec_like_filled_pop_all() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(5);
+
+            // [1, 2, 3, 4, 5]
+            for i in 0..5 {
+                buffer.push_back(i);
+            }
+
+            buffer.pop_while(|v| *v < 6);
+
+            assert!(buffer.is_empty());
+            assert_eq!(buffer.head, 0);
+            assert_eq!(buffer.tail, 0);
+        }
+
+        #[test]
+        fn wrapped_filled_pop_all() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(3);
+
+            for i in 0..3 {
+                buffer.push_back(i);
+            }
+            assert_eq!(buffer.buffer.as_ref(), &[0, 1, 2]);
+
+            for _ in 0..2 {
+                buffer.pop_front();
+            }
+            assert_eq!(buffer.buffer[2], 2);
+
+            // [1, ?, 2]
+            buffer.push_back(1);
+            assert_eq!(buffer.buffer[0], 1);
+            assert_eq!(buffer.buffer[2], 2);
+
+            buffer.pop_while(|v| *v < 3);
+
+            assert!(buffer.is_empty());
+            assert_eq!(buffer.head, 1);
+            assert_eq!(buffer.tail, 1);
+        }
+
+        #[test]
+        fn wrapped_filled_pop_one() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(3);
+
+            for i in 0..3 {
+                buffer.push_back(i);
+            }
+            assert_eq!(buffer.buffer.as_ref(), &[0, 1, 2]);
+
+            for _ in 0..2 {
+                buffer.pop_front();
+            }
+            assert_eq!(buffer.buffer[2], 2);
+
+            // [1, ?, 2]
+            buffer.push_back(1);
+            assert_eq!(buffer.buffer[0], 1);
+            assert_eq!(buffer.buffer[2], 2);
+
+            buffer.pop_while(|v| *v != 1);
+
+            assert_eq!(buffer.head, 0);
+            assert_eq!(buffer.tail, 1);
+            assert_eq!(buffer.len(), 1);
+            assert_eq!(buffer.buffer[0], 1);
         }
     }
 }
