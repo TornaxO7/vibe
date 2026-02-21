@@ -94,6 +94,7 @@ impl<T: Default> BoundedRingBuffer<T> {
         }
     }
 
+    #[allow(unused)]
     pub fn iter(&self) -> Iter<'_, T> {
         Iter::new(self)
     }

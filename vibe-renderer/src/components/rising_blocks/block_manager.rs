@@ -90,6 +90,10 @@ impl BlockManager {
 
     pub fn discard_expired_blocks(&mut self, new_time: f32) {
         self.last_time = new_time;
+
+        let time_range = 5.;
+        self.blocks
+            .pop_while(|block| (new_time - block.start_time) > time_range);
     }
 }
 
