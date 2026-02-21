@@ -8,6 +8,7 @@ mod circle;
 mod fragment_canvas;
 mod graph;
 mod radial;
+mod rising_blocks;
 mod utils;
 
 pub use aurodio::{Aurodio, AurodioDescriptor, AurodioLayerDescriptor};
