@@ -3,11 +3,11 @@ mod bounded_ring_buffer;
 mod descriptor;
 
 use crate::{
-    components::{utils::wgsl_types::Vec2f, Rgba},
+    components::{rising_blocks::block_manager::BlockManager, utils::wgsl_types::Vec2f, Rgba},
     Component, ComponentAudio, Renderable,
 };
 use cgmath::Vector2;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, CubicSplineInterpolation};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, LinearInterpolation};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 pub use descriptor::*;
@@ -39,7 +39,7 @@ struct FragmentParams {
 }
 
 pub struct RisingBlocks {
-    bar_processor: BarProcessor<CubicSplineInterpolation>,
+    bar_processor: BarProcessor<LinearInterpolation>,
 
     // vp = "vertex params"
     vp_buffer: wgpu::Buffer,
@@ -49,12 +49,20 @@ pub struct RisingBlocks {
 
     pipeline: wgpu::RenderPipeline,
     // block_datas_buffer: wgpu::Buffer,
+    block_manager: BlockManager,
 }
 
 impl RisingBlocks {
     pub fn new<F: Fetcher>(desc: &RisingBlocksDescriptor<F>) -> Self {
         let device = desc.renderer.device();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+
+        let block_manager = {
+            let total_amount_bars = bar_processor.amount_channels().get() as usize
+                * bar_processor.total_amount_bars_per_channel();
+
+            BlockManager::new(total_amount_bars)
+        };
 
         // let block_datas = BlockDatas::new(BlockDatasDescriptor {
         //     threshold: desc.threshold,
@@ -80,7 +88,7 @@ impl RisingBlocks {
                 up_direction: up_direction.into(),
                 column_direction: column_direction.into(),
                 time: 0.,
-                amount_columns: bar_processor.total_amount_bars() as AmountColumns,
+                amount_columns: bar_processor.total_amount_bars_per_channel() as AmountColumns,
             };
 
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -167,8 +175,8 @@ impl RisingBlocks {
             // fp_buffer,
             bind_group0,
             pipeline,
-            // block_datas,
-            // block_datas_buffer,
+
+            block_manager,
         }
     }
 }

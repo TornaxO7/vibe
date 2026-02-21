@@ -159,12 +159,12 @@ impl<I: Interpolater> BarProcessor<I> {
         (channels.into_boxed_slice(), bar_values)
     }
 
-    fn amount_channels(&self) -> NonZero<u8> {
+    pub fn amount_channels(&self) -> NonZero<u8> {
         NonZero::new(self.ctx.len() as u8).unwrap()
     }
 
     /// Returns the amount of bars per channel which the bar processor generates (including the padded bars).
-    pub fn total_amount_bars(&self) -> usize {
+    pub fn total_amount_bars_per_channel(&self) -> usize {
         self.bar_values[0].len()
     }
 }
@@ -189,7 +189,10 @@ mod tests {
         let bars = bar_processor.process_bars(&processor);
         assert_eq!(bars.len(), 1);
         assert_eq!(bars[0].len(), u16::MAX as usize);
-        assert_eq!(bar_processor.total_amount_bars(), u16::MAX as usize);
+        assert_eq!(
+            bar_processor.total_amount_bars_per_channel(),
+            u16::MAX as usize
+        );
     }
 
     #[test]
@@ -203,7 +206,10 @@ mod tests {
             },
         );
 
-        assert_eq!(bar_processor.total_amount_bars(), u16::MAX as usize);
+        assert_eq!(
+            bar_processor.total_amount_bars_per_channel(),
+            u16::MAX as usize
+        );
 
         let bars = bar_processor.process_bars(&processor);
         assert_eq!(bars.len(), 2);
