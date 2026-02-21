@@ -24,6 +24,18 @@ fn height_gradient() {
     );
 }
 
+#[test]
+fn presence_gradient() {
+    test(
+        RadialVariant::PresenceGradient {
+            low: WHITE.into(),
+            high: RED.into(),
+        },
+        include_bytes!("./presence-gradient.png"),
+        "radial-presence-gradient",
+    );
+}
+
 fn test(variant: RadialVariant, reference: &'static [u8], id: &'static str) {
     let tester = Tester::default();
 

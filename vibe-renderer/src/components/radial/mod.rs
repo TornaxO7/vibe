@@ -29,6 +29,7 @@ impl VertexEntrypoint {
 enum FragmentEntrypoint {
     Color,
     HeightGradient,
+    PresenceGradient,
 }
 
 impl FragmentEntrypoint {
@@ -36,6 +37,7 @@ impl FragmentEntrypoint {
         match self {
             Self::Color => "fs_color",
             Self::HeightGradient => "fs_height_gradient",
+            Self::PresenceGradient => "fs_presence_gradient",
         }
     }
 }
@@ -135,6 +137,7 @@ impl Radial {
             let (color1, color2) = match desc.variant {
                 RadialVariant::Color(rgba) => (rgba, rgba),
                 RadialVariant::HeightGradient { inner, outer } => (inner, outer),
+                RadialVariant::PresenceGradient { low, high } => (low, high),
             };
 
             let fragment_params = FragmentParams { color1, color2 };
@@ -162,6 +165,7 @@ impl Radial {
         let fragment_entrypoint = match desc.variant {
             RadialVariant::Color(_) => FragmentEntrypoint::Color,
             RadialVariant::HeightGradient { .. } => FragmentEntrypoint::HeightGradient,
+            RadialVariant::PresenceGradient { .. } => FragmentEntrypoint::PresenceGradient,
         };
 
         let circle_part = match desc.format {

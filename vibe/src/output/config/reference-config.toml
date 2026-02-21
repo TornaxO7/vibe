@@ -260,6 +260,23 @@ freq_range.Custom = { start = 50, end = 10000 }
 inner = "#00ffffff"
 outer = "#ff000000"
 
+## Radial - PresenceGradient
+[[components]]
+[components.Radial]
+init_rotation = 90.0
+circle_radius = 0.2
+bar_height_sensitivity = 1.0
+bar_width = 0.01
+position = [0.5, 0.5]
+format = "BassTreble"
+[components.Radial.audio_conf]
+amount_bars = 60
+sensitivity = 5.0
+freq_range.Custom = { start = 50, end = 10000 }
+[components.Radial.variant.PresenceGradient]
+low = "#00ffffff"
+high = "#ff000000"
+
 # Chessy
 
 ## Chessy - Box

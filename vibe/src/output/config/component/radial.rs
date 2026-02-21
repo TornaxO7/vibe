@@ -32,6 +32,12 @@ impl ComponentConfig for RadialConfig {
                 inner: inner.as_f32()?,
                 outer: outer.as_f32()?,
             },
+            RadialVariantConfig::PresenceGradient { low, high } => {
+                RadialVariant::PresenceGradient {
+                    low: low.as_f32()?,
+                    high: high.as_f32()?,
+                }
+            }
         };
 
         Ok(Box::new(Radial::new(&RadialDescriptor {
@@ -83,6 +89,7 @@ impl From<&RadialAudioConfig> for vibe_audio::BarProcessorConfig {
 pub enum RadialVariantConfig {
     Color(Rgba),
     HeightGradient { inner: Rgba, outer: Rgba },
+    PresenceGradient { low: Rgba, high: Rgba },
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
