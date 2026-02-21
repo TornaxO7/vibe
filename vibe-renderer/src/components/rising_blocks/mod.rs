@@ -72,7 +72,7 @@ impl RisingBlocks {
             // let rotation = Matrix2::from_angle(Deg(0.));
             // let up_direction = rotation * Vector2::unit_y();
             let up_direction = Vector2::new(0., 2.);
-            let column_direction = INIT_COLUMN_DIRECTION;
+            let column_direction = Vector2::new(2. / 5., 0.);
 
             let params = VertexParams {
                 bottom_left_corner: Vec2f::from([-1., -1.]),

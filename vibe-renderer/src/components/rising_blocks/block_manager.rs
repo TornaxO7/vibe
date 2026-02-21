@@ -3,7 +3,7 @@ use super::bounded_ring_buffer::*;
 type StartTime = f32;
 type Height = f32;
 
-const THRESHOLD: f32 = 0.5;
+const THRESHOLD: f32 = 1.0;
 
 /// The (estimated) max amount of blocks which a column can have.
 const MAX_BLOCKS_PER_COLUMN: usize = 16;
@@ -40,7 +40,7 @@ impl BlockManager {
         let blocks = BoundedRingBuffer::new(MAX_BLOCKS_PER_COLUMN * total_amount_bars);
         let latest = vec![None; total_amount_bars].into_boxed_slice();
         let latest_cache = vec![BlockData::default(); total_amount_bars].into_boxed_slice();
-        let prev_bar_values = vec![0f32; total_amount_bars].into_boxed_slice();
+        let prev_bar_values = vec![1f32; total_amount_bars].into_boxed_slice();
 
         Self {
             blocks,
@@ -126,12 +126,15 @@ impl BlockManager {
 
         let c = self.blocks.contigious();
         let mut offset = 0usize;
+
+        let bs = std::mem::size_of::<BlockData>();
+
         queue.write_buffer(buffer, offset as u64, bytemuck::cast_slice(c.head));
+        offset += c.head.len() * bs;
 
-        offset += std::mem::size_of_val(c.head);
         queue.write_buffer(buffer, offset as u64, bytemuck::cast_slice(c.tail));
+        offset += c.tail.len() * bs;
 
-        offset += cache_len;
         queue.write_buffer(
             buffer,
             offset as u64,
