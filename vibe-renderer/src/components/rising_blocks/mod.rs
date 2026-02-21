@@ -3,9 +3,10 @@ mod bounded_ring_buffer;
 mod descriptor;
 
 use crate::{
-    components::{rising_blocks::block_manager::BlockManager, utils::wgsl_types::Vec2f, Rgba},
+    components::{utils::wgsl_types::Vec2f, Rgba},
     Component, ComponentAudio, Renderable,
 };
+use block_manager::{BlockData, BlockManager};
 use cgmath::Vector2;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, LinearInterpolation};
 use wgpu::{include_wgsl, util::DeviceExt};
@@ -50,6 +51,7 @@ pub struct RisingBlocks {
     pipeline: wgpu::RenderPipeline,
     // block_datas_buffer: wgpu::Buffer,
     block_manager: BlockManager,
+    blocks_buffer: wgpu::Buffer,
 }
 
 impl RisingBlocks {
@@ -64,18 +66,7 @@ impl RisingBlocks {
             BlockManager::new(total_amount_bars)
         };
 
-        // let block_datas = BlockDatas::new(BlockDatasDescriptor {
-        //     threshold: desc.threshold,
-        //     ..Default::default()
-        // });
-
-        // let block_datas_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-        //     label: Some("Rising blocks: Block data buffer"),
-        //     size: (std::mem::size_of::<BlockData>() * block_datas.max_amount_blocks())
-        //         as wgpu::BufferAddress,
-        //     usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
-        //     mapped_at_creation: false,
-        // });
+        let blocks_buffer = block_manager.create_block_buffer(device);
 
         let vp_buffer = {
             // let rotation = Matrix2::from_angle(Deg(0.));
@@ -121,23 +112,22 @@ impl RisingBlocks {
                         module: &module,
                         entry_point: Some("vs_main"),
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
-                        // buffers: &[wgpu::VertexBufferLayout {
-                        //     array_stride: std::mem::size_of::<BlockData>() as wgpu::BufferAddress,
-                        //     step_mode: wgpu::VertexStepMode::Instance,
-                        //     attributes: &[
-                        //         wgpu::VertexAttribute {
-                        //             format: wgpu::VertexFormat::Float32,
-                        //             offset: 0,
-                        //             shader_location: 0,
-                        //         },
-                        //         wgpu::VertexAttribute {
-                        //             format: wgpu::VertexFormat::Float32,
-                        //             offset: std::mem::size_of::<f32>() as wgpu::BufferAddress,
-                        //             shader_location: 1,
-                        //         },
-                        //     ],
-                        // }],
-                        buffers: &[],
+                        buffers: &[wgpu::VertexBufferLayout {
+                            array_stride: std::mem::size_of::<BlockData>() as wgpu::BufferAddress,
+                            step_mode: wgpu::VertexStepMode::Instance,
+                            attributes: &[
+                                wgpu::VertexAttribute {
+                                    format: wgpu::VertexFormat::Float32,
+                                    offset: 0,
+                                    shader_location: 0,
+                                },
+                                wgpu::VertexAttribute {
+                                    format: wgpu::VertexFormat::Float32,
+                                    offset: std::mem::size_of::<f32>() as wgpu::BufferAddress,
+                                    shader_location: 1,
+                                },
+                            ],
+                        }],
                     },
                     fragment: wgpu::FragmentState {
                         module: &module,
@@ -177,6 +167,7 @@ impl RisingBlocks {
             pipeline,
 
             block_manager,
+            blocks_buffer,
         }
     }
 }
@@ -184,13 +175,12 @@ impl RisingBlocks {
 impl Renderable for RisingBlocks {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         pass.set_bind_group(0, &self.bind_group0, &[]);
-        // pass.set_vertex_buffer(
-        //     0,
-        //     self.block_datas_buffer
-        //         .slice(0..(std::mem::size_of::<BlockData>() * self.block_datas.len()) as u64),
-        // );
-        // pass.set_pipeline(&self.pipeline);
-        // pass.draw(0..4, 0..self.block_datas.len() as u32);
+
+        let amount_blocks = self.block_manager.amount_active_blocks();
+
+        pass.set_vertex_buffer(0, self.blocks_buffer.slice(..));
+        pass.set_pipeline(&self.pipeline);
+        pass.draw(0..4, 0..amount_blocks as u32);
     }
 }
 
@@ -219,12 +209,8 @@ impl Component for RisingBlocks {
 impl<F: Fetcher> ComponentAudio<F> for RisingBlocks {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &vibe_audio::SampleProcessor<F>) {
         self.bar_processor.process_bars(&processor);
-
-        for channel in self.bar_processor.bars() {
-            for bar in channel.iter().cloned() {}
-        }
-
-        // self.block_datas
-        //     .update_blocks(self.bar_processor.bars(), queue);
+        self.block_manager.process_bars(self.bar_processor.bars());
+        self.block_manager
+            .update_wgpu_buffer(queue, &self.blocks_buffer);
     }
 }
