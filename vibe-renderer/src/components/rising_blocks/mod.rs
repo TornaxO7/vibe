@@ -186,7 +186,7 @@ impl Renderable for RisingBlocks {
 
 impl Component for RisingBlocks {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        // self.block_datas.discard_expired_blocks(new_time);
+        self.block_manager.discard_expired_blocks(new_time);
 
         let offset = std::mem::size_of::<ColumnDirection>()
             + std::mem::size_of::<BottomLeftCorner>()
@@ -199,9 +199,7 @@ impl Component for RisingBlocks {
         );
     }
 
-    fn update_resolution(&mut self, _renderer: &crate::Renderer, _new_resolution: [u32; 2]) {
-        todo!()
-    }
+    fn update_resolution(&mut self, _renderer: &crate::Renderer, _new_resolution: [u32; 2]) {}
 
     fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }
