@@ -178,7 +178,6 @@ impl<I: Interpolater> ChannelCtx<I> {
                 overshoot = true;
             }
         }
-        println!();
 
         if overshoot {
             self.normalize_factor *= 0.98;
