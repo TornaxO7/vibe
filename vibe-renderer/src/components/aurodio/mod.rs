@@ -48,7 +48,7 @@ impl Aurodio {
                     BarProcessorConfig {
                         amount_bars: NonZero::new(1).unwrap(),
                         freq_range: layer.freq_range.clone(),
-                        sensitivity: desc.sensitivity,
+                        down: desc.sensitivity,
                         ..Default::default()
                     },
                 ));
