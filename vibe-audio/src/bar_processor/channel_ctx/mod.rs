@@ -150,6 +150,10 @@ impl<I: Interpolater> ChannelCtx<I> {
             debug_assert!(!prev_magnitude.is_nan());
             debug_assert!(!next_magnitude.is_nan());
 
+            // IDEA: Maybe replace the whole smoothing stuff with
+            //    supporting_point.y = supporting_point.y * 0.5 + next_magnitude;
+            // for _beat detection_ for better efficiency <.<
+
             // shoutout to `cava` for their computation on how to make the falling look smooth.
             // Really nice idea!
             if next_magnitude < self.prev[sup_idx] {
