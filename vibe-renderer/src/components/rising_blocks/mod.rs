@@ -8,7 +8,7 @@ use crate::{
 };
 use block_manager::{BlockData, BlockManager};
 use cgmath::Vector2;
-use vibe_audio::{fetcher::Fetcher, BarProcessor, LinearInterpolation};
+use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, LinearInterpolation};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 pub use descriptor::*;
@@ -57,14 +57,18 @@ pub struct RisingBlocks {
 impl RisingBlocks {
     pub fn new<F: Fetcher>(desc: &RisingBlocksDescriptor<F>) -> Self {
         let device = desc.renderer.device();
-        let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
+        let bar_processor = BarProcessor::new(
+            desc.sample_processor,
+            BarProcessorConfig {
+                up: 0.,
+                down: 100.,
+                ..desc.audio_conf.clone()
+            },
+        );
+        let total_amount_bars = bar_processor.amount_channels().get() as usize
+            * bar_processor.total_amount_bars_per_channel();
 
-        let block_manager = {
-            let total_amount_bars = bar_processor.amount_channels().get() as usize
-                * bar_processor.total_amount_bars_per_channel();
-
-            BlockManager::new(total_amount_bars)
-        };
+        let block_manager = BlockManager::new(total_amount_bars);
 
         let blocks_buffer = block_manager.create_block_buffer(device);
 
@@ -72,7 +76,7 @@ impl RisingBlocks {
             // let rotation = Matrix2::from_angle(Deg(0.));
             // let up_direction = rotation * Vector2::unit_y();
             let up_direction = Vector2::new(0., 2.);
-            let column_direction = Vector2::new(2. / 5., 0.);
+            let column_direction = Vector2::new(2. / total_amount_bars as f32, 0.);
 
             let params = VertexParams {
                 bottom_left_corner: Vec2f::from([-1., -1.]),
@@ -122,7 +126,7 @@ impl RisingBlocks {
                                     shader_location: 0,
                                 },
                                 wgpu::VertexAttribute {
-                                    format: wgpu::VertexFormat::Float32,
+                                    format: wgpu::VertexFormat::Uint32,
                                     offset: std::mem::size_of::<f32>() as wgpu::BufferAddress,
                                     shader_location: 1,
                                 },

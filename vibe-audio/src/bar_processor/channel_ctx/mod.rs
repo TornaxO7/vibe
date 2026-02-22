@@ -27,6 +27,7 @@ pub struct ChannelCtx<I: Interpolater> {
 
     up: f32,
     down: f32,
+    correction_offset: f32,
 
     // Contains the raw previous bar values
     prev: Box<[f32]>,
@@ -95,6 +96,7 @@ impl<I: Interpolater> ChannelCtx<I> {
 
             up: config.up,
             down: config.down,
+            correction_offset: config.correction_offset,
 
             prev,
             peak,
@@ -142,7 +144,7 @@ impl<I: Interpolater> ChannelCtx<I> {
                     / amount_bins;
 
                 // reduce the bass change (low `x` value) and increase the change of the treble (high `x` value)
-                let correction = normalized_x.powf(2.) + 0.05;
+                let correction = normalized_x.powf(2.) + self.correction_offset;
 
                 raw_bar_val * self.normalize_factor * correction
             };
@@ -151,7 +153,7 @@ impl<I: Interpolater> ChannelCtx<I> {
             debug_assert!(!next_magnitude.is_nan());
 
             // IDEA: Maybe replace the whole smoothing stuff with
-            //    supporting_point.y = supporting_point.y * 0.5 + next_magnitude;
+            // supporting_point.y = supporting_point.y * 0.5 + next_magnitude;
             // for _beat detection_ for better efficiency <.<
 
             // shoutout to `cava` for their computation on how to make the falling look smooth.

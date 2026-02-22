@@ -86,6 +86,8 @@ pub struct BarProcessorConfig {
     /// The higher the value, the "faster" the bars adjust to the new height.
     pub down: f32,
 
+    pub correction_offset: f32,
+
     /// Set the bar distribution.
     /// In general you needn't use another value than its default.
     pub bar_distribution: BarDistribution,
@@ -101,6 +103,7 @@ impl Default for BarProcessorConfig {
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
             up: 0.77,
             down: 4.0,
+            correction_offset: 0.05,
 
             bar_distribution: BarDistribution::Uniform,
             padding: None,
