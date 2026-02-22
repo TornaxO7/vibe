@@ -20,7 +20,7 @@ impl ComponentConfig for RisingBlocksConfig {
             sample_processor: processor,
             audio_conf: BarProcessorConfig {
                 amount_bars: NonZero::new(5).unwrap(),
-                sensitivity: 5.0,
+                down: 5.0,
                 freq_range: NonZero::new(50).unwrap()..NonZero::new(5_000).unwrap(),
                 ..Default::default()
             },

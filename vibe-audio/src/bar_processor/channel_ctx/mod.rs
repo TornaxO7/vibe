@@ -24,7 +24,9 @@ pub struct ChannelCtx<I: Interpolater> {
     padding: Option<PaddingCtx>,
 
     normalize_factor: f32,
-    sensitivity: f32,
+
+    up: f32,
+    down: f32,
 
     // Contains the raw previous bar values
     prev: Box<[f32]>,
@@ -90,7 +92,9 @@ impl<I: Interpolater> ChannelCtx<I> {
             padding: padding.clone(),
 
             normalize_factor: INIT_NORMALIZATION_FACTOR,
-            sensitivity: config.sensitivity,
+
+            up: config.up,
+            down: config.down,
 
             prev,
             peak,
@@ -150,7 +154,7 @@ impl<I: Interpolater> ChannelCtx<I> {
             // Really nice idea!
             if next_magnitude < self.prev[bar_idx] {
                 next_magnitude =
-                    self.peak[bar_idx] * (1. - (self.fall[bar_idx].powf(2.) * self.sensitivity));
+                    self.peak[bar_idx] * (1. - (self.fall[bar_idx].powf(2.) * self.down));
 
                 if next_magnitude < 0. {
                     next_magnitude = 0.;
@@ -162,13 +166,15 @@ impl<I: Interpolater> ChannelCtx<I> {
             }
             self.prev[bar_idx] = next_magnitude;
 
-            supporting_point.y = self.mem[bar_idx] * 0.77 + next_magnitude;
+            supporting_point.y = self.mem[bar_idx] * self.up + next_magnitude;
+            supporting_point.y = next_magnitude;
             self.mem[bar_idx] = supporting_point.y;
 
             if supporting_point.y > 1. {
                 overshoot = true;
             }
         }
+        println!();
 
         if overshoot {
             self.normalize_factor *= 0.98;
