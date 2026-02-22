@@ -19,8 +19,9 @@ impl ComponentConfig for RisingBlocksConfig {
             renderer,
             sample_processor: processor,
             audio_conf: BarProcessorConfig {
-                amount_bars: NonZero::new(5).unwrap(),
+                amount_bars: NonZero::new(30).unwrap(),
                 down: 5.0,
+                correction_offset: 0.075,
                 freq_range: NonZero::new(50).unwrap()..NonZero::new(5_000).unwrap(),
                 ..Default::default()
             },

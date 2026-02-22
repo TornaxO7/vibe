@@ -14,13 +14,6 @@ struct VertexParams {
 // struct FragmentParams {
 // };
 
-// struct BlockData {
-//     // The time when the block was created
-//     @location(0) start_time: f32,
-//     // The current height of the block
-//     @location(1) height: f32,
-// };
-
 @group(0) @binding(0)
 var<uniform> vp: VertexParams;
 
@@ -29,14 +22,10 @@ var<uniform> vp: VertexParams;
 
 struct Input {
     @builtin(vertex_index) vertex_idx: u32,
-    @builtin(instance_index) instance_idx: u32,
-
-    // data: BlockData,
 
     // The time when the block was created
     @location(0) start_time: f32,
-    // The current height of the block
-    @location(1) height: f32,
+    @location(1) column_idx: u32,
 };
 
 struct Output {
@@ -65,25 +54,25 @@ fn vs_main(in: Input) -> Output {
     let padding = vp.column_direction * .2;
 
     // -- x
-    let is_left_channel = in.instance_idx < vp.amount_columns;
+    let is_left_channel = in.column_idx < vp.amount_columns;
     let is_bar_left_side = in.vertex_idx == 0 || in.vertex_idx == 2;
 
     var pos = vp.bottom_left_corner;
     if (is_bar_left_side) {
-        pos += f32(in.instance_idx) * vp.column_direction + padding;
+        pos += f32(in.column_idx) * vp.column_direction + padding;
 
         if (is_left_channel) {
-            output.rel_pos.x = f32(in.instance_idx) / f32(vp.amount_columns);
+            output.rel_pos.x = f32(in.column_idx) / f32(vp.amount_columns);
         } else {
-            output.rel_pos.x = f32(vp.amount_columns*2 - in.instance_idx) / f32(vp.amount_columns);
+            output.rel_pos.x = f32(vp.amount_columns*2 - in.column_idx) / f32(vp.amount_columns);
         }
     } else {
-        pos += f32(in.instance_idx + 1) * vp.column_direction - padding;
+        pos += f32(in.column_idx + 1) * vp.column_direction - padding;
 
         if (is_left_channel) {
-            output.rel_pos.x = f32(in.instance_idx + 1) / f32(vp.amount_columns);
+            output.rel_pos.x = f32(in.column_idx + 1) / f32(vp.amount_columns);
         } else {
-            output.rel_pos.x = f32(vp.amount_columns*2 + 1 - in.instance_idx) / f32(vp.amount_columns);
+            output.rel_pos.x = f32(vp.amount_columns*2 + 1 - in.column_idx) / f32(vp.amount_columns);
         }
     }
 
@@ -91,7 +80,7 @@ fn vs_main(in: Input) -> Output {
     let is_bottom_vertex = in.vertex_idx >= 2;
     if (is_bottom_vertex) {
         // pos -= vp.up_direction * in.data.height;
-        pos -= vp.up_direction * in.height;
+        pos -= vp.up_direction * 0.01;
     }
 
     // steadily go up
