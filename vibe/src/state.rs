@@ -58,6 +58,10 @@ pub struct State {
 
 impl State {
     pub fn new(globals: &GlobalList, qh: &QueueHandle<Self>) -> anyhow::Result<Self> {
+        if is_on_kde() {
+            message_to_kde();
+        }
+
         let Ok(layer_shell) = LayerShell::bind(globals, qh) else {
             error!(concat![
                 "Your compositor doesn't seem to implement the wlr_layer_shell protocol but this is required for this program to run. ",
@@ -456,4 +460,24 @@ impl PointerHandler for State {
             }
         }
     }
+}
+
+fn is_on_kde() -> bool {
+    match std::env::var("XDG_CURRENT_DESKTOP") {
+        Ok(env) => return env == "KDE",
+        Err(err) => {
+            warn!("Couldn't read variable '$XDG_CURRENT_DESKTOP`:\n{}", err);
+        }
+    }
+
+    false
+}
+
+fn message_to_kde() {
+    warn!(concat![
+        "It looks like you are running `vibe` on `KDE` (at least that's what `$XDG_CURRENT_DESKTOP` is telling me).\n",
+        "Please note that you won't be able to interact with your desktop if `vibe` is running.\n",
+        "It's sadly an unsolveable problem :(\n",
+        "But if you still want a visualizer for your kde desktop, take a look at `kurve`: https://store.kde.org/p/2299506"
+    ]);
 }
