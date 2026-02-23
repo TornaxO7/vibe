@@ -26,7 +26,6 @@ impl ComponentConfig for RisingBlocksConfig {
                 ..Default::default()
             },
             format: texture_format,
-            threshold: 0.5,
         })))
     }
 
