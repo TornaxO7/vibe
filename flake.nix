@@ -3,8 +3,6 @@
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     rust-overlay.url = "github:oxalica/rust-overlay";
     flake-parts.url = "github:hercules-ci/flake-parts";
-
-    pwndbg.url = "github:pwndbg/pwndbg";
   };
 
   outputs = inputs@{ flake-parts, ... }:
@@ -43,7 +41,6 @@
                     cargo-flamegraph
                     cargo-release
                     git-cliff
-                    inputs.pwndbg.packages.${system}.pwndbg
                   ] ++ [ rust-toolchain ];
 
                   buildInputs = vibe.buildInputs;
