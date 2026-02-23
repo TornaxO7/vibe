@@ -222,10 +222,11 @@ impl Component for LightSources {
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
+        let offset = std::mem::offset_of!(BindingGeneralData, resolution);
 
         queue.write_buffer(
             &self.general_data_buffer,
-            0,
+            offset as wgpu::BufferAddress,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
     }

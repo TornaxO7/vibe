@@ -57,16 +57,12 @@ impl CirclePart {
     }
 }
 
-type PositionOffset = Vec2f;
-type CircleRadius = f32;
-type AspectRatio = f32;
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct VertexParams {
-    position_offset: PositionOffset,
-    circle_radius: CircleRadius,
-    aspect_ratio: AspectRatio,
+    position_offset: Vec2f,
+    circle_radius: f32,
+    aspect_ratio: f32,
 }
 
 #[repr(C)]
@@ -383,9 +379,7 @@ impl Component for Radial {
 
         {
             let aspect_ratio = new_resolution[0] as f32 / new_resolution[1] as f32;
-
-            let offset =
-                std::mem::size_of::<PositionOffset>() + std::mem::size_of::<CircleRadius>();
+            let offset = std::mem::offset_of!(VertexParams, aspect_ratio);
 
             queue.write_buffer(
                 &self.vertex_params_buffer,

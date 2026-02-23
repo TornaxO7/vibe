@@ -62,16 +62,12 @@ struct PipelineCtx {
     freqs_buffer: wgpu::Buffer,
 }
 
-type Right = Vec2f;
-type BottomLeftCorner = Vec2f;
-type Up = Vec2f;
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct VertexParams {
-    right: Right,
-    bottom_left_corner: BottomLeftCorner,
-    up: Up,
+    right: Vec2f,
+    bottom_left_corner: Vec2f,
+    up: Vec2f,
 }
 
 #[repr(C)]
@@ -395,9 +391,11 @@ impl Component for Graph {
                 right /= 2.;
             }
 
+            let offset = std::mem::offset_of!(VertexParams, right);
+
             queue.write_buffer(
                 &self.vertex_params_buffer,
-                0,
+                offset as wgpu::BufferAddress,
                 bytemuck::cast_slice(&[right.x, right.y]),
             );
         }
