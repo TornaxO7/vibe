@@ -8,24 +8,16 @@ use crate::{components::ComponentAudio, util::SimpleRenderPipelineDescriptor, Re
 use cgmath::Matrix2;
 use wgpu::{include_wgsl, util::DeviceExt};
 
-type Resolution = Vec2f;
-type PositionOffset = Vec2f;
-type Color = Rgba;
-type Rotation = Mat2x2;
-type Radius = f32;
-type SpikeSensitivity = f32;
-type FreqRadiantStep = f32;
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct Data {
-    resolution: Resolution,
-    position_offset: PositionOffset,
-    color: Color,
-    rotation: Rotation,
-    radius: Radius,
-    spike_sensitivity: SpikeSensitivity,
-    freq_radiant_step: FreqRadiantStep,
+    resolution: Vec2f,
+    position_offset: Vec2f,
+    color: Rgba,
+    rotation: Mat2x2,
+    radius: f32,
+    spike_sensitivity: f32,
+    freq_radiant_step: f32,
     _padding: f32,
 }
 
@@ -59,14 +51,14 @@ impl Circle {
                 let rel_x_offset = desc.position.0.clamp(0., 1.);
                 let rel_y_offset = desc.position.1.clamp(0., 1.);
 
-                PositionOffset::from([rel_x_offset, rel_y_offset])
+                Vec2f::from([rel_x_offset, rel_y_offset])
             };
 
             Data {
                 radius: desc.radius,
                 spike_sensitivity,
                 freq_radiant_step: std::f32::consts::PI / (total_amount_bars as f32 + 0.99),
-                resolution: Resolution::default(),
+                resolution: Vec2f::default(),
                 position_offset,
                 color,
                 rotation: Matrix2::from_angle(desc.rotation).into(),
@@ -168,9 +160,11 @@ impl Component for Circle {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
+        let offset = std::mem::offset_of!(Data, resolution);
+
         queue.write_buffer(
             &self.data_buffer,
-            0,
+            offset as wgpu::BufferAddress,
             bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
         );
     }

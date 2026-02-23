@@ -9,7 +9,7 @@ use crate::{
 };
 use std::num::NonZero;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, NothingInterpolation, SampleProcessor};
-use wgpu::include_wgsl;
+use wgpu::{include_wgsl, util::DeviceExt};
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable)]
@@ -38,11 +38,9 @@ pub struct PulseEdges {
     bar_processor: BarProcessor<NothingInterpolation>,
 
     data_binding_buffer: wgpu::Buffer,
-
     bind_group: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
-    data_binding: DataBinding,
 }
 
 impl PulseEdges {
@@ -120,25 +118,26 @@ impl PulseEdges {
             texture
         };
 
-        let data_binding = DataBinding {
-            resolution: [1f32; 2],
-            time: 0.,
-            freq: 0.,
-            wallpaper_brightness: desc.wallpaper_brightness.clamp(0., 1.),
-            edge_width: {
-                // invert, so that `edge_width` high => bigger width for the edge
-                1. / desc.edge_width.max(f32::EPSILON)
-            },
-            pulse_brightness: desc.pulse_brightness,
-            _padding: 0,
-        };
+        let data_binding_buffer = {
+            let data_binding = DataBinding {
+                resolution: [1f32; 2],
+                time: 0.,
+                freq: 0.,
+                wallpaper_brightness: desc.wallpaper_brightness.clamp(0., 1.),
+                edge_width: {
+                    // invert, so that `edge_width` high => bigger width for the edge
+                    1. / desc.edge_width.max(f32::EPSILON)
+                },
+                pulse_brightness: desc.pulse_brightness,
+                _padding: 0,
+            };
 
-        let data_binding_buffer = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("Encrust Wallpaper: data-binding buffer"),
-            size: std::mem::size_of::<DataBinding>() as wgpu::BufferAddress,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Encrust Wallpaper: data-binding buffer"),
+                contents: bytemuck::bytes_of(&data_binding),
+                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            })
+        };
 
         let sampler = device.create_sampler(&wgpu::SamplerDescriptor {
             label: Some("Encrust Wallpaper: Sampler"),
@@ -221,7 +220,6 @@ impl PulseEdges {
         Ok(Self {
             bar_processor,
 
-            data_binding,
             bind_group,
             pipeline,
 
@@ -241,37 +239,37 @@ impl Renderable for PulseEdges {
 impl<F: Fetcher> ComponentAudio<F> for PulseEdges {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &SampleProcessor<F>) {
         let bars = self.bar_processor.process_bars(processor);
-
-        self.data_binding.freq = bars[0][0];
+        let offset = std::mem::offset_of!(DataBinding, freq);
+        let freq = &bars[0][0];
 
         queue.write_buffer(
             &self.data_binding_buffer,
-            0,
-            bytemuck::bytes_of(&self.data_binding),
+            offset as wgpu::BufferAddress,
+            bytemuck::bytes_of(freq),
         );
     }
 }
 
 impl Component for PulseEdges {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        self.data_binding.time = new_time;
+        let offset = std::mem::offset_of!(DataBinding, time);
 
         queue.write_buffer(
             &self.data_binding_buffer,
-            0,
-            bytemuck::bytes_of(&self.data_binding),
+            offset as wgpu::BufferAddress,
+            bytemuck::bytes_of(&new_time),
         );
     }
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
-
-        self.data_binding.resolution = [new_resolution[0] as f32, new_resolution[1] as f32];
+        let offset = std::mem::offset_of!(DataBinding, resolution);
+        let resolution = [new_resolution[0] as f32, new_resolution[1] as f32];
 
         queue.write_buffer(
             &self.data_binding_buffer,
-            0,
-            bytemuck::bytes_of(&self.data_binding),
+            offset as wgpu::BufferAddress,
+            bytemuck::bytes_of(&resolution),
         );
     }
 

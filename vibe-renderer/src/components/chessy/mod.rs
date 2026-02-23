@@ -14,18 +14,13 @@ use wgpu::{include_wgsl, util::DeviceExt};
 // this texture size seems good enough for a 1920x1080 screen.
 const DEFAULT_SDF_TEXTURE_SIZE: u32 = 512;
 
-type Resolution = Vec2f;
-type Time = f32;
-type MovementSpeed = f32;
-type ZoomFactor = f32;
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Pod, bytemuck::Zeroable, Default)]
 struct Data {
-    resolution: Resolution,
-    time: Time,
-    movement_speed: MovementSpeed,
-    zoom_factor: ZoomFactor,
+    resolution: Vec2f,
+    time: f32,
+    movement_speed: f32,
+    zoom_factor: f32,
     _padding: f32,
 }
 
@@ -52,7 +47,7 @@ impl Chessy {
         let total_amount_bars = bar_processor.total_amount_bars();
 
         let data = Data {
-            resolution: Resolution::default(),
+            resolution: Vec2f::default(),
             time: 0f32,
             movement_speed: desc.movement_speed,
             zoom_factor: desc.zoom_factor,
@@ -181,11 +176,11 @@ impl<F: Fetcher> ComponentAudio<F> for Chessy {
 
 impl Component for Chessy {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        let resolution_size = 8;
+        let offset = std::mem::offset_of!(Data, time);
 
         queue.write_buffer(
             &self.data_buffer,
-            resolution_size,
+            offset as wgpu::BufferAddress,
             bytemuck::bytes_of(&new_time),
         );
     }
@@ -238,10 +233,12 @@ impl Component for Chessy {
                 ],
             });
 
+            let offset = std::mem::offset_of!(Data, resolution);
+
             // update `resolution` values
             queue.write_buffer(
                 &self.data_buffer,
-                0,
+                offset as wgpu::BufferAddress,
                 bytemuck::cast_slice(&[new_resolution[0] as f32, new_resolution[1] as f32]),
             );
         }
