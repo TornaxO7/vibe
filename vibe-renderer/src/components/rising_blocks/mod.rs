@@ -20,20 +20,14 @@ const VERTEX_SPACE_SIZE: f32 = 2.;
 // the size of the screen.
 // const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
 
-type ColumnDirection = Vec2f;
-type BottomLeftCorner = Vec2f;
-type UpDirection = Vec2f;
-type Time = f32;
-type AmountColumns = u32;
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
 struct VertexParams {
-    column_direction: ColumnDirection,
-    bottom_left_corner: BottomLeftCorner,
-    up_direction: UpDirection,
-    time: Time,
-    amount_columns: AmountColumns,
+    column_direction: Vec2f,
+    bottom_left_corner: Vec2f,
+    up_direction: Vec2f,
+    time: f32,
+    amount_columns: f32,
 }
 
 #[repr(C)]
@@ -85,7 +79,7 @@ impl RisingBlocks {
                 up_direction: up_direction.into(),
                 column_direction: column_direction.into(),
                 time: 0.,
-                amount_columns: bar_processor.total_amount_bars_per_channel() as AmountColumns,
+                amount_columns: bar_processor.total_amount_bars_per_channel() as f32,
             };
 
             device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
@@ -174,10 +168,7 @@ impl Renderable for RisingBlocks {
 impl Component for RisingBlocks {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         self.block_manager.discard_expired_blocks(new_time);
-
-        let offset = std::mem::size_of::<ColumnDirection>()
-            + std::mem::size_of::<BottomLeftCorner>()
-            + std::mem::size_of::<UpDirection>();
+        let offset = std::mem::offset_of!(VertexParams, time);
 
         queue.write_buffer(
             &self.vp_buffer,
