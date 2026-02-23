@@ -7,6 +7,4 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
     pub sample_processor: &'a SampleProcessor<F>,
     pub audio_conf: BarProcessorConfig,
     pub format: wgpu::TextureFormat,
-
-    pub threshold: f32,
 }

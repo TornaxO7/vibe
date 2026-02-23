@@ -51,7 +51,8 @@ impl BlockManager {
         for ((bar_idx, bar_value), prev_beat) in
             bar_values.enumerate().zip(self.prev_beat.iter_mut())
         {
-            let is_beat = bar_value > 0.5;
+            const THRESHOLD: f32 = 0.5;
+            let is_beat = bar_value > THRESHOLD;
             if is_beat {
                 if !*prev_beat {
                     self.blocks
