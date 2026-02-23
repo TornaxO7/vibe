@@ -6,7 +6,9 @@ use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct RisingBlocksConfig {}
+pub struct RisingBlocksConfig {
+    pub canvas_height: Option<f32>,
+}
 
 impl ComponentConfig for RisingBlocksConfig {
     fn create_component<F: vibe_audio::fetcher::Fetcher>(
@@ -18,6 +20,7 @@ impl ComponentConfig for RisingBlocksConfig {
         Ok(Box::new(RisingBlocks::new(&RisingBlocksDescriptor {
             renderer,
             sample_processor: processor,
+            format: texture_format,
             audio_conf: BarProcessorConfig {
                 amount_bars: NonZero::new(30).unwrap(),
                 down: 5.0,
@@ -25,7 +28,8 @@ impl ComponentConfig for RisingBlocksConfig {
                 freq_range: NonZero::new(50).unwrap()..NonZero::new(5_000).unwrap(),
                 ..Default::default()
             },
-            format: texture_format,
+
+            canvas_height: self.canvas_height.unwrap_or(1.0),
         })))
     }
 

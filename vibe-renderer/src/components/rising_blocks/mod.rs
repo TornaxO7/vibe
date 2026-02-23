@@ -13,9 +13,12 @@ use wgpu::{include_wgsl, util::DeviceExt};
 
 pub use descriptor::*;
 
+/// The `x` and `y` coords goes from -1 to 1.
+const VERTEX_SPACE_SIZE: f32 = 2.;
+
 // The actual column direction needs to be computed first after we know
 // the size of the screen.
-const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
+// const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
 
 type ColumnDirection = Vec2f;
 type BottomLeftCorner = Vec2f;
@@ -49,7 +52,6 @@ pub struct RisingBlocks {
     bind_group0: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
-    // block_datas_buffer: wgpu::Buffer,
     block_manager: BlockManager,
     blocks_buffer: wgpu::Buffer,
 }
@@ -73,9 +75,9 @@ impl RisingBlocks {
         let blocks_buffer = block_manager.create_block_buffer(device);
 
         let vp_buffer = {
-            // let rotation = Matrix2::from_angle(Deg(0.));
             // let up_direction = rotation * Vector2::unit_y();
-            let up_direction = Vector2::new(0., 2.);
+            let up_direction =
+                Vector2::new(0., desc.canvas_height.clamp(0., 1.) * VERTEX_SPACE_SIZE);
             let column_direction = Vector2::new(2. / total_amount_bars as f32, 0.);
 
             let params = VertexParams {
@@ -92,18 +94,6 @@ impl RisingBlocks {
                 usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
             })
         };
-
-        // let fp_buffer = {
-        //     let params = FragmentParams {
-        //         color1: Vec4f::from([0., 0., 1., 1.]),
-        //     };
-
-        //     device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-        //         label: Some("Rising blocks: Fragment params buffer"),
-        //         contents: bytemuck::bytes_of(&params),
-        //         usage: wgpu::BufferUsages::UNIFORM,
-        //     })
-        // };
 
         let pipeline = {
             let module = device.create_shader_module(include_wgsl!("./shader.wgsl"));
@@ -150,23 +140,16 @@ impl RisingBlocks {
         let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Rising blocks: Bind group 0"),
             layout: &pipeline.get_bind_group_layout(0),
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: vp_buffer.as_entire_binding(),
-                },
-                // wgpu::BindGroupEntry {
-                //     binding: 1,
-                //     resource: fp_buffer.as_entire_binding(),
-                // },
-            ],
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: vp_buffer.as_entire_binding(),
+            }],
         });
 
         Self {
             bar_processor,
 
             vp_buffer,
-            // fp_buffer,
             bind_group0,
             pipeline,
 
