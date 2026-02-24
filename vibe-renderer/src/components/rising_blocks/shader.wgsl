@@ -12,14 +12,8 @@ struct VertexParams {
     amount_columns: u32,
 };
 
-// struct FragmentParams {
-// };
-
 @group(0) @binding(0)
 var<uniform> vp: VertexParams;
-
-// @group(0) @binding(1)
-// var<uniform> fp: FragmentParams;
 
 struct Input {
     @builtin(vertex_index) vertex_idx: u32,
@@ -31,9 +25,6 @@ struct Input {
 
 struct Output {
     @builtin(position) pos: vec4<f32>,
-    // The relative position within the spectrum.
-    // `pos` but `x` and `y` are normalized (aka. they are in the range [0, 1])
-    @location(0) rel_pos: vec2f,
 };
 
 // Assuming:
@@ -61,20 +52,8 @@ fn vs_main(in: Input) -> Output {
     var pos = vp.bottom_left_corner;
     if (is_bar_left_side) {
         pos += f32(in.column_idx) * vp.column_direction + padding;
-
-        if (is_left_channel) {
-            output.rel_pos.x = f32(in.column_idx) / f32(vp.amount_columns);
-        } else {
-            output.rel_pos.x = f32(vp.amount_columns*2 - in.column_idx) / f32(vp.amount_columns);
-        }
     } else {
         pos += f32(in.column_idx + 1) * vp.column_direction - padding;
-
-        if (is_left_channel) {
-            output.rel_pos.x = f32(in.column_idx + 1) / f32(vp.amount_columns);
-        } else {
-            output.rel_pos.x = f32(vp.amount_columns*2 + 1 - in.column_idx) / f32(vp.amount_columns);
-        }
     }
 
     // -- y
