@@ -1,5 +1,4 @@
 mod block_manager;
-mod bounded_ring_buffer;
 mod descriptor;
 
 use crate::{
