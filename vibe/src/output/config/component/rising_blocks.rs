@@ -1,7 +1,6 @@
-use std::num::NonZero;
-
 use crate::output::config::component::ComponentConfig;
 use serde::{Deserialize, Serialize};
+use std::num::NonZero;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor};
 

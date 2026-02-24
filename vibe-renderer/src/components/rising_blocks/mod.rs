@@ -1,20 +1,17 @@
 mod blocks;
 mod descriptor;
+mod glowing_line;
 
-use crate::{components::Rgba, Component, ComponentAudio, Renderable};
+use crate::{Component, ComponentAudio, Renderable};
 use blocks::{BlocksDescriptor, BlocksRenderer};
+use glowing_line::{GlowingLineDescriptor, GlowingLineRenderer};
 use vibe_audio::fetcher::Fetcher;
 
 pub use descriptor::*;
 
-#[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
-struct FragmentParams {
-    color1: Rgba,
-}
-
 pub struct RisingBlocks {
     blocks: BlocksRenderer,
+    glowing_line: GlowingLineRenderer,
 }
 
 impl RisingBlocks {
@@ -27,13 +24,22 @@ impl RisingBlocks {
             canvas_height: desc.canvas_height,
         });
 
-        Self { blocks }
+        let glowing_line = GlowingLineRenderer::new(&GlowingLineDescriptor {
+            renderer: desc.renderer,
+            format: desc.format,
+        });
+
+        Self {
+            blocks,
+            glowing_line,
+        }
     }
 }
 
 impl Renderable for RisingBlocks {
     fn render_with_renderpass(&self, pass: &mut wgpu::RenderPass) {
         self.blocks.render_with_renderpass(pass);
+        self.glowing_line.render_with_renderpass(pass);
     }
 }
 
