@@ -7,7 +7,7 @@ use crate::{
     Component, ComponentAudio, Renderable,
 };
 use block_manager::{BlockData, BlockManager};
-use cgmath::Vector2;
+use cgmath::{InnerSpace, Vector2};
 use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, LinearInterpolation};
 use wgpu::{include_wgsl, util::DeviceExt};
 
@@ -21,11 +21,12 @@ const VERTEX_SPACE_SIZE: f32 = 2.;
 // const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
 
 #[repr(C)]
-#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct VertexParams {
     column_direction: Vec2f,
     bottom_left_corner: Vec2f,
     up_direction: Vec2f,
+    block_height: Vec2f,
     time: f32,
     amount_columns: f32,
 }
@@ -48,6 +49,8 @@ pub struct RisingBlocks {
     pipeline: wgpu::RenderPipeline,
     block_manager: BlockManager,
     blocks_buffer: wgpu::Buffer,
+
+    block_height: Vector2<f32>,
 }
 
 impl RisingBlocks {
@@ -68,25 +71,30 @@ impl RisingBlocks {
 
         let blocks_buffer = block_manager.create_block_buffer(device);
 
-        let vp_buffer = {
+        let (vp_buffer, block_height) = {
             // let up_direction = rotation * Vector2::unit_y();
             let up_direction =
                 Vector2::new(0., desc.canvas_height.clamp(0., 1.) * VERTEX_SPACE_SIZE);
             let column_direction = Vector2::new(2. / total_amount_bars as f32, 0.);
+            let block_height = up_direction.normalize() * column_direction.magnitude();
 
             let params = VertexParams {
                 bottom_left_corner: Vec2f::from([-1., -1.]),
                 up_direction: up_direction.into(),
+                block_height: block_height.into(),
                 column_direction: column_direction.into(),
                 time: 0.,
                 amount_columns: bar_processor.total_amount_bars_per_channel() as f32,
             };
 
-            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
-                label: Some("Rising blocks: Vertex params buffer"),
-                contents: bytemuck::bytes_of(&params),
-                usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            })
+            (
+                device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                    label: Some("Rising blocks: Vertex params buffer"),
+                    contents: bytemuck::bytes_of(&params),
+                    usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+                }),
+                block_height,
+            )
         };
 
         let pipeline = {
@@ -149,6 +157,8 @@ impl RisingBlocks {
 
             block_manager,
             blocks_buffer,
+
+            block_height,
         }
     }
 }
@@ -177,7 +187,20 @@ impl Component for RisingBlocks {
         );
     }
 
-    fn update_resolution(&mut self, _renderer: &crate::Renderer, _new_resolution: [u32; 2]) {}
+    fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
+        let queue = renderer.queue();
+        let aspect_ratio = new_resolution[0] as f32 / new_resolution[1] as f32;
+        let block_height = self.block_height * aspect_ratio;
+        let offset = std::mem::offset_of!(VertexParams, block_height);
+
+        let block_height_bytes: [f32; 2] = block_height.into();
+
+        queue.write_buffer(
+            &self.vp_buffer,
+            offset as wgpu::BufferAddress,
+            bytemuck::bytes_of(&block_height_bytes),
+        );
+    }
 
     fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}
 }
