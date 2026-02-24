@@ -6,7 +6,7 @@
 4. Compile and run the binary with `cargo run --release`.
 5. Your microphone is very likely be caught as the audio source.
    To fix that:
-   1. start the application `pavucontrol`.
+   1. Start an audio mixer for pipewire/pulseaudio by using [wiremix] or [pavucontrol] (or anything else). The following steps are assuming [pavucontrol].
    2. At the top: Click on `Recording`
    3. There should be an entry (something like `ALSA[vibe]`). On the right, click on the drop down menu.
    4. Select the audio source (often "Monitor _bla_ Built-in Audio _bla_")
@@ -43,3 +43,6 @@ nix run github:TornaxO7/vibe
 ```
 
 This flake also provides a package for it if you'd like to install it permanently. Take a look into the `flake.nix` for that.
+
+[wiremix]: https://github.com/tsowell/wiremix
+[pavucontrol]: https://github.com/pulseaudio/pavucontrol
