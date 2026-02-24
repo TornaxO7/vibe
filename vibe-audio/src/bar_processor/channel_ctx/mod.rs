@@ -173,7 +173,6 @@ impl<I: Interpolater> ChannelCtx<I> {
             self.prev[sup_idx] = next_magnitude;
 
             supporting_point.y = self.mem[sup_idx] * self.up + next_magnitude;
-            supporting_point.y = next_magnitude;
             self.mem[sup_idx] = supporting_point.y;
 
             if supporting_point.y > 1. {
