@@ -6,6 +6,7 @@ struct VertexParams {
 
     // length = min height size
     up_direction: vec2f,
+    block_height: vec2f,
 
     time: f32,
     amount_columns: u32,
@@ -79,46 +80,17 @@ fn vs_main(in: Input) -> Output {
     // -- y
     let is_bottom_vertex = in.vertex_idx >= 2;
     if (is_bottom_vertex) {
-        // pos -= vp.up_direction * in.data.height;
-        pos -= vp.up_direction * 0.01;
+        pos -= vp.block_height;
     }
 
     // steadily go up
-    // pos += vp.up_direction * (vp.time - in.data.start_time);
     pos += vp.up_direction * (vp.time - in.start_time);
 
     output.pos = vec4f(pos, 0., 1.);
     return output;
 }
 
-// // == fragment ==
-// // Idea: Create a function which returns a value from [0., 1.]:
-// // - 0. => Use bar color
-// // - 1. => Use border color
-// //
-// // Basically something like a SDF for the bar
-// //
-// // Assumptions:
-// // - Bar x coord is within [-1, 1]
-// // - Height is within range [0, freq]
-// fn get_border_mask(pos: vec2f, freq: f32) -> f32 {
-//     // let border_width = .1;
-//     const BORDER_TRANSITION_SIZE: f32 = .01;
-
-//     // horizontal mask
-//     let border_width_transition_start = clamp(1. - fp.border_width, 0., 1.);
-//     let border_width_transition_end = border_width_transition_start + BORDER_TRANSITION_SIZE;
-//     let width = smoothstep(border_width_transition_start, border_width_transition_end, abs(pos.x));
-
-//     // vertical mask
-//     const HEIGHT_FACTOR: f32 = .01; // found out by experimenting... seems to be fine, lol
-//     let border_height_transition_start = max(freq - fp.border_width*HEIGHT_FACTOR - BORDER_TRANSITION_SIZE, 0.);
-//     let border_height_transition_end = max(freq - fp.border_width*HEIGHT_FACTOR, 0.);
-//     let height = smoothstep(border_height_transition_start, border_height_transition_end, pos.y);
-
-//     return max(width, height);
-// }
-
+// == fragment ==
 @fragment
 fn fs_main(in: Output) -> @location(0) vec4f {
     return vec4f(1.);
