@@ -7,18 +7,13 @@ use std::num::NonZero;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, NothingInterpolation};
 use wgpu::{include_wgsl, util::DeviceExt};
 
-type BaseColor = Vec3f;
-type Time = f32;
-type Resolution = Vec2f;
-type MovementSpeed = f32;
-
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct FragmentParams {
-    base_color: BaseColor,
-    time: Time,
-    resolution: Resolution,
-    movement_speed: MovementSpeed,
+    base_color: Vec3f,
+    time: f32,
+    resolution: Vec2f,
+    movement_speed: f32,
     _padding: u32,
 }
 
@@ -60,8 +55,8 @@ impl Aurodio {
         let fragment_params_buffer = {
             let fragment_params = FragmentParams {
                 base_color: desc.base_color,
-                time: Time::default(),
-                resolution: Resolution::default(),
+                time: 0.,
+                resolution: Vec2f::default(),
                 movement_speed: desc.movement_speed,
                 ..Default::default()
             };
@@ -207,7 +202,7 @@ impl<F: Fetcher> ComponentAudio<F> for Aurodio {
 
 impl Component for Aurodio {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        let offset = std::mem::size_of::<BaseColor>();
+        let offset = std::mem::offset_of!(FragmentParams, time);
 
         queue.write_buffer(
             &self.fragment_params_buffer,
@@ -219,7 +214,7 @@ impl Component for Aurodio {
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         let queue = renderer.queue();
 
-        let offset = std::mem::size_of::<BaseColor>() + std::mem::size_of::<Time>();
+        let offset = std::mem::offset_of!(FragmentParams, resolution);
 
         queue.write_buffer(
             &self.fragment_params_buffer,
