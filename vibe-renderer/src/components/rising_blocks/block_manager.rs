@@ -1,4 +1,4 @@
-use super::bounded_ring_buffer::*;
+use crate::components::utils::bounded_ring_buffer::BoundedRingBuffer;
 
 type StartTime = f32;
 type ColumnIdx = u32;
