@@ -37,14 +37,6 @@ cargo run --release
 # cargo install --release
 ```
 
-1. Your microphone is very likely be caught as the audio source.
-   To fix that:
-   1. start the application `pavucontrol`.
-   2. At the top: Click on `Recording`
-   3. There should be an entry (something like `ALSA[vibe]`). On the right, click on the drop down menu.
-   4. Select the audio source (often "Monitor _bla_ Built-in Audio _bla_")
-2. (optional) [Configure](https://github.com/TornaxO7/vibe/wiki/Config) `vibe`!
-
 # Installation with supported package managers
 
 Here's a list of package manager commands which you can copy+paste to install the required dependencies. If your package manager isn't listed here, feel free to create a PR!

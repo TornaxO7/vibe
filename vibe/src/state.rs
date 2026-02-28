@@ -82,8 +82,13 @@ impl State {
                         std::io::ErrorKind::NotFound => {
                             warn!(concat![
                                 "Looks like you are starting `vibe` for the first time.\n",
-                                "\tPlease see the 5th point here: <https://github.com/TornaxO7/vibe/blob/main/USAGE.md>\n",
-                                "\tto check if `vibe` is listenting to the correct source."
+                                "Your microphone is very likely be caught as the audio source.\n",
+                                "\tTo fix that:\n",
+                                "\t1. start the application `pavucontrol` (or any other audio mixer)\n",
+                                "\t2. At the top: Click on `Recording`\n",
+                                "\t3. There should be an entry (something like `ALSA[vibe]`). On the right, click on the drop down menu.\n",
+                                "\t4. Select the audio source (often \"Monitor *bla* Built-in Audio *bla*\")\n",
+                                "Afterwards, you can start configuring `vibe`: https://github.com/TornaxO7/vibe/wiki/Config"
                             ]);
 
                             if let Err(err) = default_config.save() {
