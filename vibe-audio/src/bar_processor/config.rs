@@ -78,10 +78,15 @@ pub struct BarProcessorConfig {
 
     // /// Decide how the bar values should be interpolated.
     // pub interpolation: InterpolationVariant,
-    /// Control how fast the bars should adjust to their new height.
-    /// Default value: `2`.
+    /// Control how fast the bars should adjust to a peak.
     /// The higher the value, the "faster" the bars adjust to the new height.
-    pub sensitivity: f32,
+    pub up: f32,
+
+    /// Control how fast the bars should fall.
+    /// The higher the value, the "faster" the bars adjust to the new height.
+    pub down: f32,
+
+    pub correction_offset: f32,
 
     /// Set the bar distribution.
     /// In general you needn't use another value than its default.
@@ -96,7 +101,10 @@ impl Default for BarProcessorConfig {
             // interpolation: InterpolationVariant::CubicSpline,
             amount_bars: NonZero::new(30).unwrap(),
             freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-            sensitivity: 2.,
+            up: 0.77,
+            down: 4.0,
+            correction_offset: 0.05,
+
             bar_distribution: BarDistribution::Uniform,
             padding: None,
         }

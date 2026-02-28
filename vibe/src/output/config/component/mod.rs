@@ -7,6 +7,7 @@ mod fragment_canvas;
 mod graph;
 mod light_sources;
 mod radial;
+mod rising_blocks;
 mod util;
 
 use serde::{Deserialize, Serialize};
@@ -24,6 +25,7 @@ pub use fragment_canvas::*;
 pub use graph::*;
 pub use light_sources::*;
 pub use radial::*;
+pub use rising_blocks::*;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum FreqRange {
@@ -103,6 +105,7 @@ pub enum Config {
     Chessy(ChessyConfig),
     WallpaperPulseEdges(WallpaperPulseEdgesConfig),
     WallpaperLightSources(LightSourcesConfig),
+    RisingBlocks(RisingBlocksConfig),
 }
 
 impl Default for Config {
@@ -138,6 +141,9 @@ impl ComponentConfig for Config {
             Self::WallpaperLightSources(config) => {
                 config.create_component(renderer, processor, texture_format)
             }
+            Self::RisingBlocks(config) => {
+                config.create_component(renderer, processor, texture_format)
+            }
         }
     }
 
@@ -152,6 +158,7 @@ impl ComponentConfig for Config {
             Config::Chessy(config) => config.external_paths(),
             Config::WallpaperPulseEdges(config) => config.external_paths(),
             Config::WallpaperLightSources(config) => config.external_paths(),
+            Config::RisingBlocks(config) => config.external_paths(),
         }
     }
 }

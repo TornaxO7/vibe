@@ -1,0 +1,38 @@
+use crate::output::config::component::ComponentConfig;
+use serde::{Deserialize, Serialize};
+use std::num::NonZero;
+use vibe_audio::BarProcessorConfig;
+use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor};
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RisingBlocksConfig {
+    pub canvas_height: Option<f32>,
+}
+
+impl ComponentConfig for RisingBlocksConfig {
+    fn create_component<F: vibe_audio::fetcher::Fetcher>(
+        &self,
+        renderer: &vibe_renderer::Renderer,
+        processor: &vibe_audio::SampleProcessor<F>,
+        texture_format: wgpu::TextureFormat,
+    ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
+        Ok(Box::new(RisingBlocks::new(&RisingBlocksDescriptor {
+            renderer,
+            sample_processor: processor,
+            format: texture_format,
+            audio_conf: BarProcessorConfig {
+                amount_bars: NonZero::new(30).unwrap(),
+                down: 5.0,
+                correction_offset: 0.075,
+                freq_range: NonZero::new(50).unwrap()..NonZero::new(5_000).unwrap(),
+                ..Default::default()
+            },
+
+            canvas_height: self.canvas_height.unwrap_or(1.0),
+        })))
+    }
+
+    fn external_paths(&self) -> Vec<std::path::PathBuf> {
+        vec![]
+    }
+}

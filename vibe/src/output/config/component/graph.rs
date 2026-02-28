@@ -79,7 +79,7 @@ impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
         Self {
             freq_range: conf.freq_range.range(),
-            sensitivity: conf.sensitivity,
+            down: conf.sensitivity,
             ..Default::default()
         }
     }
