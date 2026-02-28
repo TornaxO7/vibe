@@ -10,7 +10,7 @@
 
 , flip
 
-, mesa
+, libgbm
 , vulkan-loader
 , vulkan-validation-layers
 , vulkan-tools
@@ -47,18 +47,19 @@ rustPlatform.buildRustPackage rec {
     vulkan-loader
     vulkan-validation-layers
     vulkan-tools
-    mesa
   ];
 
   doCheck = false;
-  buildType = "debug";
 
   postInstall = ''
-    # theoretically we only need 3:
-    # - wayland
-    # - vulkan-loader
-    # - mesa
-    wrapProgram $out/bin/$pname --suffix LD_LIBRARY_PATH : ${builtins.toString (lib.makeLibraryPath buildInputs)}
+    wrapProgram $out/bin/$pname --suffix LD_LIBRARY_PATH : ${builtins.toString (lib.makeLibraryPath [
+      # Without wayland in library path, this warning is raised:
+      # "No windowing system present. Using surfaceless platform"
+      wayland
+      # Without vulkan-loader present, wgpu won't find any adapter
+      vulkan-loader
+      libgbm
+    ])}
   '';
 
   LD_LIBRARY_PATH = "$LD_LIBRARY_PATH:${lib.makeLibraryPath buildInputs}";
