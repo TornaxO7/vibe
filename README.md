@@ -31,10 +31,9 @@ However I can't promise to work on every suggestion/bug :>
 
 **Note:** I'm unsure if I'd declare the config file format(s) of `vibe` as "stable", so for the time being: Be prepared for breaking changes.
 
-# Start using `vibe`
-`vibe` won't work out of the box probably. Some steps are required.
+# Installation
 
-See [USAGE.md](./USAGE.md) for more information.
+See the instructions detailed in [`INSTALLATION.md`](https://github.com/TornaxO7/vibe/blob/main/INSTALLATION.md).
 
 # Configure `vibe`
 
