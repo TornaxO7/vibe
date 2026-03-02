@@ -12,4 +12,7 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
     /// `0`: Well... zero height...
     /// `1`: The full screen height
     pub canvas_height: f32,
+
+    // TODO: This should be in a `BlocksVariant`
+    pub spawn_random: bool,
 }

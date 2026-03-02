@@ -63,7 +63,7 @@ impl BlocksRenderer {
         let total_amount_bars = bar_processor.amount_channels().get() as usize
             * bar_processor.total_amount_bars_per_channel();
 
-        let block_manager = BlockManager::new(total_amount_bars);
+        let block_manager = BlockManager::new(total_amount_bars, desc.spawn_random);
 
         let blocks_buffer = block_manager.create_block_buffer(device);
 

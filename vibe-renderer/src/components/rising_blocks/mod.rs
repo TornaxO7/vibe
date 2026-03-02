@@ -22,6 +22,7 @@ impl RisingBlocks {
             audio_conf: desc.audio_conf.clone(),
             format: desc.format,
             canvas_height: desc.canvas_height,
+            spawn_random: desc.spawn_random,
         });
 
         let glowing_line = GlowingLineRenderer::new(&GlowingLineDescriptor {

@@ -29,19 +29,23 @@ pub struct BlockManager {
 
     last_time: f32,
     total_amount_columns: usize,
+    rng: Option<fastrand::Rng>,
 }
 
 impl BlockManager {
-    pub fn new(total_amount_bars: usize) -> Self {
+    pub fn new(total_amount_bars: usize, place_random: bool) -> Self {
         let blocks = BoundedRingBuffer::new(MAX_BLOCKS_PER_COLUMN * total_amount_bars);
 
         let prev_beat = vec![false; total_amount_bars].into_boxed_slice();
+
+        let rng = place_random.then(|| fastrand::Rng::new());
 
         Self {
             blocks,
             last_time: 0.,
             prev_beat,
             total_amount_columns: total_amount_bars,
+            rng,
         }
     }
 
@@ -55,8 +59,13 @@ impl BlockManager {
             let is_beat = bar_value > THRESHOLD;
             if is_beat {
                 if !*prev_beat {
+                    let column_idx = match &mut self.rng {
+                        Some(rng) => rng.u32(0..self.total_amount_columns as u32),
+                        None => bar_idx as u32,
+                    };
+
                     self.blocks
-                        .push_back(BlockData::new(self.last_time, bar_idx as u32));
+                        .push_back(BlockData::new(self.last_time, column_idx));
                 } else {
                     *prev_beat = false;
                 }

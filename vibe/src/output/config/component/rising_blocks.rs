@@ -7,6 +7,7 @@ use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RisingBlocksConfig {
     pub canvas_height: Option<f32>,
+    pub spawn_random: Option<bool>,
 }
 
 impl ComponentConfig for RisingBlocksConfig {
@@ -29,6 +30,7 @@ impl ComponentConfig for RisingBlocksConfig {
             },
 
             canvas_height: self.canvas_height.unwrap_or(1.0),
+            spawn_random: self.spawn_random.unwrap_or(false),
         })))
     }
 
