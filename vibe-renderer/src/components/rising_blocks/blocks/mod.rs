@@ -8,7 +8,7 @@ use crate::{
 use cgmath::{InnerSpace, Vector2};
 use manager::{BlockData, BlockManager};
 use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, LinearInterpolation};
-use wgpu::{include_wgsl, util::DeviceExt};
+use wgpu::util::DeviceExt;
 
 pub use descriptor::*;
 
@@ -100,7 +100,28 @@ impl BlocksRenderer {
         };
 
         let pipeline = {
-            let module = device.create_shader_module(include_wgsl!("./shader.wgsl"));
+            let module = {
+                let curr_dir = std::path::Path::new(std::file!())
+                    .parent()
+                    .unwrap()
+                    .to_string_lossy()
+                    .into_owned();
+
+                let mut compiler = wesl::Wesl::new(curr_dir);
+                if let Some(easing) = desc.easing {
+                    compiler.set_feature(easing.as_str(), true);
+                }
+
+                let wgsl_str = compiler
+                    .compile(&"package::shader".parse().unwrap())
+                    .unwrap()
+                    .to_string();
+
+                device.create_shader_module(wgpu::ShaderModuleDescriptor {
+                    label: Some("Rising blocks: Shader"),
+                    source: wgpu::ShaderSource::Wgsl(wgsl_str.into()),
+                })
+            };
 
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {

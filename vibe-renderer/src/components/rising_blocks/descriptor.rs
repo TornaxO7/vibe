@@ -15,6 +15,23 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
 
     // TODO: This should be in a `BlocksVariant`
     pub spawn_random: bool,
-
     pub speed: f32,
+    pub easing: Option<RisingBlocksEasing>,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum RisingBlocksEasing {
+    InSine,
+    OutSine,
+    InOutSine,
+}
+
+impl RisingBlocksEasing {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            Self::InSine => "in_sine",
+            Self::OutSine => "out_sine",
+            Self::InOutSine => "in_out_sine",
+        }
+    }
 }

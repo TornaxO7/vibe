@@ -2,7 +2,7 @@ use crate::output::config::component::ComponentConfig;
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::BarProcessorConfig;
-use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor};
+use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor, RisingBlocksEasing};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RisingBlocksConfigError {
@@ -18,6 +18,8 @@ pub struct RisingBlocksConfig {
     // > 1.0 => faster
     // < 1.0 => slower
     pub speed: Option<f32>,
+
+    pub easing: Option<RisingBlockConfigEasing>,
 }
 
 impl ComponentConfig for RisingBlocksConfig {
@@ -48,10 +50,29 @@ impl ComponentConfig for RisingBlocksConfig {
             canvas_height: self.canvas_height.unwrap_or(1.0),
             spawn_random: self.spawn_random.unwrap_or(false),
             speed: self.speed.unwrap_or(1f32),
+            easing: self.easing.map(|conf| conf.into()),
         })))
     }
 
     fn external_paths(&self) -> Vec<std::path::PathBuf> {
         vec![]
+    }
+}
+
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RisingBlockConfigEasing {
+    InSine,
+    OutSine,
+    InOutSine,
+}
+
+impl From<RisingBlockConfigEasing> for RisingBlocksEasing {
+    fn from(conf: RisingBlockConfigEasing) -> Self {
+        match conf {
+            RisingBlockConfigEasing::InSine => Self::InSine,
+            RisingBlockConfigEasing::OutSine => Self::OutSine,
+            RisingBlockConfigEasing::InOutSine => Self::InOutSine,
+        }
     }
 }

@@ -1,4 +1,4 @@
-use crate::Renderer;
+use crate::{components::rising_blocks::RisingBlocksEasing, Renderer};
 use vibe_audio::{fetcher::Fetcher, BarProcessorConfig, SampleProcessor};
 
 pub struct BlocksDescriptor<'a, F: Fetcher> {
@@ -12,8 +12,7 @@ pub struct BlocksDescriptor<'a, F: Fetcher> {
     /// `0`: Well... zero height...
     /// `1`: The full screen height
     pub canvas_height: f32,
-
     pub spawn_random: bool,
-
     pub speed: f32,
+    pub easing: Option<RisingBlocksEasing>,
 }

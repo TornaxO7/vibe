@@ -1,3 +1,5 @@
+const PI: f32 = acos(-1.);
+
 struct VertexParams {
     // Not normalized.
     // Length equals a full column "slot" (with the direction to the next column)
@@ -64,7 +66,18 @@ fn vs_main(in: Input) -> Output {
     }
 
     // steadily go up
-    pos += vp.up_direction * (vp.time - in.start_time) * vp.speed;
+    let t_raw = (vp.time - in.start_time)*vp.speed;
+
+    @if(in_sine)
+    let t = ease_in_sine(t_raw);
+    @elif(out_sine)
+    let t = ease_out_sine(t_raw);
+    @elif(in_out_sine)
+    let t = ease_in_out_sine(t_raw);
+    @else
+    let t = t_raw;
+
+    pos += vp.up_direction * t;
 
     output.pos = vec4f(pos, 0., 1.);
     return output;
@@ -76,3 +89,16 @@ fn fs_main(in: Output) -> @location(0) vec4f {
     return vec4f(1.);
 }
 
+// == easing functions ==
+
+fn ease_in_sine(x: f32) -> f32 {
+    return 1. - cos(x * PI * 0.5);
+}
+
+fn ease_out_sine(x: f32) -> f32 {
+    return sin(x * PI * .5);
+}
+
+fn ease_in_out_sine(x: f32) -> f32 {
+    return -(cos(PI * x) - 1.) * 0.5;
+}

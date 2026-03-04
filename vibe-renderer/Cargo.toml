@@ -23,6 +23,7 @@ bytemuck.workspace = true
 
 fastrand = "2.3"
 pollster = "0.4"
+wesl = "0.3"
 
 [dev-dependencies]
 anyhow.workspace = true
