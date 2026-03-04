@@ -23,6 +23,7 @@ impl RisingBlocks {
             format: desc.format,
             canvas_height: desc.canvas_height,
             spawn_random: desc.spawn_random,
+            speed: desc.speed,
         });
 
         let glowing_line = GlowingLineRenderer::new(&GlowingLineDescriptor {

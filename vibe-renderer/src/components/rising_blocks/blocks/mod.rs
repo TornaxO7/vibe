@@ -24,6 +24,8 @@ struct VertexParams {
     block_height: Vec2f,
     time: f32,
     amount_columns: f32,
+    speed: f32,
+    _padding: f32,
 }
 
 #[repr(C)]
@@ -47,6 +49,8 @@ pub struct BlocksRenderer {
     blocks_buffer: wgpu::Buffer,
 
     block_height: Vector2<f32>,
+
+    speed: f32,
 }
 
 impl BlocksRenderer {
@@ -63,7 +67,7 @@ impl BlocksRenderer {
         let total_amount_bars = bar_processor.amount_channels().get() as usize
             * bar_processor.total_amount_bars_per_channel();
 
-        let block_manager = BlockManager::new(total_amount_bars, desc.spawn_random);
+        let block_manager = BlockManager::new(total_amount_bars, desc.spawn_random, desc.speed);
 
         let blocks_buffer = block_manager.create_block_buffer(device);
 
@@ -81,6 +85,8 @@ impl BlocksRenderer {
                 column_direction: column_direction.into(),
                 time: 0.,
                 amount_columns: bar_processor.total_amount_bars_per_channel() as f32,
+                speed: desc.speed,
+                ..Default::default()
             };
 
             (
@@ -155,6 +161,7 @@ impl BlocksRenderer {
             blocks_buffer,
 
             block_height,
+            speed: desc.speed,
         }
     }
 }
@@ -173,6 +180,7 @@ impl Renderable for BlocksRenderer {
 
 impl Component for BlocksRenderer {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
+        let new_time = new_time * self.speed;
         self.block_manager.discard_expired_blocks(new_time);
         let offset = std::mem::offset_of!(VertexParams, time);
 

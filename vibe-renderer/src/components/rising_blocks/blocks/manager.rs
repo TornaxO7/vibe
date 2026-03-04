@@ -30,10 +30,15 @@ pub struct BlockManager {
     last_time: f32,
     total_amount_columns: usize,
     rng: Option<fastrand::Rng>,
+
+    time_to_live: f32,
 }
 
 impl BlockManager {
-    pub fn new(total_amount_bars: usize, place_random: bool) -> Self {
+    pub fn new(total_amount_bars: usize, place_random: bool, speed: f32) -> Self {
+        assert!(speed > 0f32);
+        let time_to_live = 1. / speed;
+
         let blocks = BoundedRingBuffer::new(MAX_BLOCKS_PER_COLUMN * total_amount_bars);
 
         let prev_beat = vec![false; total_amount_bars].into_boxed_slice();
@@ -46,6 +51,7 @@ impl BlockManager {
             prev_beat,
             total_amount_columns: total_amount_bars,
             rng,
+            time_to_live,
         }
     }
 
@@ -80,11 +86,9 @@ impl BlockManager {
 
     pub fn discard_expired_blocks(&mut self, new_time: f32) {
         self.last_time = new_time;
-
-        let time_to_live = 1.;
         self.blocks.pop_while(|block| {
             let run_time = new_time - block.start_time;
-            run_time > time_to_live
+            run_time > self.time_to_live
         });
     }
 }

@@ -14,4 +14,6 @@ pub struct BlocksDescriptor<'a, F: Fetcher> {
     pub canvas_height: f32,
 
     pub spawn_random: bool,
+
+    pub speed: f32,
 }

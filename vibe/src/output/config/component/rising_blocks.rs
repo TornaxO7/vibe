@@ -4,10 +4,20 @@ use std::num::NonZero;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor};
 
+#[derive(thiserror::Error, Debug)]
+pub enum RisingBlocksConfigError {
+    #[error("The speed value {0} is invalid. Speed must be > 0!")]
+    InvalidSpeed(f32),
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct RisingBlocksConfig {
     pub canvas_height: Option<f32>,
     pub spawn_random: Option<bool>,
+
+    // > 1.0 => faster
+    // < 1.0 => slower
+    pub speed: Option<f32>,
 }
 
 impl ComponentConfig for RisingBlocksConfig {
@@ -17,6 +27,12 @@ impl ComponentConfig for RisingBlocksConfig {
         processor: &vibe_audio::SampleProcessor<F>,
         texture_format: wgpu::TextureFormat,
     ) -> Result<Box<dyn vibe_renderer::ComponentAudio<F>>, super::ConfigError> {
+        if let Some(speed) = self.speed {
+            if speed <= 0f32 {
+                return Err(RisingBlocksConfigError::InvalidSpeed(speed).into());
+            }
+        }
+
         Ok(Box::new(RisingBlocks::new(&RisingBlocksDescriptor {
             renderer,
             sample_processor: processor,
@@ -31,6 +47,7 @@ impl ComponentConfig for RisingBlocksConfig {
 
             canvas_height: self.canvas_height.unwrap_or(1.0),
             spawn_random: self.spawn_random.unwrap_or(false),
+            speed: self.speed.unwrap_or(1f32),
         })))
     }
 

@@ -10,6 +10,7 @@ struct VertexParams {
 
     time: f32,
     amount_columns: u32,
+    speed: f32,
 };
 
 @group(0) @binding(0)
@@ -63,7 +64,7 @@ fn vs_main(in: Input) -> Output {
     }
 
     // steadily go up
-    pos += vp.up_direction * (vp.time - in.start_time);
+    pos += vp.up_direction * (vp.time - in.start_time) * vp.speed;
 
     output.pos = vec4f(pos, 0., 1.);
     return output;

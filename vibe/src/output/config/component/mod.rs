@@ -74,6 +74,9 @@ pub enum ConfigError {
 
     #[error(transparent)]
     ColorFormat(#[from] util::ColorFormatError),
+
+    #[error(transparent)]
+    RisingBlocks(#[from] rising_blocks::RisingBlocksConfigError),
 }
 
 pub trait ComponentConfig {

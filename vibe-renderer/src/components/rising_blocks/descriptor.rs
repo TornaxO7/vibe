@@ -15,4 +15,6 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
 
     // TODO: This should be in a `BlocksVariant`
     pub spawn_random: bool,
+
+    pub speed: f32,
 }
