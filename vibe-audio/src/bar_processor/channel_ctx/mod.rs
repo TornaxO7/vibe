@@ -24,7 +24,10 @@ pub struct ChannelCtx<I: Interpolater> {
     padding: Option<PaddingCtx>,
 
     normalize_factor: f32,
-    sensitivity: f32,
+
+    up: f32,
+    down: f32,
+    correction_offset: f32,
 
     // Contains the raw previous bar values
     prev: Box<[f32]>,
@@ -90,7 +93,10 @@ impl<I: Interpolater> ChannelCtx<I> {
             padding: padding.clone(),
 
             normalize_factor: INIT_NORMALIZATION_FACTOR,
-            sensitivity: config.sensitivity,
+
+            up: config.up,
+            down: config.down,
+            correction_offset: config.correction_offset,
 
             prev,
             peak,
@@ -113,7 +119,7 @@ impl<I: Interpolater> ChannelCtx<I> {
 
         let amount_bars = self.prev.len();
 
-        for (bar_idx, (supporting_point, fft_range)) in self
+        for (sup_idx, (supporting_point, fft_range)) in self
             .interpolator
             .supporting_points_mut()
             .iter_mut()
@@ -137,8 +143,8 @@ impl<I: Interpolater> ChannelCtx<I> {
                     .sum::<f32>()
                     / amount_bins;
 
-                // reduce the bass change (low x value) and increase the change of the treble (high x value)
-                let correction = normalized_x.powf(2.) + 0.05;
+                // reduce the bass change (low `x` value) and increase the change of the treble (high `x` value)
+                let correction = normalized_x.powf(2.) + self.correction_offset;
 
                 raw_bar_val * self.normalize_factor * correction
             };
@@ -146,24 +152,28 @@ impl<I: Interpolater> ChannelCtx<I> {
             debug_assert!(!prev_magnitude.is_nan());
             debug_assert!(!next_magnitude.is_nan());
 
+            // IDEA: Maybe replace the whole smoothing stuff with
+            // supporting_point.y = supporting_point.y * 0.5 + next_magnitude;
+            // for _beat detection_ for better efficiency <.<
+
             // shoutout to `cava` for their computation on how to make the falling look smooth.
             // Really nice idea!
-            if next_magnitude < self.prev[bar_idx] {
+            if next_magnitude < self.prev[sup_idx] {
                 next_magnitude =
-                    self.peak[bar_idx] * (1. - (self.fall[bar_idx].powf(2.) * self.sensitivity));
+                    self.peak[sup_idx] * (1. - (self.fall[sup_idx].powf(2.) * self.down));
 
                 if next_magnitude < 0. {
                     next_magnitude = 0.;
                 }
-                self.fall[bar_idx] += 0.028;
+                self.fall[sup_idx] += 0.028;
             } else {
-                self.peak[bar_idx] = next_magnitude;
-                self.fall[bar_idx] = 0.0;
+                self.peak[sup_idx] = next_magnitude;
+                self.fall[sup_idx] = 0.0;
             }
-            self.prev[bar_idx] = next_magnitude;
+            self.prev[sup_idx] = next_magnitude;
 
-            supporting_point.y = self.mem[bar_idx] * 0.77 + next_magnitude;
-            self.mem[bar_idx] = supporting_point.y;
+            supporting_point.y = self.mem[sup_idx] * self.up + next_magnitude;
+            self.mem[sup_idx] = supporting_point.y;
 
             if supporting_point.y > 1. {
                 overshoot = true;

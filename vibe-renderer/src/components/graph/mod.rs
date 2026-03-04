@@ -136,7 +136,7 @@ impl Graph {
             )
         };
 
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let vertex_params_buffer = {
             let bottom_left_corner = match desc.placement {
@@ -375,7 +375,7 @@ impl Component for Graph {
         };
 
         self.bar_processor.set_amount_bars(canvas_width);
-        let total_amount_bars = self.bar_processor.total_amount_bars();
+        let total_amount_bars = self.bar_processor.total_amount_bars_per_channel();
 
         // update `right` vector
         {

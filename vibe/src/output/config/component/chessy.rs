@@ -52,7 +52,7 @@ impl From<ChessyAudioConfig> for BarProcessorConfig {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range.range(),
-            sensitivity: conf.sensitivity,
+            down: conf.sensitivity,
             ..Default::default()
         }
     }
