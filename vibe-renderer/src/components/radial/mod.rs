@@ -105,7 +105,7 @@ impl Radial {
     pub fn new<F: Fetcher>(desc: &RadialDescriptor<F>) -> Self {
         let device = desc.renderer.device();
         let bar_processor = BarProcessor::new(desc.processor, desc.audio_conf.clone());
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let vertex_params_buffer = {
             let position_offset = {

@@ -44,7 +44,7 @@ impl Chessy {
         let renderer = desc.renderer;
         let device = renderer.device();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_config.clone());
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let data = Data {
             resolution: Vec2f::default(),

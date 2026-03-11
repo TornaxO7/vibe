@@ -45,7 +45,7 @@ impl FragmentCanvas {
         let device = desc.renderer.device();
         let queue = desc.renderer.queue();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let iresolution = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas: `iResolution` buffer"),

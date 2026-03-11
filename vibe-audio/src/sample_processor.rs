@@ -100,7 +100,7 @@ impl<F: Fetcher> SampleProcessor<F> {
         self.sample_buffer.lock().unwrap().sample_rate()
     }
 
-    pub(crate) fn amount_channels(&self) -> NonZero<u8> {
+    pub fn amount_channels(&self) -> NonZero<u8> {
         NonZero::new(self.channels.len() as u8).unwrap()
     }
 }
