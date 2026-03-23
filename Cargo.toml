@@ -27,7 +27,7 @@ clap = { version = "4.6", features = ["derive"] }
 vibe-audio = { path = "./vibe-audio" }
 image = "0.25"
 xdg = "3.0"
-toml = "1.0"
+toml = "1.1"
 tracing-indicatif = "0.3"
 bytemuck = "1.25"
 colored = "3"
