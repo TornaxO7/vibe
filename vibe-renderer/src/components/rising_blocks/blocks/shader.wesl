@@ -28,6 +28,7 @@ struct Input {
 
 struct Output {
     @builtin(position) pos: vec4<f32>,
+    @location(0) t: f32,
 };
 
 // Assuming:
@@ -80,13 +81,14 @@ fn vs_main(in: Input) -> Output {
     pos += vp.up_direction * t;
 
     output.pos = vec4f(pos, 0., 1.);
+    output.t = (vp.time - in.start_time) * vp.speed;
     return output;
 }
 
 // == fragment ==
 @fragment
 fn fs_main(in: Output) -> @location(0) vec4f {
-    return vec4f(1.);
+    return vec4f(vec3(1.), smoothstep(1., 0., in.t));
 }
 
 // == easing functions ==

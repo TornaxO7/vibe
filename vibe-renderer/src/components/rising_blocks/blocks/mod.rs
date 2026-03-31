@@ -154,7 +154,7 @@ impl BlocksRenderer {
                         compilation_options: wgpu::PipelineCompilationOptions::default(),
                         targets: &[Some(wgpu::ColorTargetState {
                             format: desc.format,
-                            blend: None,
+                            blend: Some(wgpu::BlendState::ALPHA_BLENDING),
                             write_mask: wgpu::ColorWrites::all(),
                         })],
                     },
