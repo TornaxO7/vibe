@@ -49,10 +49,13 @@ impl Renderable for RisingBlocks {
 impl Component for RisingBlocks {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
         self.blocks.update_time(queue, new_time);
+        self.glowing_line.update_time(queue, new_time);
     }
 
     fn update_resolution(&mut self, renderer: &crate::Renderer, new_resolution: [u32; 2]) {
         self.blocks.update_resolution(renderer, new_resolution);
+        self.glowing_line
+            .update_resolution(renderer, new_resolution);
     }
 
     fn update_mouse_position(&mut self, _queue: &wgpu::Queue, _new_pos: (f32, f32)) {}

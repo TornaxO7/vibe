@@ -76,7 +76,7 @@ impl BlocksRenderer {
             let up_direction =
                 Vector2::new(0., desc.canvas_height.clamp(0., 1.) * VERTEX_SPACE_SIZE);
             let column_direction = Vector2::new(2. / total_amount_bars as f32, 0.);
-            let block_height = up_direction.normalize() * column_direction.magnitude();
+            let block_height = up_direction.normalize() * column_direction.magnitude() * 0.5;
 
             let params = VertexParams {
                 bottom_left_corner: Vec2f::from([-1., -1.]),
