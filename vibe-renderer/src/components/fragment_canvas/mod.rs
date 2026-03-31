@@ -197,7 +197,7 @@ impl FragmentCanvas {
 
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas: Pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout],
+                bind_group_layouts: &[Some(&bind_group0_layout)],
                 ..Default::default()
             });
 

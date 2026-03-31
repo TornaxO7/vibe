@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
-use tracing::{error, warn};
+use tracing::error;
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{components::ComponentAudio, Renderer, RendererDescriptor};
 use winit::{
@@ -86,8 +86,23 @@ impl State<'_> {
         }
     }
 
-    pub fn render(&self, renderer: &Renderer) -> Result<(), wgpu::SurfaceError> {
-        let surface_texture = self.surface.get_current_texture()?;
+    pub fn render(&self, renderer: &Renderer) {
+        let surface_texture = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(frame) => frame,
+            wgpu::CurrentSurfaceTexture::Occluded
+            | wgpu::CurrentSurfaceTexture::Timeout
+            | wgpu::CurrentSurfaceTexture::Outdated
+            | wgpu::CurrentSurfaceTexture::Suboptimal(_) => {
+                return;
+            }
+            wgpu::CurrentSurfaceTexture::Validation => {
+                panic!("Validation error occured.");
+            }
+            wgpu::CurrentSurfaceTexture::Lost => {
+                panic!("Lost window.");
+            }
+        };
+
         let view = surface_texture
             .texture
             .create_view(&wgpu::TextureViewDescriptor::default());
@@ -95,7 +110,6 @@ impl State<'_> {
         renderer.render(&view, &self.components);
 
         surface_texture.present();
-        Ok(())
     }
 
     pub fn update_mouse_pos(&mut self, queue: &wgpu::Queue, new_pos: PhysicalPosition<f64>) {
@@ -296,18 +310,7 @@ impl ApplicationHandler for OutputRenderer<'_> {
                     component.update_audio(self.renderer.queue(), &self.processor);
                 }
 
-                match state.render(&self.renderer) {
-                    Ok(_) => {}
-                    Err(wgpu::SurfaceError::Timeout) => {
-                        error!("Surface timeout");
-                    }
-                    Err(wgpu::SurfaceError::OutOfMemory) => {
-                        unreachable!("Dayum, you don't have any memory left for rendering....");
-                    }
-                    Err(err) => {
-                        warn!("{}", err);
-                    }
-                }
+                state.render(&self.renderer);
             }
 
             WindowEvent::Resized(new_size) => {
