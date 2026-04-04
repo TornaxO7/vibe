@@ -235,13 +235,18 @@ impl OutputHandler for State {
 
         let layer_surface = {
             let wl_surface = self.compositor_state.create_surface(qh);
+            let layer = if config.overlay { Layer::Overlay } else { Layer::Background };
             let layer_surface = self.layer_shell.create_layer_surface(
                 qh,
                 wl_surface,
-                Layer::Background,
+                layer,
                 Some(format!("{} background", crate::APP_NAME)),
                 Some(&output),
             );
+            if config.overlay {
+                let region = self.compositor_state.wl_compositor().create_region(&qh, ());
+                layer_surface.wl_surface().set_input_region(Some(&region));
+            }
             layer_surface
         };
 
@@ -282,6 +287,19 @@ impl OutputHandler for State {
     fn output_destroyed(&mut self, _conn: &Connection, _qh: &QueueHandle<Self>, output: WlOutput) {
         info!("An output was removed.");
         self.outputs.remove(&output);
+    }
+}
+
+impl wayland_client::Dispatch<wayland_client::protocol::wl_region::WlRegion, ()> for State {
+    fn event(
+        _state: &mut Self,
+        _proxy: &wayland_client::protocol::wl_region::WlRegion,
+        _event: wayland_client::protocol::wl_region::Event,
+        _data: &(),
+        _conn: &Connection,
+        _qh: &QueueHandle<Self>,
+    ) {
+        // WlRegion has no events
     }
 }
 
