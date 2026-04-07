@@ -144,6 +144,7 @@ impl OutputRenderer<'_> {
                         path,
                         OutputConfig {
                             enable: true,
+                            overlay: false,
                             components: Vec::new(),
                         },
                     )

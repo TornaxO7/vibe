@@ -12,6 +12,10 @@ pub struct OutputConfig {
     /// If the config should be loaded or not.
     pub enable: bool,
 
+    /// Render on the overlay layer (above all windows) and pass through input events.
+    #[serde(default)]
+    pub overlay: bool,
+
     /// The list of components which should be used for the output.
     pub components: Vec<component::Config>,
 }
@@ -22,6 +26,7 @@ impl OutputConfig {
 
         let new = Self {
             enable: true,
+            overlay: false,
             components: vec![default_component],
         };
 
@@ -89,6 +94,7 @@ mod tests {
     fn external_paths() {
         let output_config = OutputConfig {
             enable: true,
+            overlay: false,
             components: vec![
                 component::Config::FragmentCanvas(FragmentCanvasConfig {
                     audio_conf: component::FragmentCanvasAudioConfig::default(),
