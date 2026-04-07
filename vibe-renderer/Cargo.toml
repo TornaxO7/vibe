@@ -21,7 +21,7 @@ xdg.workspace = true
 tracing-indicatif.workspace = true
 bytemuck.workspace = true
 
-fastrand = "2.3"
+fastrand = "2.4"
 pollster = "0.4"
 
 [dev-dependencies]
