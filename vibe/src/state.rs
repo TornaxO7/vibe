@@ -244,7 +244,7 @@ impl OutputHandler for State {
                 Some(&output),
             );
             if config.overlay {
-                let region = self.compositor_state.wl_compositor().create_region(&qh, ());
+                let region = self.compositor_state.wl_compositor().create_region(qh, ());
                 layer_surface.wl_surface().set_input_region(Some(&region));
             }
             layer_surface
