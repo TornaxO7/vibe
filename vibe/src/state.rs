@@ -235,7 +235,11 @@ impl OutputHandler for State {
 
         let layer_surface = {
             let wl_surface = self.compositor_state.create_surface(qh);
-            let layer = if config.overlay { Layer::Overlay } else { Layer::Background };
+            let layer = if config.overlay {
+                Layer::Overlay
+            } else {
+                Layer::Background
+            };
             let layer_surface = self.layer_shell.create_layer_surface(
                 qh,
                 wl_surface,
