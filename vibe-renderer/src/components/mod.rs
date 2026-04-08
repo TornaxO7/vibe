@@ -20,6 +20,7 @@ pub use graph::{Graph, GraphBorder, GraphDescriptor, GraphFormat, GraphPlacement
 pub use radial::{Radial, RadialDescriptor, RadialFormat, RadialVariant};
 pub use rising_blocks::{
     RisingBlocks, RisingBlocksBackground, RisingBlocksDescriptor, RisingBlocksEasing,
+    RisingBlocksForeground,
 };
 
 use crate::{Renderable, Renderer};

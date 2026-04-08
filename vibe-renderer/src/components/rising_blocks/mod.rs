@@ -3,7 +3,7 @@ mod descriptor;
 mod glowing_line;
 
 use crate::{Component, ComponentAudio, Renderable};
-use blocks::{BlocksDescriptor, BlocksRenderer};
+use blocks::{BlocksColor, BlocksDescriptor, BlocksRenderer};
 use glowing_line::{GlowingLineDescriptor, GlowingLineRenderer};
 use vibe_audio::fetcher::Fetcher;
 
@@ -18,17 +18,24 @@ impl RisingBlocks {
     pub fn new<F: Fetcher>(desc: &RisingBlocksDescriptor<F>) -> Self {
         debug_assert!(0f32 <= desc.canvas_height && desc.canvas_height <= 1f32);
 
-        let blocks = BlocksRenderer::new(&BlocksDescriptor {
-            renderer: desc.renderer,
-            sample_processor: desc.sample_processor,
-            audio_conf: desc.audio_conf.clone(),
-            format: desc.format,
-            canvas_height: desc.canvas_height,
-            spawn_random: desc.spawn_random,
-            speed: desc.speed,
-            easing: desc.easing,
-            beat_threshold: desc.beat_threshold,
-        });
+        let blocks = {
+            let color = match desc.foreground {
+                RisingBlocksForeground::Color(color) => BlocksColor::Color(color),
+            };
+
+            BlocksRenderer::new(&BlocksDescriptor {
+                renderer: desc.renderer,
+                sample_processor: desc.sample_processor,
+                audio_conf: desc.audio_conf.clone(),
+                format: desc.format,
+                canvas_height: desc.canvas_height,
+                spawn_random: desc.spawn_random,
+                speed: desc.speed,
+                easing: desc.easing,
+                beat_threshold: desc.beat_threshold,
+                color,
+            })
+        };
 
         let glowing_line = {
             let color1 = match desc.background {

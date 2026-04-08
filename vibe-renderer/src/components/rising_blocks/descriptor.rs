@@ -19,6 +19,7 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
     pub easing: Option<RisingBlocksEasing>,
     pub beat_threshold: f32,
     pub background: RisingBlocksBackground,
+    pub foreground: RisingBlocksForeground,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -40,5 +41,10 @@ impl RisingBlocksEasing {
 
 #[derive(Debug, Clone)]
 pub enum RisingBlocksBackground {
+    Color(Rgba),
+}
+
+#[derive(Debug, Clone)]
+pub enum RisingBlocksForeground {
     Color(Rgba),
 }

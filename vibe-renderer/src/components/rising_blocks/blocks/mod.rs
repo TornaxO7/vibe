@@ -41,7 +41,7 @@ pub struct BlocksRenderer {
     // vp = "vertex params"
     vp_buffer: wgpu::Buffer,
     // fp = "fragment params"
-    // fp_buffer: wgpu::Buffer,
+    _fp_buffer: wgpu::Buffer,
     bind_group0: wgpu::BindGroup,
 
     pipeline: wgpu::RenderPipeline,
@@ -102,6 +102,18 @@ impl BlocksRenderer {
                 }),
                 block_height,
             )
+        };
+
+        let fp_buffer = {
+            let color1 = match desc.color {
+                BlocksColor::Color(color) => color,
+            };
+
+            device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+                label: Some("Rising blocks: Fragment params buffer"),
+                contents: bytemuck::bytes_of(&FragmentParams { color1 }),
+                usage: wgpu::BufferUsages::UNIFORM,
+            })
         };
 
         let pipeline = {
@@ -170,15 +182,22 @@ impl BlocksRenderer {
         let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Rising blocks: Bind group 0"),
             layout: &pipeline.get_bind_group_layout(0),
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: vp_buffer.as_entire_binding(),
-            }],
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: vp_buffer.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: fp_buffer.as_entire_binding(),
+                },
+            ],
         });
 
         Self {
             bar_processor,
 
+            _fp_buffer: fp_buffer,
             vp_buffer,
             bind_group0,
             pipeline,

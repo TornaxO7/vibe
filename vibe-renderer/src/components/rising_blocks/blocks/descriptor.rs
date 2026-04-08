@@ -1,4 +1,7 @@
-use crate::{components::rising_blocks::RisingBlocksEasing, Renderer};
+use crate::{
+    components::{rising_blocks::RisingBlocksEasing, Rgba},
+    Renderer,
+};
 use vibe_audio::{fetcher::Fetcher, BarProcessorConfig, SampleProcessor};
 
 pub struct BlocksDescriptor<'a, F: Fetcher> {
@@ -19,4 +22,10 @@ pub struct BlocksDescriptor<'a, F: Fetcher> {
     /// The threshold when a bar value is detected as a beat.
     /// Needs to be within the range [0, 1].
     pub beat_threshold: f32,
+
+    pub color: BlocksColor,
+}
+
+pub enum BlocksColor {
+    Color(Rgba),
 }

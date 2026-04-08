@@ -15,8 +15,15 @@ struct VertexParams {
     speed: f32,
 };
 
+struct FragmentParams {
+    color1: vec4f,
+};
+
 @group(0) @binding(0)
 var<uniform> vp: VertexParams;
+
+@group(0) @binding(1)
+var<uniform> fp: FragmentParams;
 
 struct Input {
     @builtin(vertex_index) vertex_idx: u32,
@@ -97,7 +104,8 @@ fn fs_main(in: Output) -> @location(0) vec4f {
     let r = smoothstep(1., .8, length(in.rel));
     let fade_out = smoothstep(1., 0., in.t);
 
-    return vec4f(vec3f(r)*fade_out, 1.);
+    let a = r*fade_out;
+    return vec4f(fp.color1.rgb, min(fp.color1.a, a));
 }
 
 // == easing functions ==

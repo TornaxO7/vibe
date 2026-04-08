@@ -7,6 +7,7 @@ use std::num::NonZero;
 use vibe_audio::BarProcessorConfig;
 use vibe_renderer::components::{
     RisingBlocks, RisingBlocksBackground, RisingBlocksDescriptor, RisingBlocksEasing,
+    RisingBlocksForeground,
 };
 
 #[derive(thiserror::Error, Debug)]
@@ -28,6 +29,7 @@ pub struct RisingBlocksConfig {
     pub beat_threshold: Option<f32>,
 
     pub background: RisingBlocksBackgroundConfig,
+    pub foreground: RisingBlocksForegroundConfig,
 }
 
 impl ComponentConfig for RisingBlocksConfig {
@@ -61,6 +63,7 @@ impl ComponentConfig for RisingBlocksConfig {
             easing: self.easing.map(|conf| conf.into()),
             beat_threshold: self.beat_threshold.unwrap_or(0.5f32),
             background: self.background.clone().try_into()?,
+            foreground: self.foreground.clone().try_into()?,
         })))
     }
 
@@ -99,6 +102,24 @@ impl TryFrom<RisingBlocksBackgroundConfig> for RisingBlocksBackground {
     fn try_from(conf: RisingBlocksBackgroundConfig) -> Result<Self, Self::Error> {
         match conf {
             RisingBlocksBackgroundConfig::Color(color) => {
+                color.as_f32().map(|col| Self::Color(col))
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RisingBlocksForegroundConfig {
+    Color(Rgba),
+}
+
+impl TryFrom<RisingBlocksForegroundConfig> for RisingBlocksForeground {
+    type Error = ColorFormatError;
+
+    fn try_from(conf: RisingBlocksForegroundConfig) -> Result<Self, Self::Error> {
+        match conf {
+            RisingBlocksForegroundConfig::Color(color) => {
                 color.as_f32().map(|col| Self::Color(col))
             }
         }
