@@ -148,7 +148,12 @@ impl<T: Default> BoundedRingBuffer<T> {
     /// Returns two slices which, if you put `tail` after `head`, would
     /// make the contigious array.
     pub fn contigious(&self) -> Contigious<'_, T> {
-        if self.head <= self.tail {
+        if self.is_empty() {
+            Contigious {
+                head: &[],
+                tail: &[],
+            }
+        } else if self.head < self.tail {
             Contigious {
                 head: &self.buffer[self.head..self.tail],
                 tail: &[],
@@ -471,8 +476,8 @@ mod tests {
         fn empty() {
             let buffer = BoundedRingBuffer::<u8>::new(1);
             let c = buffer.contigious();
-            assert!(c.head.is_empty());
-            assert!(c.tail.is_empty());
+            assert!(c.head.is_empty(), "{:?}", c.head);
+            assert!(c.tail.is_empty(), "{:?}", c.tail);
         }
 
         #[test]
@@ -482,7 +487,19 @@ mod tests {
             buffer.push_back(69);
             let c = buffer.contigious();
             assert_eq!(c.head, &[69]);
-            assert!(c.tail.is_empty());
+            assert!(c.tail.is_empty(), "{:?}", c.tail);
+        }
+
+        #[test]
+        fn regular_full() {
+            let mut buffer = BoundedRingBuffer::<u8>::new(3);
+            // [0, 1, 2]
+            for i in 0..3 {
+                buffer.push_back(i);
+            }
+            let c = buffer.contigious();
+            assert_eq!(c.head, &[0, 1, 2]);
+            assert!(c.tail.is_empty(), "{:?}", c.tail);
         }
 
         #[test]
