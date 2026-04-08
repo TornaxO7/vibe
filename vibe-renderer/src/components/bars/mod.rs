@@ -12,9 +12,6 @@ use std::num::NonZero;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, CubicSplineInterpolation, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
-/// The x coords goes from -1 to 1.
-const VERTEX_SURFACE_WIDTH: f32 = 2.;
-
 // The actual column direction needs to be computed first after we know
 // the size of the screen.
 const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
@@ -114,7 +111,7 @@ impl Bars {
     pub fn new<F: Fetcher>(desc: &BarsDescriptor<F>) -> Result<Self, ShaderCodeError> {
         let device = desc.renderer.device();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let (bottom_left_corner, angle, width) = match desc.placement {
             BarsPlacement::Bottom => (Vector2::from([-1., -1.]), Deg(0.), BarsWidth::ScreenWidth),
@@ -164,7 +161,7 @@ impl Bars {
                 bottom_left_corner: bottom_left_corner.into(),
                 up_direction: up_direction.into(),
                 column_direction: column_direction.into(),
-                max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
+                max_height: desc.max_height * super::utils::VERTEX_SURFACE_WIDTH,
                 height_mirrored,
                 amount_bars: total_amount_bars as u32,
                 _padding1: 0,
@@ -420,44 +417,48 @@ fn create_pipeline(
     let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Bars: Pipeline layout"),
         bind_group_layouts: &[
-            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Bars: Bind group 0 layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
+            Some(
+                &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Bars: Bind group 0 layout"),
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::VERTEX,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                    ],
+                }),
+            ),
+            Some(
+                &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Bars: Bind group 1 layout"),
+                    entries: &[wgpu::BindGroupLayoutEntry {
                         binding: 0,
                         visibility: wgpu::ShaderStages::VERTEX,
                         ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
                             has_dynamic_offset: false,
                             min_binding_size: None,
                         },
                         count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
-                        visibility: wgpu::ShaderStages::FRAGMENT,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
-                        },
-                        count: None,
-                    },
-                ],
-            }),
-            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Bars: Bind group 1 layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::VERTEX,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            }),
+                    }],
+                }),
+            ),
         ],
         ..Default::default()
     });

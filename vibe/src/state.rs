@@ -161,7 +161,7 @@ impl State {
         }
 
         match output.surface().get_current_texture() {
-            Ok(surface_texture) => {
+            wgpu::CurrentSurfaceTexture::Success(surface_texture) => {
                 self.renderer.render(
                     &surface_texture
                         .texture
@@ -171,11 +171,21 @@ impl State {
                 surface_texture.present();
                 output.request_redraw(qh);
             }
-            Err(wgpu::SurfaceError::OutOfMemory) => unreachable!("Out of memory"),
-            Err(wgpu::SurfaceError::Timeout) => {
+            wgpu::CurrentSurfaceTexture::Timeout => {
                 error!("A frame took too long to be present")
             }
-            Err(err) => warn!("{}", err),
+            wgpu::CurrentSurfaceTexture::Occluded => {
+                warn!("The surface seems to be behind another layer/window. `vibe` will wait until it's seeable again before rendering again.");
+            }
+            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Suboptimal(_) => {
+                warn!("Received outdated texture of surface. (nothing bad. Just going to skip a frame.)");
+            }
+            wgpu::CurrentSurfaceTexture::Lost => {
+                error!("Lost texture of surface. Eh... dunno, what you should do about this. Should be fine to ignore this (otherwise please create an issue <.<)");
+            }
+            wgpu::CurrentSurfaceTexture::Validation => {
+                panic!("Validation error occured. Shame on me. Please create an issue.");
+            }
         };
     }
 }
@@ -267,7 +277,7 @@ impl OutputHandler for State {
                 self.renderer
                     .instance()
                     .create_surface_unsafe(wgpu::SurfaceTargetUnsafe::RawHandle {
-                        raw_display_handle,
+                        raw_display_handle: Some(raw_display_handle),
                         raw_window_handle,
                     })
                     .unwrap()

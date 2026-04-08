@@ -114,10 +114,9 @@ impl Renderer {
             wgpu::Features::FLOAT32_FILTERABLE | wgpu::Features::TEXTURE_FORMAT_16BIT_NORM;
 
         let instance = wgpu::Instance::new(
-            &wgpu::InstanceDescriptor {
+            wgpu::InstanceDescriptor {
                 backends: desc.backend,
-
-                ..Default::default()
+                ..wgpu::InstanceDescriptor::new_without_display_handle()
             }
             .with_env(),
         );

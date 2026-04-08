@@ -76,7 +76,7 @@ impl LightSources {
                 BarProcessorConfig {
                     amount_bars: NonZero::new(amount_bars).unwrap(),
                     freq_range: desc.freq_range.clone(),
-                    sensitivity: desc.sensitivity,
+                    down: desc.sensitivity,
                     ..Default::default()
                 },
             )

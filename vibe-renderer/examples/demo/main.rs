@@ -114,7 +114,7 @@ impl<'a> State<'a> {
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
                     amount_bars: std::num::NonZero::new(60).unwrap(),
-                    sensitivity: 4.,
+                    down: 4.,
                     ..Default::default()
                 },
                 texture_format: surface_config.format,
@@ -134,7 +134,7 @@ impl<'a> State<'a> {
                 renderer: &renderer,
                 sample_processor: &processor,
                 audio_conf: BarProcessorConfig {
-                    sensitivity: 4.,
+                    down: 4.,
                     amount_bars: NonZero::new(30).unwrap(),
                     ..Default::default()
                 },
@@ -218,7 +218,7 @@ impl<'a> State<'a> {
                     renderer: &renderer,
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
-                        sensitivity: 4.0,
+                        down: 4.0,
                         ..Default::default()
                     },
                     output_texture_format: surface_config.format,
@@ -238,7 +238,7 @@ impl<'a> State<'a> {
                     sample_processor: processor,
                     audio_conf: BarProcessorConfig {
                         amount_bars: NonZero::new(256).unwrap(),
-                        sensitivity: 4.0,
+                        down: 4.0,
                         ..Default::default()
                     },
                     output_texture_format: surface_config.format,
@@ -261,7 +261,7 @@ impl<'a> State<'a> {
                 processor,
                 audio_conf: vibe_audio::BarProcessorConfig {
                     amount_bars: NonZero::new(60).unwrap(),
-                    sensitivity: 4.0,
+                    down: 4.0,
                     ..Default::default()
                 },
                 output_texture_format: surface_config.format,
@@ -282,7 +282,7 @@ impl<'a> State<'a> {
                     processor,
                     audio_conf: vibe_audio::BarProcessorConfig {
                         amount_bars: NonZero::new(60).unwrap(),
-                        sensitivity: 4.0,
+                        down: 4.0,
                         ..Default::default()
                     },
                     output_texture_format: surface_config.format,
@@ -385,15 +385,15 @@ impl<'a> State<'a> {
         }
     }
 
-    pub fn render(
-        &mut self,
-        processor: &SampleProcessor<SystemAudioFetcher>,
-    ) -> Result<(), wgpu::SurfaceError> {
+    pub fn render(&mut self, processor: &SampleProcessor<SystemAudioFetcher>) {
         self.component
             .update_audio(self.renderer.queue(), processor);
         self.component
             .update_time(self.renderer.queue(), self.time.elapsed().as_secs_f32());
-        let surface_texture = self.surface.get_current_texture()?;
+        let surface_texture = match self.surface.get_current_texture() {
+            wgpu::CurrentSurfaceTexture::Success(texture) => texture,
+            _ => return,
+        };
 
         let view = surface_texture
             .texture
@@ -402,7 +402,6 @@ impl<'a> State<'a> {
         self.renderer.render(&view, &[self.component.as_ref()]);
 
         surface_texture.present();
-        Ok(())
     }
 
     pub fn update_mouse_pos(&mut self, new_pos: PhysicalPosition<f64>) {
@@ -494,7 +493,7 @@ impl<'a> ApplicationHandler for App<'a> {
             winit::event::WindowEvent::Resized(new_size) => state.resize(new_size),
             winit::event::WindowEvent::CloseRequested => event_loop.exit(),
             winit::event::WindowEvent::RedrawRequested => {
-                state.render(&self.sample_processor).unwrap();
+                state.render(&self.sample_processor);
                 state.window.request_redraw();
             }
             winit::event::WindowEvent::KeyboardInput { event, .. } => match event {

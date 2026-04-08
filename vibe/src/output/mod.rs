@@ -132,7 +132,12 @@ pub fn get_surface_config(
     let format = surface_caps
         .formats
         .iter()
-        .find(|f| !f.is_srgb())
+        .find(|f| {
+            let channel = f.channels();
+
+            let has_alpha = channel.contains(wgpu::wgt::TextureChannel::ALPHA);
+            !f.is_srgb() && has_alpha
+        })
         .copied()
         .unwrap();
 

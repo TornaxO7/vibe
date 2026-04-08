@@ -45,7 +45,7 @@ impl FragmentCanvas {
         let device = desc.renderer.device();
         let queue = desc.renderer.queue();
         let bar_processor = BarProcessor::new(desc.sample_processor, desc.audio_conf.clone());
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let iresolution = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("Fragment canvas: `iResolution` buffer"),
@@ -197,7 +197,7 @@ impl FragmentCanvas {
 
             let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
                 label: Some("Fragment canvas: Pipeline layout"),
-                bind_group_layouts: &[&bind_group0_layout],
+                bind_group_layouts: &[Some(&bind_group0_layout)],
                 ..Default::default()
             });
 

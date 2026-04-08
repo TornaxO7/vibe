@@ -1,0 +1,130 @@
+use crate::components::utils::bounded_ring_buffer::BoundedRingBuffer;
+
+type StartTime = f32;
+type ColumnIdx = u32;
+
+/// The (estimated) max amount of blocks which a column can have.
+const MAX_BLOCKS_PER_COLUMN: usize = 16;
+
+#[repr(C)]
+#[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default, PartialEq)]
+pub struct BlockData {
+    start_time: StartTime,
+    column_idx: ColumnIdx,
+}
+
+impl BlockData {
+    pub fn new(start_time: f32, column_idx: u32) -> Self {
+        Self {
+            column_idx,
+            start_time,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct BlockManagerDescriptor {
+    pub total_amount_bars: usize,
+    pub place_random: bool,
+    pub speed: f32,
+
+    /// The threshold when a bar value is detected as a beat.
+    pub beat_threshold: f32,
+}
+
+#[derive(Debug)]
+pub struct BlockManager {
+    blocks: BoundedRingBuffer<BlockData>,
+    prev_beat: Box<[bool]>,
+
+    last_time: f32,
+    total_amount_columns: usize,
+    rng: Option<fastrand::Rng>,
+
+    beat_threshold: f32,
+
+    time_to_live: f32,
+}
+
+impl BlockManager {
+    pub fn new(desc: BlockManagerDescriptor) -> Self {
+        assert!(desc.speed > 0f32);
+        let time_to_live = 1. / desc.speed;
+
+        let blocks = BoundedRingBuffer::new(MAX_BLOCKS_PER_COLUMN * desc.total_amount_bars);
+
+        let prev_beat = vec![false; desc.total_amount_bars].into_boxed_slice();
+
+        let rng = desc.place_random.then(fastrand::Rng::new);
+
+        Self {
+            blocks,
+            last_time: 0.,
+            prev_beat,
+            total_amount_columns: desc.total_amount_bars,
+            rng,
+            time_to_live,
+            beat_threshold: desc.beat_threshold,
+        }
+    }
+
+    pub fn process_bars(&mut self, bars: &[Box<[f32]>]) {
+        let bar_values = bars.iter().flatten().cloned();
+
+        for ((bar_idx, bar_value), prev_beat) in
+            bar_values.enumerate().zip(self.prev_beat.iter_mut())
+        {
+            let is_beat = bar_value > self.beat_threshold;
+            if is_beat {
+                if !*prev_beat {
+                    let column_idx = match &mut self.rng {
+                        Some(rng) => rng.u32(0..self.total_amount_columns as u32),
+                        None => bar_idx as u32,
+                    };
+
+                    self.blocks
+                        .push_back(BlockData::new(self.last_time, column_idx));
+                } else {
+                    *prev_beat = false;
+                }
+            }
+            *prev_beat = is_beat;
+        }
+    }
+
+    pub fn amount_active_blocks(&self) -> usize {
+        self.blocks.len()
+    }
+
+    pub fn discard_expired_blocks(&mut self, new_time: f32) {
+        self.last_time = new_time;
+        self.blocks.pop_while(|block| {
+            let run_time = new_time - block.start_time;
+            run_time > self.time_to_live
+        });
+    }
+}
+
+/// WGPU relevant methods.
+impl BlockManager {
+    pub fn create_block_buffer(&self, device: &wgpu::Device) -> wgpu::Buffer {
+        let max_amount_blocks = MAX_BLOCKS_PER_COLUMN * self.total_amount_columns;
+
+        device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("Rising blocks: Block data buffer"),
+            size: (std::mem::size_of::<BlockData>() * max_amount_blocks) as wgpu::BufferAddress,
+            usage: wgpu::BufferUsages::VERTEX | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        })
+    }
+
+    pub fn update_wgpu_buffer(&mut self, queue: &wgpu::Queue, buffer: &wgpu::Buffer) {
+        let c = self.blocks.contigious();
+        let mut offset = 0usize;
+
+        queue.write_buffer(buffer, offset as u64, bytemuck::cast_slice(c.head));
+        offset += std::mem::size_of_val(c.head);
+
+        queue.write_buffer(buffer, offset as u64, bytemuck::cast_slice(c.tail));
+    }
+}

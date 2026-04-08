@@ -20,9 +20,6 @@ use wgpu::{include_wgsl, util::DeviceExt};
 /// Each graph is put inside a box with 4 vertices.
 const AMOUNT_VERTICES: u32 = 4;
 
-/// The x coords goes from -1 to 1.
-const VERTEX_SURFACE_WIDTH: f32 = 2.;
-
 #[derive(Debug, Clone, Copy)]
 enum VertexEntrypoint {
     BassTreble,
@@ -136,7 +133,7 @@ impl Graph {
             )
         };
 
-        let total_amount_bars = bar_processor.total_amount_bars();
+        let total_amount_bars = bar_processor.total_amount_bars_per_channel();
 
         let vertex_params_buffer = {
             let bottom_left_corner = match desc.placement {
@@ -169,7 +166,7 @@ impl Graph {
                 let mut up = Vector2::unit_y();
                 up = rotation * up;
                 // stretch the up vector accordingly to the vertex space
-                up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH
+                up * desc.max_height.clamp(0., 1.) * super::utils::VERTEX_SURFACE_WIDTH
             };
 
             // those values should be override anyhow due to the first update_resolution calls
@@ -375,12 +372,12 @@ impl Component for Graph {
         };
 
         self.bar_processor.set_amount_bars(canvas_width);
-        let total_amount_bars = self.bar_processor.total_amount_bars();
+        let total_amount_bars = self.bar_processor.total_amount_bars_per_channel();
 
         // update `right` vector
         {
             let pixel_width_in_vertex_space =
-                1. / (new_resolution[0] as f32 / VERTEX_SURFACE_WIDTH);
+                1. / (new_resolution[0] as f32 / super::utils::VERTEX_SURFACE_WIDTH);
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
@@ -482,44 +479,48 @@ fn create_pipeline(
     let layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
         label: Some("Bars: Pipeline layout"),
         bind_group_layouts: &[
-            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Bars: Bind group 0 layout"),
-                entries: &[
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 0,
-                        visibility: wgpu::ShaderStages::VERTEX,
-                        ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
-                            has_dynamic_offset: false,
-                            min_binding_size: None,
+            Some(
+                &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Bars: Bind group 0 layout"),
+                    entries: &[
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 0,
+                            visibility: wgpu::ShaderStages::VERTEX,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
                         },
-                        count: None,
-                    },
-                    wgpu::BindGroupLayoutEntry {
-                        binding: 1,
+                        wgpu::BindGroupLayoutEntry {
+                            binding: 1,
+                            visibility: wgpu::ShaderStages::FRAGMENT,
+                            ty: wgpu::BindingType::Buffer {
+                                ty: wgpu::BufferBindingType::Uniform,
+                                has_dynamic_offset: false,
+                                min_binding_size: None,
+                            },
+                            count: None,
+                        },
+                    ],
+                }),
+            ),
+            Some(
+                &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+                    label: Some("Bars: Bind group 1 layout"),
+                    entries: &[wgpu::BindGroupLayoutEntry {
+                        binding: 0,
                         visibility: wgpu::ShaderStages::FRAGMENT,
                         ty: wgpu::BindingType::Buffer {
-                            ty: wgpu::BufferBindingType::Uniform,
+                            ty: wgpu::BufferBindingType::Storage { read_only: true },
                             has_dynamic_offset: false,
                             min_binding_size: None,
                         },
                         count: None,
-                    },
-                ],
-            }),
-            &device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-                label: Some("Bars: Bind group 1 layout"),
-                entries: &[wgpu::BindGroupLayoutEntry {
-                    binding: 0,
-                    visibility: wgpu::ShaderStages::FRAGMENT,
-                    ty: wgpu::BindingType::Buffer {
-                        ty: wgpu::BufferBindingType::Storage { read_only: true },
-                        has_dynamic_offset: false,
-                        min_binding_size: None,
-                    },
-                    count: None,
-                }],
-            }),
+                    }],
+                }),
+            ),
         ],
         ..Default::default()
     });
