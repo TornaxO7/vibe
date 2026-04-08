@@ -16,6 +16,8 @@ pub struct RisingBlocks {
 
 impl RisingBlocks {
     pub fn new<F: Fetcher>(desc: &RisingBlocksDescriptor<F>) -> Self {
+        debug_assert!(0f32 <= desc.canvas_height && desc.canvas_height <= 1f32);
+
         let blocks = BlocksRenderer::new(&BlocksDescriptor {
             renderer: desc.renderer,
             sample_processor: desc.sample_processor,
@@ -30,6 +32,8 @@ impl RisingBlocks {
         let glowing_line = GlowingLineRenderer::new(&GlowingLineDescriptor {
             renderer: desc.renderer,
             format: desc.format,
+
+            canvas_height: desc.canvas_height,
         });
 
         Self {

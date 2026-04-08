@@ -7,7 +7,9 @@ pub use descriptor::*;
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
-struct VertexParams {}
+struct VertexParams {
+    pub canvas_height: f32,
+}
 
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
@@ -19,6 +21,7 @@ struct FragmentParams {
 pub struct GlowingLineRenderer {
     pipeline: wgpu::RenderPipeline,
 
+    _vp: wgpu::Buffer,
     fp: wgpu::Buffer,
     bind_group0: wgpu::BindGroup,
 }
@@ -26,6 +29,14 @@ pub struct GlowingLineRenderer {
 impl GlowingLineRenderer {
     pub fn new(desc: &GlowingLineDescriptor) -> Self {
         let device = desc.renderer.device();
+
+        let vp = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("Rising blocks, glowing line: Vertex params"),
+            contents: &bytemuck::bytes_of(&VertexParams {
+                canvas_height: desc.canvas_height,
+            }),
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
 
         let fp = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Rising blocks, glowing line: Fragment parameters"),
@@ -39,7 +50,39 @@ impl GlowingLineRenderer {
             device.create_render_pipeline(&crate::util::simple_pipeline_descriptor(
                 crate::util::SimpleRenderPipelineDescriptor {
                     label: "Glowing line: Render pipeline",
-                    layout: None,
+                    layout: Some(
+                        &device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+                            label: Some("Glowing line: Render pipeline layout"),
+                            bind_group_layouts: &[Some(&device.create_bind_group_layout(
+                                &wgpu::BindGroupLayoutDescriptor {
+                                    label: Some("Glowing line: Bind group 0 layout"),
+                                    entries: &[
+                                        wgpu::BindGroupLayoutEntry {
+                                            binding: 0,
+                                            visibility: wgpu::ShaderStages::VERTEX,
+                                            ty: wgpu::BindingType::Buffer {
+                                                ty: wgpu::BufferBindingType::Uniform,
+                                                has_dynamic_offset: false,
+                                                min_binding_size: None,
+                                            },
+                                            count: None,
+                                        },
+                                        wgpu::BindGroupLayoutEntry {
+                                            binding: 1,
+                                            visibility: wgpu::ShaderStages::FRAGMENT,
+                                            ty: wgpu::BindingType::Buffer {
+                                                ty: wgpu::BufferBindingType::Uniform,
+                                                has_dynamic_offset: false,
+                                                min_binding_size: None,
+                                            },
+                                            count: None,
+                                        },
+                                    ],
+                                },
+                            ))],
+                            ..Default::default()
+                        }),
+                    ),
                     vertex: wgpu::VertexState {
                         module: &module,
                         entry_point: None,
@@ -70,14 +113,21 @@ impl GlowingLineRenderer {
         let bind_group0 = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("Rising blocks, glowing line: Bind group 0"),
             layout: &pipeline.get_bind_group_layout(0),
-            entries: &[wgpu::BindGroupEntry {
-                binding: 0,
-                resource: fp.as_entire_binding(),
-            }],
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: vp.as_entire_binding(),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: fp.as_entire_binding(),
+                },
+            ],
         });
 
         Self {
             pipeline,
+            _vp: vp,
             fp,
             bind_group0,
         }
