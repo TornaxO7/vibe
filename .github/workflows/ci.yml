@@ -21,7 +21,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - uses: TornaxO7/rust-template@v2-ci-actions
+      - uses: TornaxO7/rust-template@v3-ci-actions
       - name: Check formatting
         if: github.event.pull_request.head.repo.full_name != github.repository
         run: cargo fmt --check --verbose
@@ -47,7 +47,7 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: ubuntu-latest
     steps:
-      - uses: TornaxO7/rust-template@v2-ci-actions
+      - uses: TornaxO7/rust-template@v3-ci-actions
       - name: Check best practices (Clippy)
         run: cargo clippy --verbose -- -Dwarnings
 
@@ -55,8 +55,6 @@ jobs:
     if: github.event.pull_request.draft == false
     runs-on: self-hosted
     steps:
-      - uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
+      - uses: actions/checkout@v6
       - name: Running tests
         run: cargo test -j 2 --verbose
