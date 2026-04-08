@@ -71,6 +71,7 @@ impl BlocksRenderer {
             total_amount_bars,
             place_random: desc.spawn_random,
             speed: desc.speed,
+            beat_threshold: desc.beat_threshold,
         });
 
         let blocks_buffer = block_manager.create_block_buffer(device);

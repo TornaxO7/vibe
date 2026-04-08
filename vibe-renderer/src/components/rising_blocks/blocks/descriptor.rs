@@ -15,4 +15,8 @@ pub struct BlocksDescriptor<'a, F: Fetcher> {
     pub spawn_random: bool,
     pub speed: f32,
     pub easing: Option<RisingBlocksEasing>,
+
+    /// The threshold when a bar value is detected as a beat.
+    /// Needs to be within the range [0, 1].
+    pub beat_threshold: f32,
 }

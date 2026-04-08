@@ -17,6 +17,7 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
     pub spawn_random: bool,
     pub speed: f32,
     pub easing: Option<RisingBlocksEasing>,
+    pub beat_threshold: f32,
 }
 
 #[derive(Debug, Clone, Copy)]

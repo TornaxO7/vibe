@@ -20,6 +20,7 @@ pub struct RisingBlocksConfig {
     pub speed: Option<f32>,
 
     pub easing: Option<RisingBlockConfigEasing>,
+    pub beat_threshold: Option<f32>,
 }
 
 impl ComponentConfig for RisingBlocksConfig {
@@ -51,6 +52,7 @@ impl ComponentConfig for RisingBlocksConfig {
             spawn_random: self.spawn_random.unwrap_or(false),
             speed: self.speed.unwrap_or(1f32),
             easing: self.easing.map(|conf| conf.into()),
+            beat_threshold: self.beat_threshold.unwrap_or(0.5f32),
         })))
     }
 

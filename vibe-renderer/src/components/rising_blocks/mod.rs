@@ -27,6 +27,7 @@ impl RisingBlocks {
             spawn_random: desc.spawn_random,
             speed: desc.speed,
             easing: desc.easing,
+            beat_threshold: desc.beat_threshold,
         });
 
         let glowing_line = GlowingLineRenderer::new(&GlowingLineDescriptor {

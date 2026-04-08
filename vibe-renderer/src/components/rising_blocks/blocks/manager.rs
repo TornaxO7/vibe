@@ -27,6 +27,9 @@ pub struct BlockManagerDescriptor {
     pub total_amount_bars: usize,
     pub place_random: bool,
     pub speed: f32,
+
+    /// The threshold when a bar value is detected as a beat.
+    pub beat_threshold: f32,
 }
 
 #[derive(Debug)]
@@ -37,6 +40,8 @@ pub struct BlockManager {
     last_time: f32,
     total_amount_columns: usize,
     rng: Option<fastrand::Rng>,
+
+    beat_threshold: f32,
 
     time_to_live: f32,
 }
@@ -59,6 +64,7 @@ impl BlockManager {
             total_amount_columns: desc.total_amount_bars,
             rng,
             time_to_live,
+            beat_threshold: desc.beat_threshold,
         }
     }
 
@@ -68,8 +74,7 @@ impl BlockManager {
         for ((bar_idx, bar_value), prev_beat) in
             bar_values.enumerate().zip(self.prev_beat.iter_mut())
         {
-            const THRESHOLD: f32 = 0.5;
-            let is_beat = bar_value > THRESHOLD;
+            let is_beat = bar_value > self.beat_threshold;
             if is_beat {
                 if !*prev_beat {
                     let column_idx = match &mut self.rng {
