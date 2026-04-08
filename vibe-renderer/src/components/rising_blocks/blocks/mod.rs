@@ -6,7 +6,7 @@ use crate::{
     Component, ComponentAudio, Renderable,
 };
 use cgmath::{InnerSpace, Vector2};
-use manager::{BlockData, BlockManager};
+use manager::{BlockData, BlockManager, BlockManagerDescriptor};
 use vibe_audio::{fetcher::Fetcher, BarProcessor, BarProcessorConfig, LinearInterpolation};
 use wgpu::util::DeviceExt;
 
@@ -67,7 +67,11 @@ impl BlocksRenderer {
         let total_amount_bars = bar_processor.amount_channels().get() as usize
             * bar_processor.total_amount_bars_per_channel();
 
-        let block_manager = BlockManager::new(total_amount_bars, desc.spawn_random, desc.speed);
+        let block_manager = BlockManager::new(BlockManagerDescriptor {
+            total_amount_bars,
+            place_random: desc.spawn_random,
+            speed: desc.speed,
+        });
 
         let blocks_buffer = block_manager.create_block_buffer(device);
 

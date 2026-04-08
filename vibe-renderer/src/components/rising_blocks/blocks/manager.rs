@@ -23,6 +23,13 @@ impl BlockData {
 }
 
 #[derive(Debug)]
+pub struct BlockManagerDescriptor {
+    pub total_amount_bars: usize,
+    pub place_random: bool,
+    pub speed: f32,
+}
+
+#[derive(Debug)]
 pub struct BlockManager {
     blocks: BoundedRingBuffer<BlockData>,
     prev_beat: Box<[bool]>,
@@ -35,21 +42,21 @@ pub struct BlockManager {
 }
 
 impl BlockManager {
-    pub fn new(total_amount_bars: usize, place_random: bool, speed: f32) -> Self {
-        assert!(speed > 0f32);
-        let time_to_live = 1. / speed;
+    pub fn new(desc: BlockManagerDescriptor) -> Self {
+        assert!(desc.speed > 0f32);
+        let time_to_live = 1. / desc.speed;
 
-        let blocks = BoundedRingBuffer::new(MAX_BLOCKS_PER_COLUMN * total_amount_bars);
+        let blocks = BoundedRingBuffer::new(MAX_BLOCKS_PER_COLUMN * desc.total_amount_bars);
 
-        let prev_beat = vec![false; total_amount_bars].into_boxed_slice();
+        let prev_beat = vec![false; desc.total_amount_bars].into_boxed_slice();
 
-        let rng = place_random.then(|| fastrand::Rng::new());
+        let rng = desc.place_random.then(|| fastrand::Rng::new());
 
         Self {
             blocks,
             last_time: 0.,
             prev_beat,
-            total_amount_columns: total_amount_bars,
+            total_amount_columns: desc.total_amount_bars,
             rng,
             time_to_live,
         }
