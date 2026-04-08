@@ -55,7 +55,7 @@ impl BlockManager {
 
         let prev_beat = vec![false; desc.total_amount_bars].into_boxed_slice();
 
-        let rng = desc.place_random.then(|| fastrand::Rng::new());
+        let rng = desc.place_random.then(fastrand::Rng::new);
 
         Self {
             blocks,
@@ -122,10 +122,8 @@ impl BlockManager {
         let c = self.blocks.contigious();
         let mut offset = 0usize;
 
-        let bs = std::mem::size_of::<BlockData>();
-
         queue.write_buffer(buffer, offset as u64, bytemuck::cast_slice(c.head));
-        offset += c.head.len() * bs;
+        offset += std::mem::size_of_val(c.head);
 
         queue.write_buffer(buffer, offset as u64, bytemuck::cast_slice(c.tail));
     }

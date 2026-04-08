@@ -78,6 +78,10 @@ pub enum RisingBlockConfigEasing {
     InSine,
     OutSine,
     InOutSine,
+
+    InCubic,
+    OutCubic,
+    InOutCubic,
 }
 
 impl From<RisingBlockConfigEasing> for RisingBlocksEasing {
@@ -86,6 +90,10 @@ impl From<RisingBlockConfigEasing> for RisingBlocksEasing {
             RisingBlockConfigEasing::InSine => Self::InSine,
             RisingBlockConfigEasing::OutSine => Self::OutSine,
             RisingBlockConfigEasing::InOutSine => Self::InOutSine,
+
+            RisingBlockConfigEasing::InCubic => Self::InCubic,
+            RisingBlockConfigEasing::OutCubic => Self::OutCubic,
+            RisingBlockConfigEasing::InOutCubic => Self::InOutCubic,
         }
     }
 }
@@ -101,9 +109,7 @@ impl TryFrom<RisingBlocksBackgroundConfig> for RisingBlocksBackground {
 
     fn try_from(conf: RisingBlocksBackgroundConfig) -> Result<Self, Self::Error> {
         match conf {
-            RisingBlocksBackgroundConfig::Color(color) => {
-                color.as_f32().map(|col| Self::Color(col))
-            }
+            RisingBlocksBackgroundConfig::Color(color) => color.as_f32().map(Self::Color),
         }
     }
 }
@@ -119,9 +125,7 @@ impl TryFrom<RisingBlocksForegroundConfig> for RisingBlocksForeground {
 
     fn try_from(conf: RisingBlocksForegroundConfig) -> Result<Self, Self::Error> {
         match conf {
-            RisingBlocksForegroundConfig::Color(color) => {
-                color.as_f32().map(|col| Self::Color(col))
-            }
+            RisingBlocksForegroundConfig::Color(color) => color.as_f32().map(Self::Color),
         }
     }
 }

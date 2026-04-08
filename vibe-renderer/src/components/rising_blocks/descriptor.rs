@@ -27,6 +27,10 @@ pub enum RisingBlocksEasing {
     InSine,
     OutSine,
     InOutSine,
+
+    InCubic,
+    OutCubic,
+    InOutCubic,
 }
 
 impl RisingBlocksEasing {
@@ -35,6 +39,10 @@ impl RisingBlocksEasing {
             Self::InSine => "in_sine",
             Self::OutSine => "out_sine",
             Self::InOutSine => "in_out_sine",
+
+            Self::InCubic => "in_cubic",
+            Self::OutCubic => "out_cubic",
+            Self::InOutCubic => "in_out_cubic",
         }
     }
 }

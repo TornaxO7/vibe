@@ -19,6 +19,7 @@ impl RisingBlocks {
         debug_assert!(0f32 <= desc.canvas_height && desc.canvas_height <= 1f32);
 
         let blocks = {
+            #[allow(clippy::infallible_destructuring_match)]
             let color = match desc.foreground {
                 RisingBlocksForeground::Color(color) => BlocksColor::Color(color),
             };
@@ -38,6 +39,7 @@ impl RisingBlocks {
         };
 
         let glowing_line = {
+            #[allow(clippy::infallible_destructuring_match)]
             let color1 = match desc.background {
                 RisingBlocksBackground::Color(color) => color,
             };

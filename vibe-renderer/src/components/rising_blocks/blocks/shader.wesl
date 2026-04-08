@@ -88,6 +88,12 @@ fn vs_main(in: Input) -> Output {
     let t = ease_out_sine(t_raw);
     @elif(in_out_sine)
     let t = ease_in_out_sine(t_raw);
+    @elif(in_cubic)
+    let t = ease_in_cubic(t_raw);
+    @elif(out_cubic)
+    let t = ease_out_cubic(t_raw);
+    @elif(in_out_cubic)
+    let t = ease_in_out_cubic(t_raw);
     @else
     let t = t_raw;
 
@@ -110,6 +116,7 @@ fn fs_main(in: Output) -> @location(0) vec4f {
 
 // == easing functions ==
 
+// == sine
 fn ease_in_sine(x: f32) -> f32 {
     return 1. - cos(x * PI * 0.5);
 }
@@ -120,4 +127,22 @@ fn ease_out_sine(x: f32) -> f32 {
 
 fn ease_in_out_sine(x: f32) -> f32 {
     return -(cos(PI * x) - 1.) * 0.5;
+}
+
+// == cubic
+fn ease_in_cubic(x: f32) -> f32 {
+    return x*x*x;
+}
+
+fn ease_out_cubic(x: f32) -> f32 {
+    return 1. - pow(1. - x, 3.);
+}
+
+fn ease_in_out_cubic(x: f32) -> f32 {
+    // return x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2;
+    if (x < 0.5) {
+        return 4. * x * x * x;
+    } else {
+        return 1. - pow(-2. * x + 2., 3.) / 2.;
+    }
 }

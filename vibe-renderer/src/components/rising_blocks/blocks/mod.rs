@@ -105,6 +105,7 @@ impl BlocksRenderer {
         };
 
         let fp_buffer = {
+            #[allow(clippy::infallible_destructuring_match)]
             let color1 = match desc.color {
                 BlocksColor::Color(color) => color,
             };
@@ -256,7 +257,7 @@ impl Component for BlocksRenderer {
 
 impl<F: Fetcher> ComponentAudio<F> for BlocksRenderer {
     fn update_audio(&mut self, queue: &wgpu::Queue, processor: &vibe_audio::SampleProcessor<F>) {
-        self.bar_processor.process_bars(&processor);
+        self.bar_processor.process_bars(processor);
         self.block_manager.process_bars(self.bar_processor.bars());
         self.block_manager
             .update_wgpu_buffer(queue, &self.blocks_buffer);

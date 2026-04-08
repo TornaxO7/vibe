@@ -38,7 +38,7 @@ impl GlowingLineRenderer {
 
         let vp = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Rising blocks, glowing line: Vertex params"),
-            contents: &bytemuck::bytes_of(&VertexParams {
+            contents: bytemuck::bytes_of(&VertexParams {
                 canvas_height: desc.canvas_height,
             }),
             usage: wgpu::BufferUsages::UNIFORM,
@@ -46,7 +46,7 @@ impl GlowingLineRenderer {
 
         let fp = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Rising blocks, glowing line: Fragment parameters"),
-            contents: &bytemuck::bytes_of(&FragmentParams {
+            contents: bytemuck::bytes_of(&FragmentParams {
                 time: 0f32,
                 color1: desc.color1,
                 ..Default::default()
