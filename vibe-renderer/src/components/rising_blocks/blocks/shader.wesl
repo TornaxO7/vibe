@@ -27,8 +27,9 @@ struct Input {
 };
 
 struct Output {
-    @builtin(position) pos: vec4<f32>,
+    @builtin(position) pos: vec4f,
     @location(0) t: f32,
+    @location(1) rel: vec2f,
 };
 
 // Assuming:
@@ -56,14 +57,19 @@ fn vs_main(in: Input) -> Output {
     var pos = vp.bottom_left_corner;
     if (is_bar_left_side) {
         pos += f32(in.column_idx) * vp.column_direction + padding;
+        output.rel.x = -1.;
     } else {
         pos += f32(in.column_idx + 1) * vp.column_direction - padding;
+        output.rel.x = 1.;
     }
 
     // -- y
     let is_bottom_vertex = in.vertex_idx >= 2;
     if (is_bottom_vertex) {
         pos -= vp.block_height;
+        output.rel.y = -1.;
+    } else {
+        output.rel.y = 1.;
     }
 
     // steadily go up
@@ -88,7 +94,10 @@ fn vs_main(in: Input) -> Output {
 // == fragment ==
 @fragment
 fn fs_main(in: Output) -> @location(0) vec4f {
-    return vec4f(vec3(1.), smoothstep(1., 0., in.t));
+    let r = smoothstep(1., .8, length(in.rel));
+    let fade_out = smoothstep(1., 0., in.t);
+
+    return vec4f(vec3f(r)*fade_out, 1.);
 }
 
 // == easing functions ==
