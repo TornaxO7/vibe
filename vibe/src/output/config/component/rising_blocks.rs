@@ -1,8 +1,13 @@
-use crate::output::config::component::ComponentConfig;
+use crate::output::config::component::{
+    util::{ColorFormatError, Rgba},
+    ComponentConfig,
+};
 use serde::{Deserialize, Serialize};
 use std::num::NonZero;
 use vibe_audio::BarProcessorConfig;
-use vibe_renderer::components::{RisingBlocks, RisingBlocksDescriptor, RisingBlocksEasing};
+use vibe_renderer::components::{
+    RisingBlocks, RisingBlocksBackground, RisingBlocksDescriptor, RisingBlocksEasing,
+};
 
 #[derive(thiserror::Error, Debug)]
 pub enum RisingBlocksConfigError {
@@ -21,6 +26,8 @@ pub struct RisingBlocksConfig {
 
     pub easing: Option<RisingBlockConfigEasing>,
     pub beat_threshold: Option<f32>,
+
+    pub background: RisingBlocksBackgroundConfig,
 }
 
 impl ComponentConfig for RisingBlocksConfig {
@@ -53,6 +60,7 @@ impl ComponentConfig for RisingBlocksConfig {
             speed: self.speed.unwrap_or(1f32),
             easing: self.easing.map(|conf| conf.into()),
             beat_threshold: self.beat_threshold.unwrap_or(0.5f32),
+            background: self.background.clone().try_into()?,
         })))
     }
 
@@ -75,6 +83,24 @@ impl From<RisingBlockConfigEasing> for RisingBlocksEasing {
             RisingBlockConfigEasing::InSine => Self::InSine,
             RisingBlockConfigEasing::OutSine => Self::OutSine,
             RisingBlockConfigEasing::InOutSine => Self::InOutSine,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum RisingBlocksBackgroundConfig {
+    Color(Rgba),
+}
+
+impl TryFrom<RisingBlocksBackgroundConfig> for RisingBlocksBackground {
+    type Error = ColorFormatError;
+
+    fn try_from(conf: RisingBlocksBackgroundConfig) -> Result<Self, Self::Error> {
+        match conf {
+            RisingBlocksBackgroundConfig::Color(color) => {
+                color.as_f32().map(|col| Self::Color(col))
+            }
         }
     }
 }

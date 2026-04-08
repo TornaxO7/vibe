@@ -1,6 +1,9 @@
 mod descriptor;
 
-use crate::{Component, Renderable};
+use crate::{
+    components::utils::wgsl_types::{Vec3f, Vec4f},
+    Component, Renderable,
+};
 use wgpu::{include_wgsl, util::DeviceExt};
 
 pub use descriptor::*;
@@ -14,7 +17,10 @@ struct VertexParams {
 #[repr(C)]
 #[derive(Debug, Clone, Copy, bytemuck::Zeroable, bytemuck::Pod, Default)]
 struct FragmentParams {
+    pub color1: Vec4f,
+
     pub time: f32,
+    _padding: Vec3f,
 }
 
 /// Renders the glowing line where the blocks spawn.
@@ -40,7 +46,11 @@ impl GlowingLineRenderer {
 
         let fp = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
             label: Some("Rising blocks, glowing line: Fragment parameters"),
-            contents: &bytemuck::bytes_of(&FragmentParams { time: 0f32 }),
+            contents: &bytemuck::bytes_of(&FragmentParams {
+                time: 0f32,
+                color1: desc.color1,
+                ..Default::default()
+            }),
             usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
         });
 
@@ -144,7 +154,11 @@ impl Renderable for GlowingLineRenderer {
 
 impl Component for GlowingLineRenderer {
     fn update_time(&mut self, queue: &wgpu::Queue, new_time: f32) {
-        queue.write_buffer(&self.fp, 0, bytemuck::bytes_of(&new_time));
+        queue.write_buffer(
+            &self.fp,
+            std::mem::offset_of!(FragmentParams, time) as u64,
+            bytemuck::bytes_of(&new_time),
+        );
     }
 
     fn update_resolution(&mut self, _renderer: &crate::Renderer, _new_resolution: [u32; 2]) {}

@@ -3,6 +3,7 @@ struct VertexParams {
 }
 
 struct FragmentParams {
+    color1: vec4f,
     time: f32,
 }
 
@@ -65,5 +66,5 @@ fn fs_main(in: Output) -> @location(0) vec4f {
 
     let b = 0.09;
     let a = .1 / (in.rel.y + b + wave) - b;
-    return vec4f(vec3f(0., 1., 1.), a);
+    return vec4f(fp.color1.rgb, min(fp.color1.a, a));
 }

@@ -1,4 +1,4 @@
-use crate::Renderer;
+use crate::{components::Rgba, Renderer};
 use vibe_audio::{fetcher::Fetcher, BarProcessorConfig, SampleProcessor};
 
 pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
@@ -18,6 +18,7 @@ pub struct RisingBlocksDescriptor<'a, F: Fetcher> {
     pub speed: f32,
     pub easing: Option<RisingBlocksEasing>,
     pub beat_threshold: f32,
+    pub background: RisingBlocksBackground,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -35,4 +36,9 @@ impl RisingBlocksEasing {
             Self::InOutSine => "in_out_sine",
         }
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum RisingBlocksBackground {
+    Color(Rgba),
 }

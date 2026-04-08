@@ -30,12 +30,20 @@ impl RisingBlocks {
             beat_threshold: desc.beat_threshold,
         });
 
-        let glowing_line = GlowingLineRenderer::new(&GlowingLineDescriptor {
-            renderer: desc.renderer,
-            format: desc.format,
+        let glowing_line = {
+            let color1 = match desc.background {
+                RisingBlocksBackground::Color(color) => color,
+            };
 
-            canvas_height: desc.canvas_height,
-        });
+            GlowingLineRenderer::new(&GlowingLineDescriptor {
+                renderer: desc.renderer,
+                format: desc.format,
+
+                canvas_height: desc.canvas_height,
+
+                color1,
+            })
+        };
 
         Self {
             blocks,
