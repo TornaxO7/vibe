@@ -12,9 +12,6 @@ use std::num::NonZero;
 use vibe_audio::{fetcher::Fetcher, BarProcessor, CubicSplineInterpolation, SampleProcessor};
 use wgpu::{include_wgsl, util::DeviceExt};
 
-/// The x coords goes from -1 to 1.
-const VERTEX_SURFACE_WIDTH: f32 = 2.;
-
 // The actual column direction needs to be computed first after we know
 // the size of the screen.
 const INIT_COLUMN_DIRECTION: Vector2<f32> = Vector2::new(1.0, 0.0);
@@ -164,7 +161,7 @@ impl Bars {
                 bottom_left_corner: bottom_left_corner.into(),
                 up_direction: up_direction.into(),
                 column_direction: column_direction.into(),
-                max_height: desc.max_height * VERTEX_SURFACE_WIDTH,
+                max_height: desc.max_height * super::utils::VERTEX_SURFACE_WIDTH,
                 height_mirrored,
                 amount_bars: total_amount_bars as u32,
                 _padding1: 0,

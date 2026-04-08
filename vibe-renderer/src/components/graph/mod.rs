@@ -20,9 +20,6 @@ use wgpu::{include_wgsl, util::DeviceExt};
 /// Each graph is put inside a box with 4 vertices.
 const AMOUNT_VERTICES: u32 = 4;
 
-/// The x coords goes from -1 to 1.
-const VERTEX_SURFACE_WIDTH: f32 = 2.;
-
 #[derive(Debug, Clone, Copy)]
 enum VertexEntrypoint {
     BassTreble,
@@ -169,7 +166,7 @@ impl Graph {
                 let mut up = Vector2::unit_y();
                 up = rotation * up;
                 // stretch the up vector accordingly to the vertex space
-                up * desc.max_height.clamp(0., 1.) * VERTEX_SURFACE_WIDTH
+                up * desc.max_height.clamp(0., 1.) * super::utils::VERTEX_SURFACE_WIDTH
             };
 
             // those values should be override anyhow due to the first update_resolution calls
@@ -380,7 +377,7 @@ impl Component for Graph {
         // update `right` vector
         {
             let pixel_width_in_vertex_space =
-                1. / (new_resolution[0] as f32 / VERTEX_SURFACE_WIDTH);
+                1. / (new_resolution[0] as f32 / super::utils::VERTEX_SURFACE_WIDTH);
 
             let rotation = Matrix2::from_angle(self.angle);
             let right_dir = rotation * Vector2::new(pixel_width_in_vertex_space, 0.);
