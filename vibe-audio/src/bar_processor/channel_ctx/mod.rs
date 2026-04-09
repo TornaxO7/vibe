@@ -11,7 +11,14 @@ use padding::PaddingCtx;
 use realfft::num_complex::Complex32;
 use std::ops::Range;
 
+// For tests, we want to see some difference of the input...
+// NOTE: Don't ask me why, but somehow I need to flip this.
+#[cfg(not(test))]
+const INIT_NORMALIZATION_FACTOR: f32 = 1.0;
+// ... while we don't want to flash-bang the user if they start up vibe.
+#[cfg(test)]
 const INIT_NORMALIZATION_FACTOR: f32 = 0.1;
+
 const DEFAULT_PADDING_SIZE: usize = 5;
 const MIN_MAGNITUDE: f32 = 1e-16;
 
