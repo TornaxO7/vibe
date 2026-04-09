@@ -54,7 +54,8 @@ impl PulseEdges {
             vibe_audio::BarProcessorConfig {
                 amount_bars: NonZero::new(1).unwrap(),
                 freq_range: desc.freq_range.clone(),
-                down: desc.audio_sensitivity,
+                up: desc.up,
+                down: desc.down,
                 ..Default::default()
             },
         );

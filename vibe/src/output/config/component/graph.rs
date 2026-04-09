@@ -72,14 +72,18 @@ impl ComponentConfig for GraphConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct GraphAudioConfig {
     pub freq_range: FreqRange,
-    pub sensitivity: f32,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
 }
 
 impl From<GraphAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: GraphAudioConfig) -> Self {
         Self {
             freq_range: conf.freq_range.range(),
-            down: conf.sensitivity,
+            down: conf.down,
+            up: conf.up,
             ..Default::default()
         }
     }

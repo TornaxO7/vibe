@@ -22,5 +22,7 @@ pub struct AurodioDescriptor<'a, F: Fetcher> {
 
     // audio config
     pub layers: &'a [AurodioLayerDescriptor],
-    pub sensitivity: f32,
+
+    pub up: f32,
+    pub down: f32,
 }

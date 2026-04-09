@@ -52,7 +52,8 @@ impl ComponentConfig for LightSourcesConfig {
 
             processor,
             freq_range: self.audio_conf.freq_range.clone(),
-            sensitivity: self.audio_conf.sensitivity,
+            up: self.audio_conf.up,
+            down: self.audio_conf.down,
 
             wallpaper: img,
             sources: &sources,
@@ -71,7 +72,20 @@ impl ComponentConfig for LightSourcesConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct LightSourcesAudioConfig {
     pub freq_range: Range<NonZero<u16>>,
-    pub sensitivity: f32,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
+}
+
+impl Default for LightSourcesAudioConfig {
+    fn default() -> Self {
+        Self {
+            freq_range: vibe_audio::default_freq_range(),
+            up: vibe_audio::default_up(),
+            down: vibe_audio::default_down(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

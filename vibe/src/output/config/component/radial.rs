@@ -64,7 +64,10 @@ impl ComponentConfig for RadialConfig {
 pub struct RadialAudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: FreqRange,
-    pub sensitivity: f32,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
 }
 
 impl From<RadialAudioConfig> for vibe_audio::BarProcessorConfig {
@@ -72,7 +75,8 @@ impl From<RadialAudioConfig> for vibe_audio::BarProcessorConfig {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range.range(),
-            down: conf.sensitivity,
+            down: conf.down,
+            up: conf.up,
 
             ..Default::default()
         }

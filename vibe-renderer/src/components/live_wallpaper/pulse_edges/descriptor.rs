@@ -8,7 +8,8 @@ pub struct PulseEdgesDescriptor<'a, F: Fetcher> {
 
     pub img: image::DynamicImage,
     pub freq_range: Range<NonZero<u16>>,
-    pub audio_sensitivity: f32,
+    pub up: f32,
+    pub down: f32,
 
     pub high_threshold_ratio: f32,
     pub low_threshold_ratio: f32,

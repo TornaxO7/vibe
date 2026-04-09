@@ -20,7 +20,8 @@ fn test() {
 
         img,
         freq_range: NonZero::new(100).unwrap()..NonZero::new(300).unwrap(),
-        audio_sensitivity: 4.0,
+        down: vibe_audio::default_down(),
+        up: vibe_audio::default_up(),
         high_threshold_ratio: 0.7,
         low_threshold_ratio: 0.3,
         wallpaper_brightness: 0.2,

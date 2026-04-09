@@ -80,10 +80,9 @@ impl Default for BarsConfig {
         Self {
             audio_conf: BarsAudioConfig {
                 amount_bars: NonZero::new(60).unwrap(),
-                freq_range: FreqRange::Custom(
-                    NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-                ),
-                sensitivity: 4.0,
+                freq_range: None,
+                up: vibe_audio::default_up(),
+                down: vibe_audio::default_down(),
             },
             max_height: 0.75,
             variant: BarsVariantConfig::Color(turquoise),
@@ -97,27 +96,23 @@ impl Default for BarsConfig {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct BarsAudioConfig {
     pub amount_bars: NonZero<u16>,
-    pub freq_range: FreqRange,
-    pub sensitivity: f32,
-}
-
-impl Default for BarsAudioConfig {
-    fn default() -> Self {
-        Self {
-            amount_bars: NonZero::new(60).unwrap(),
-            freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
-            sensitivity: 0.2,
-        }
-    }
+    pub freq_range: Option<FreqRange>,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
 }
 
 impl From<BarsAudioConfig> for vibe_audio::BarProcessorConfig {
     fn from(conf: BarsAudioConfig) -> Self {
         Self {
             amount_bars: conf.amount_bars,
-            freq_range: conf.freq_range.range(),
-            down: conf.sensitivity,
-
+            freq_range: match conf.freq_range {
+                Some(freq_range) => freq_range.range(),
+                None => NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
+            },
+            down: conf.down,
+            up: conf.up,
             ..Default::default()
         }
     }
@@ -239,7 +234,7 @@ mod tests {
 
                 let current: BarsAudioConfig = toml::from_str(conf).unwrap();
 
-                assert_eq!(current.freq_range, FreqRange::Bass);
+                assert_eq!(current.freq_range, Some(FreqRange::Bass));
             }
 
             #[test]
@@ -254,7 +249,9 @@ mod tests {
 
                 assert_eq!(
                     current.freq_range,
-                    FreqRange::Custom(NonZero::new(250).unwrap()..NonZero::new(1_000).unwrap())
+                    Some(FreqRange::Custom(
+                        NonZero::new(250).unwrap()..NonZero::new(1_000).unwrap()
+                    ))
                 );
             }
         }

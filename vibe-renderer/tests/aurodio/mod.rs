@@ -20,7 +20,8 @@ fn test() {
             freq_range: NonZero::new(50).unwrap()..NonZero::new(200).unwrap(),
             zoom_factor: 5.,
         }],
-        sensitivity: 0.2,
+        down: vibe_audio::default_down(),
+        up: vibe_audio::default_up(),
         seed: Some(NICE),
     });
 
