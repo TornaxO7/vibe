@@ -44,7 +44,10 @@ impl ComponentConfig for ChessyConfig {
 pub struct ChessyAudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: FreqRange,
-    pub sensitivity: f32,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
 }
 
 impl From<ChessyAudioConfig> for BarProcessorConfig {
@@ -52,7 +55,8 @@ impl From<ChessyAudioConfig> for BarProcessorConfig {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range.range(),
-            down: conf.sensitivity,
+            up: conf.up,
+            down: conf.down,
             ..Default::default()
         }
     }

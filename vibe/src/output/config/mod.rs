@@ -83,11 +83,11 @@ pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<Ou
 mod tests {
     use super::*;
     use crate::output::config::component::{
-        self, FragmentCanvasConfig, FragmentCanvasTexture, FreqRange, LightSourcesConfig,
+        self, FragmentCanvasConfig, FragmentCanvasTexture, LightSourcesConfig,
         WallpaperPulseEdgesAudioConfig, WallpaperPulseEdgesConfig, WallpaperPulseEdgesGaussianBlur,
         WallpaperPulseEdgesThresholds,
     };
-    use std::{collections::HashSet, num::NonZero};
+    use std::collections::HashSet;
     use vibe_renderer::components::{ShaderCode, ShaderLanguage, ShaderSource};
 
     #[test]
@@ -108,12 +108,7 @@ mod tests {
                 }),
                 component::Config::WallpaperPulseEdges(WallpaperPulseEdgesConfig {
                     wallpaper_path: "/tmp/wallpaper_palse_edges.png".into(),
-                    audio_conf: WallpaperPulseEdgesAudioConfig {
-                        sensitivity: 4.,
-                        freq_range: FreqRange::Custom(
-                            NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-                        ),
-                    },
+                    audio_conf: WallpaperPulseEdgesAudioConfig::default(),
                     thresholds: WallpaperPulseEdgesThresholds {
                         high: 0.2,
                         low: 0.8,
@@ -128,10 +123,7 @@ mod tests {
                 }),
                 component::Config::WallpaperLightSources(LightSourcesConfig {
                     wallpaper_path: "/tmp/wallpaper_light_sources.png".into(),
-                    audio_conf: component::LightSourcesAudioConfig {
-                        freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-                        sensitivity: 0.5,
-                    },
+                    audio_conf: component::LightSourcesAudioConfig::default(),
                     sources: vec![],
                     uniform_pulse: true,
                     debug_sources: false,

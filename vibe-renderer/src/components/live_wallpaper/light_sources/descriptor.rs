@@ -8,7 +8,8 @@ pub struct LightSourcesDescriptor<'a, F: Fetcher> {
     pub processor: &'a SampleProcessor<F>,
 
     pub freq_range: Range<NonZero<u16>>,
-    pub sensitivity: f32,
+    pub up: f32,
+    pub down: f32,
 
     pub wallpaper: image::DynamicImage,
     pub sources: &'a [LightSourceData],

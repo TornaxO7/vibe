@@ -11,7 +11,8 @@ placement = "Bottom"
 format = "BassTreble"
 [components.Bars.audio_conf]
 amount_bars = 6
-sensitivity = 4.0
+down = 4.0
+up = 0.77
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Bars.variant]
 Color = "#00ffffff"
@@ -24,7 +25,6 @@ placement = "Bottom"
 format = "BassTreble"
 [components.Bars.audio_conf]
 amount_bars = 6
-sensitivity = 4.0
 freq_range = "Bass"
 [components.Bars.variant.HorizontalGradient]
 left = "#00ffffff"
@@ -38,7 +38,6 @@ placement = "Bottom"
 format = "BassTreble"
 [components.Bars.audio_conf]
 amount_bars = 6
-sensitivity = 4.0
 freq_range = "Mid"
 [components.Bars.variant.VerticalGradient]
 top = "#00ffffff"
@@ -52,7 +51,6 @@ placement = "Bottom"
 format = "BassTreble"
 [components.Bars.audio_conf]
 amount_bars = 6
-sensitivity = 4.0
 freq_range = "Treble"
 [components.Bars.variant.PresenceGradient]
 high_presence = "#00ffffff"
@@ -64,7 +62,6 @@ low_presence = "#ff0000ff"
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-sensitivity = 4.5
 freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
@@ -74,7 +71,6 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-sensitivity = 10.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
@@ -93,7 +89,6 @@ fn main(@builtin(position) pos: vec4<f32>) -> @location(0) vec4<f32> {
 path = "/tmp/img.png"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-sensitivity = 4.5
 freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Wgsl"
@@ -104,7 +99,6 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-sensitivity = 1.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
@@ -114,7 +108,6 @@ path = "/tmp/fragment_code.wgsl"
 [[components]]
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-sensitivity = 10.5
 freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
@@ -132,7 +125,6 @@ void main() {
 path = "/tmp/img.png"
 [components.FragmentCanvas.audio_conf]
 amount_bars = 60
-sensitivity = 1.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.FragmentCanvas.fragment_code]
 language = "Glsl"
@@ -145,7 +137,6 @@ base_color = "#ffffff"
 movement_speed = 0.009999999776482582
 
 [components.Aurodio.audio_conf]
-sensitivity = 10.0
 [[components.Aurodio.layers]]
 freq_range.Custom = { start = 50, end = 500 }
 zoom_factor = 5.0
@@ -162,7 +153,6 @@ max_height = 0.5
 placement = "Top"
 format = "BassTreble"
 [components.Graph.audio_conf]
-sensitivity = 0.1
 freq_range.Custom = { start = 50, end = 5000 }
 amount_bars = 150
 [components.Graph.variant]
@@ -175,7 +165,6 @@ max_height = 0.5
 placement = "Bottom"
 format = "BassTrebleBass"
 [components.Graph.audio_conf]
-sensitivity = 3.0
 freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.HorizontalGradient]
 left = "#00ffffff"
@@ -188,7 +177,6 @@ max_height = 0.5
 placement = "Right"
 format = "TrebleBassTreble"
 [components.Graph.audio_conf]
-sensitivity = 8.0
 freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
 top = "#00ffffff"
@@ -204,7 +192,6 @@ offset = [0.5, 0.5]
 rotation = 90.0
 amount_bars = 500
 [components.Graph.audio_conf]
-sensitivity = 8.0
 freq_range.Custom = { start = 50, end = 5000 }
 [components.Graph.variant.VerticalGradient]
 top = "#00ffffff"
@@ -220,11 +207,10 @@ rotation = 90.0
 position = [0.5, 0.5]
 [components.Circle.audio_conf]
 amount_bars = 30
-sensitivity = 10.5
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Circle.variant.Graph]
-spike_sensitivity = 0.2
 color = "#00ffffff"
+spike_sensitivity = 0.2
 
 # Radial
 
@@ -239,7 +225,6 @@ position = [0.5, 0.5]
 format = "TrebleBassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
-sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant]
 Color = "#00ffffff"
@@ -255,7 +240,6 @@ position = [0.5, 0.5]
 format = "BassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
-sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant.HeightGradient]
 inner = "#00ffffff"
@@ -272,7 +256,6 @@ position = [0.5, 0.5]
 format = "BassTreble"
 [components.Radial.audio_conf]
 amount_bars = 60
-sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 [components.Radial.variant.PresenceGradient]
 low = "#00ffffff"
@@ -288,7 +271,6 @@ pattern = "Box"
 zoom_factor = 5.0
 [components.Chessy.audio_conf]
 amount_bars = 10
-sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 
 ## Chessy - Circle
@@ -299,7 +281,6 @@ pattern = "Circle"
 zoom_factor = 5.0
 [components.Chessy.audio_conf]
 amount_bars = 10
-sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }
 
 ## Chessy - Heart
@@ -310,5 +291,4 @@ pattern = "Heart"
 zoom_factor = 5.0
 [components.Chessy.audio_conf]
 amount_bars = 10
-sensitivity = 5.0
 freq_range.Custom = { start = 50, end = 10000 }

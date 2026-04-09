@@ -36,7 +36,8 @@ impl ComponentConfig for AurodioConfig {
             texture_format,
             base_color: self.base_color.as_f32()?,
             movement_speed: self.movement_speed,
-            sensitivity: self.audio_conf.sensitivity,
+            up: self.audio_conf.up,
+            down: self.audio_conf.down,
             layers: &layers,
             seed: None,
         })))
@@ -49,7 +50,10 @@ impl ComponentConfig for AurodioConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AurodioAudioConfig {
-    pub sensitivity: f32,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

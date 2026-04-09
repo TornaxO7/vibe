@@ -106,7 +106,8 @@ impl<'a> State<'a> {
                 ],
                 base_color: [0., 0.5, 0.5].into(),
                 movement_speed: 0.005,
-                sensitivity: 0.2,
+                down: vibe_audio::default_down(),
+                up: vibe_audio::default_up(),
                 seed: None,
             })) as Box<dyn ComponentAudio<_>>),
             ComponentName::BarsColorVariant => Bars::new(&BarsDescriptor {
@@ -348,7 +349,8 @@ impl<'a> State<'a> {
                         .unwrap(),
 
                     freq_range: NonZero::new(100).unwrap()..NonZero::new(250).unwrap(),
-                    audio_sensitivity: 8.,
+                    down: vibe_audio::default_down(),
+                    up: vibe_audio::default_up(),
                     texture_format: surface_config.format,
 
                     low_threshold_ratio: 0.4,

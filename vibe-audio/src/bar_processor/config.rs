@@ -19,7 +19,7 @@ pub enum InterpolationVariant {
 /// Set the distribution of the bars.
 #[derive(Debug, Clone, Copy, Hash, Default)]
 pub enum BarDistribution {
-    /// Tell the [`Barprocessor`] to distribute the bars so that the frequency spectrum
+    /// Tell the [crate::BarProcessor] to distribute the bars so that the frequency spectrum
     /// looks like as if it would grow linear or in other words:
     /// To make the bars look "natural" to us.
     #[default]
@@ -79,7 +79,7 @@ pub struct BarProcessorConfig {
     // /// Decide how the bar values should be interpolated.
     // pub interpolation: InterpolationVariant,
     /// Control how fast the bars should adjust to a peak.
-    /// The higher the value, the "faster" the bars adjust to the new height.
+    /// The lower the value, the "faster" the bars adjust to the new height.
     pub up: f32,
 
     /// Control how fast the bars should fall.
@@ -100,13 +100,28 @@ impl Default for BarProcessorConfig {
         Self {
             // interpolation: InterpolationVariant::CubicSpline,
             amount_bars: NonZero::new(30).unwrap(),
-            freq_range: NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap(),
-            up: 0.77,
-            down: 4.0,
+            freq_range: default_freq_range(),
+            up: default_up(),
+            down: default_down(),
             correction_offset: 0.05,
 
             bar_distribution: BarDistribution::Uniform,
             padding: None,
         }
     }
+}
+
+/// Returns the default value for [BarProcessorConfig::up].
+pub fn default_up() -> f32 {
+    0.77
+}
+
+/// Returns the default value for [BarProcessorConfig::down].
+pub fn default_down() -> f32 {
+    4.0
+}
+
+/// Returns the default value for [BarProcessorConfig::freq_range].
+pub fn default_freq_range() -> Range<NonZero<u16>> {
+    NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()
 }

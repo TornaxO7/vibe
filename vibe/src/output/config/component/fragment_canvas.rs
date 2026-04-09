@@ -103,7 +103,10 @@ impl FragmentCanvasTexture {
 pub struct FragmentCanvasAudioConfig {
     pub amount_bars: NonZero<u16>,
     pub freq_range: FreqRange,
-    pub sensitivity: f32,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
 }
 
 impl Default for FragmentCanvasAudioConfig {
@@ -111,7 +114,8 @@ impl Default for FragmentCanvasAudioConfig {
         Self {
             amount_bars: NonZero::new(60).unwrap(),
             freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
-            sensitivity: 0.2,
+            up: vibe_audio::default_up(),
+            down: vibe_audio::default_down(),
         }
     }
 }
@@ -121,7 +125,8 @@ impl From<FragmentCanvasAudioConfig> for BarProcessorConfig {
         Self {
             amount_bars: conf.amount_bars,
             freq_range: conf.freq_range.range(),
-            down: conf.sensitivity,
+            up: conf.up,
+            down: conf.down,
             ..Default::default()
         }
     }
@@ -158,7 +163,7 @@ mod tests {
             audio_conf: FragmentCanvasAudioConfig {
                 amount_bars: NonZero::new(10).unwrap(),
                 freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
-                sensitivity: 4.0,
+                ..Default::default()
             },
             fragment_code: ShaderCode {
                 language: ShaderLanguage::Wgsl,
@@ -188,7 +193,7 @@ mod tests {
             audio_conf: FragmentCanvasAudioConfig {
                 amount_bars: NonZero::new(10).unwrap(),
                 freq_range: FreqRange::Custom(NonZero::new(50).unwrap()..NonZero::new(10_000).unwrap()),
-                sensitivity: 4.0,
+                ..Default::default()
             },
             fragment_code: ShaderCode {
                 language: ShaderLanguage::Glsl,

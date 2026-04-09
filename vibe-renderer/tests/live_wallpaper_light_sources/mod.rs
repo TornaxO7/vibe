@@ -23,7 +23,8 @@ fn test() {
         wallpaper: img,
 
         freq_range: NonZero::new(150).unwrap()..NonZero::new(250).unwrap(),
-        sensitivity: 4.0,
+        down: vibe_audio::default_down(),
+        up: vibe_audio::default_up(),
 
         sources: &[LightSourceData {
             center: [0f32; 2],

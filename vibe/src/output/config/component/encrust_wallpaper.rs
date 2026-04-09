@@ -46,7 +46,8 @@ impl ComponentConfig for WallpaperPulseEdgesConfig {
 
                 img,
                 freq_range: self.audio_conf.freq_range.range(),
-                audio_sensitivity: self.audio_conf.sensitivity,
+                up: self.audio_conf.up,
+                down: self.audio_conf.down,
                 high_threshold_ratio,
                 low_threshold_ratio,
                 wallpaper_brightness: self.wallpaper_brightness,
@@ -68,8 +69,21 @@ impl ComponentConfig for WallpaperPulseEdgesConfig {
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct WallpaperPulseEdgesAudioConfig {
-    pub sensitivity: f32,
     pub freq_range: FreqRange,
+    #[serde(default = "vibe_audio::default_up")]
+    pub up: f32,
+    #[serde(default = "vibe_audio::default_down")]
+    pub down: f32,
+}
+
+impl Default for WallpaperPulseEdgesAudioConfig {
+    fn default() -> Self {
+        Self {
+            freq_range: FreqRange::Bass,
+            up: vibe_audio::default_up(),
+            down: vibe_audio::default_down(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

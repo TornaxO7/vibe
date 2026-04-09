@@ -15,7 +15,7 @@ pub enum DeviceType {
 }
 
 /// Returns the given output/input device of the given id.
-/// You can retrieve a list of available ids by using the [`get_device_names`] function.
+/// You can retrieve a list of available ids by using the [`get_device_ids`] function.
 ///
 /// Returns `Err` if there's a problem retrieving an output/input device.
 /// Returns `Ok(None)` if retrieveing the output/input devices worked find but it couldn't find a device with the given name.
