@@ -129,17 +129,26 @@ pub fn get_surface_config(
     size: Size,
 ) -> wgpu::SurfaceConfiguration {
     let surface_caps = surface.get_capabilities(adapter);
-    let format = surface_caps
-        .formats
-        .iter()
-        .find(|f| {
-            let channel = f.channels();
+    let format = {
+        let formats = surface_caps.formats;
 
-            let has_alpha = channel.contains(wgpu::wgt::TextureChannel::ALPHA);
-            !f.is_srgb() && has_alpha
-        })
-        .copied()
-        .unwrap();
+        if formats.contains(&wgpu::TextureFormat::Bgra8Unorm) {
+            wgpu::TextureFormat::Bgra8Unorm
+        } else if formats.contains(&wgpu::TextureFormat::Rgba8Unorm) {
+            wgpu::TextureFormat::Rgba8Unorm
+        } else {
+            formats
+                .iter()
+                .find(|f| {
+                    let channel = f.channels();
+
+                    let has_alpha = channel.contains(wgpu::wgt::TextureChannel::ALPHA);
+                    !f.is_srgb() && has_alpha
+                })
+                .copied()
+                .unwrap()
+        }
+    };
 
     if !surface_caps
         .alpha_modes
