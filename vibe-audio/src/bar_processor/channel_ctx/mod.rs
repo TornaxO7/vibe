@@ -13,6 +13,7 @@ use std::ops::Range;
 
 const INIT_NORMALIZATION_FACTOR: f32 = 1.;
 const DEFAULT_PADDING_SIZE: usize = 5;
+const MIN_MAGNITUDE: f32 = 1e-16;
 
 /// Contains every additional information for a channel to be processed.
 pub struct ChannelCtx<I: Interpolater> {
@@ -135,7 +136,7 @@ impl<I: Interpolater> ChannelCtx<I> {
                     .iter()
                     .map(|out| {
                         let mag = out.norm();
-                        if mag > 0. {
+                        if mag > MIN_MAGNITUDE {
                             is_silent = false;
                         }
                         mag
