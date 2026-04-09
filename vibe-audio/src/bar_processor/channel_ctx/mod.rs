@@ -11,7 +11,7 @@ use padding::PaddingCtx;
 use realfft::num_complex::Complex32;
 use std::ops::Range;
 
-const INIT_NORMALIZATION_FACTOR: f32 = 1.;
+const INIT_NORMALIZATION_FACTOR: f32 = 0.1;
 const DEFAULT_PADDING_SIZE: usize = 5;
 const MIN_MAGNITUDE: f32 = 1e-16;
 
