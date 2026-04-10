@@ -48,6 +48,7 @@ impl ComponentConfig for WallpaperPulseEdgesConfig {
                 freq_range: self.audio_conf.freq_range.range(),
                 up: self.audio_conf.up,
                 down: self.audio_conf.down,
+                init_norm_factor: vibe_audio::InitNormFactor::default(),
                 high_threshold_ratio,
                 low_threshold_ratio,
                 wallpaper_brightness: self.wallpaper_brightness,

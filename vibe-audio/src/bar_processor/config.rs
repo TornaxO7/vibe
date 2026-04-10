@@ -67,6 +67,16 @@ pub struct PaddingConfig {
     pub size: PaddingSize,
 }
 
+#[derive(Debug, Clone, Copy)]
+pub struct InitNormFactor(pub f32);
+
+impl Default for InitNormFactor {
+    fn default() -> Self {
+        // This prevents users getting flash-banged.
+        Self(0.05)
+    }
+}
+
 /// The config options for [crate::BarProcessor].
 #[derive(Debug, Clone)]
 pub struct BarProcessorConfig {
@@ -93,6 +103,10 @@ pub struct BarProcessorConfig {
     pub bar_distribution: BarDistribution,
 
     pub padding: Option<PaddingConfig>,
+
+    /// Set the initial normalization factor.
+    /// If you set this to a low value, the frequency values will slowly increase.
+    pub init_norm_factor: InitNormFactor,
 }
 
 impl Default for BarProcessorConfig {
@@ -107,6 +121,7 @@ impl Default for BarProcessorConfig {
 
             bar_distribution: BarDistribution::Uniform,
             padding: None,
+            init_norm_factor: Default::default(),
         }
     }
 }

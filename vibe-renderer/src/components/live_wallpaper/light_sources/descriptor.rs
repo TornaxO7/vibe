@@ -10,6 +10,7 @@ pub struct LightSourcesDescriptor<'a, F: Fetcher> {
     pub freq_range: Range<NonZero<u16>>,
     pub up: f32,
     pub down: f32,
+    pub init_norm_factor: vibe_audio::InitNormFactor,
 
     pub wallpaper: image::DynamicImage,
     pub sources: &'a [LightSourceData],

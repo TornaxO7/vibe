@@ -35,7 +35,10 @@ fn test(pattern: SdfPattern, reference: &'static [u8], id: &'static str) {
     let mut chessy = Chessy::new(&ChessyDescriptor {
         renderer: &tester.renderer,
         sample_processor: &tester.sample_processor,
-        audio_config: BarProcessorConfig::default(),
+        audio_config: BarProcessorConfig {
+            init_norm_factor: crate::INIT_NORM_FACTOR,
+            ..Default::default()
+        },
         texture_format: tester.output_texture_format(),
         movement_speed: 0.1,
         pattern,

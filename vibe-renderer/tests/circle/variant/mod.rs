@@ -21,7 +21,10 @@ fn test(variant: CircleVariant, reference: &'static [u8], id: &'static str) {
     let mut circle = Circle::new(&CircleDescriptor {
         renderer: &tester.renderer,
         sample_processor: &tester.sample_processor,
-        audio_conf: BarProcessorConfig::default(),
+        audio_conf: BarProcessorConfig {
+            init_norm_factor: crate::INIT_NORM_FACTOR,
+            ..Default::default()
+        },
         texture_format: tester.output_texture_format(),
         variant,
         radius: 0.1,

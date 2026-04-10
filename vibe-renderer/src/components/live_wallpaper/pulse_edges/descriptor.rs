@@ -10,6 +10,7 @@ pub struct PulseEdgesDescriptor<'a, F: Fetcher> {
     pub freq_range: Range<NonZero<u16>>,
     pub up: f32,
     pub down: f32,
+    pub init_norm_factor: vibe_audio::InitNormFactor,
 
     pub high_threshold_ratio: f32,
     pub low_threshold_ratio: f32,

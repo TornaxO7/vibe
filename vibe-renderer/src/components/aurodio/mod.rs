@@ -45,6 +45,7 @@ impl Aurodio {
                         freq_range: layer.freq_range.clone(),
                         up: desc.up,
                         down: desc.down,
+                        init_norm_factor: desc.init_norm_factor,
                         ..Default::default()
                     },
                 ));

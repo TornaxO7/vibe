@@ -22,6 +22,7 @@ fn test() {
         freq_range: NonZero::new(100).unwrap()..NonZero::new(300).unwrap(),
         down: vibe_audio::default_down(),
         up: vibe_audio::default_up(),
+        init_norm_factor: crate::INIT_NORM_FACTOR,
         high_threshold_ratio: 0.7,
         low_threshold_ratio: 0.3,
         wallpaper_brightness: 0.2,
