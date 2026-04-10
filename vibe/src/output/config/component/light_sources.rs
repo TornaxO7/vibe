@@ -54,6 +54,7 @@ impl ComponentConfig for LightSourcesConfig {
             freq_range: self.audio_conf.freq_range.clone(),
             up: self.audio_conf.up,
             down: self.audio_conf.down,
+            init_norm_factor: vibe_audio::InitNormFactor::default(),
 
             wallpaper: img,
             sources: &sources,

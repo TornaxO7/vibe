@@ -45,7 +45,10 @@ fn test(format: RadialFormat, reference: &'static [u8], id: &'static str) {
     let mut radial = Radial::new(&RadialDescriptor {
         renderer: &tester.renderer,
         processor: &tester.sample_processor,
-        audio_conf: BarProcessorConfig::default(),
+        audio_conf: BarProcessorConfig {
+            init_norm_factor: crate::INIT_NORM_FACTOR,
+            ..Default::default()
+        },
         output_texture_format: tester.output_texture_format(),
         variant: RadialVariant::HeightGradient {
             inner: RED.into(),

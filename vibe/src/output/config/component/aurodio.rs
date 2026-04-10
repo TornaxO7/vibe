@@ -38,6 +38,7 @@ impl ComponentConfig for AurodioConfig {
             movement_speed: self.movement_speed,
             up: self.audio_conf.up,
             down: self.audio_conf.down,
+            init_norm_factor: vibe_audio::InitNormFactor::default(),
             layers: &layers,
             seed: None,
         })))

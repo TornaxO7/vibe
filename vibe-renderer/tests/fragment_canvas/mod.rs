@@ -14,6 +14,13 @@ fn load_img() -> DynamicImage {
         .unwrap()
 }
 
+fn bar_processor_config() -> BarProcessorConfig {
+    BarProcessorConfig {
+        init_norm_factor: crate::INIT_NORM_FACTOR,
+        ..Default::default()
+    }
+}
+
 // Check if the standard shaders are working
 #[test]
 fn wgsl_passes_without_img() {
@@ -21,7 +28,7 @@ fn wgsl_passes_without_img() {
 
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &tester.sample_processor,
-        audio_conf: BarProcessorConfig::default(),
+        audio_conf: bar_processor_config(),
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
 
@@ -48,7 +55,7 @@ fn wgsl_passes_with_img() {
 
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &tester.sample_processor,
-        audio_conf: BarProcessorConfig::default(),
+        audio_conf: bar_processor_config(),
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
 
@@ -75,7 +82,7 @@ fn glsl_passes_without_img() {
 
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &tester.sample_processor,
-        audio_conf: BarProcessorConfig::default(),
+        audio_conf: bar_processor_config(),
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
 
@@ -103,7 +110,7 @@ fn glsl_passes_with_img() {
     let sample_processor = SampleProcessor::new(DummyFetcher::new(2));
     let mut frag_canvas = FragmentCanvas::new(&FragmentCanvasDescriptor {
         sample_processor: &sample_processor,
-        audio_conf: BarProcessorConfig::default(),
+        audio_conf: bar_processor_config(),
         renderer: &tester.renderer,
         format: tester.output_texture_format(),
 

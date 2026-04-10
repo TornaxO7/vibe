@@ -25,6 +25,8 @@ mod fetcher;
 
 use fetcher::TestFetcher;
 
+// We want to see the height differences, so we use a higher value than the default.
+const INIT_NORM_FACTOR: vibe_audio::InitNormFactor = vibe_audio::InitNormFactor(1.0);
 const PIXEL_SIZE: u32 = std::mem::size_of::<u32>() as u32;
 /// The environment variable which needs to be set to create and save the diff images of the tests.
 const DIFF_ENV: &str = "VIBE_TEST_SAVE_DIFF";

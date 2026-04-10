@@ -22,6 +22,7 @@ fn test() {
         }],
         down: vibe_audio::default_down(),
         up: vibe_audio::default_up(),
+        init_norm_factor: super::INIT_NORM_FACTOR,
         seed: Some(NICE),
     });
 

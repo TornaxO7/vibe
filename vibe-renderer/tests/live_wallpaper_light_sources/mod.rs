@@ -25,6 +25,7 @@ fn test() {
         freq_range: NonZero::new(150).unwrap()..NonZero::new(250).unwrap(),
         down: vibe_audio::default_down(),
         up: vibe_audio::default_up(),
+        init_norm_factor: crate::INIT_NORM_FACTOR,
 
         sources: &[LightSourceData {
             center: [0f32; 2],

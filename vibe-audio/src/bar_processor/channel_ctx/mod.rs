@@ -11,7 +11,6 @@ use padding::PaddingCtx;
 use realfft::num_complex::Complex32;
 use std::ops::Range;
 
-const INIT_NORMALIZATION_FACTOR: f32 = 1.;
 const DEFAULT_PADDING_SIZE: usize = 5;
 const MIN_MAGNITUDE: f32 = 1e-16;
 
@@ -93,7 +92,7 @@ impl<I: Interpolater> ChannelCtx<I> {
             fft_out_ranges: supporting_points_fft_ranges,
             padding: padding.clone(),
 
-            normalize_factor: INIT_NORMALIZATION_FACTOR,
+            normalize_factor: config.init_norm_factor.0,
 
             up: config.up,
             down: config.down,
