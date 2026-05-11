@@ -38,6 +38,28 @@ impl OutputConfig {
         Ok(new)
     }
 
+    /// Tries to load the config of the given output name.
+    ///
+    /// # Returns
+    /// The absolute path to the config file of the given output name (if it exists)
+    /// and the deserialized config (if the config is correct).
+    pub fn try_load_from_name<S: AsRef<str>>(
+        output_name: S,
+    ) -> Option<(PathBuf, anyhow::Result<Self>)> {
+        let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
+
+        for entry in iterator {
+            let entry = entry.unwrap();
+            let path = entry.path();
+
+            if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
+                return Some((path.clone(), Self::try_from(path.as_path()).context("")));
+            }
+        }
+
+        None
+    }
+
     /// Saves the current state of the config to the config file of the output.
     pub fn save(&self, name: impl AsRef<str>) -> io::Result<()> {
         let string = toml::to_string(self).unwrap();
@@ -83,24 +105,6 @@ impl TryFrom<&Path> for OutputConfig {
         let content = std::fs::read_to_string(path).map_err(OutputConfigReadError::IO)?;
         toml::from_str(&content).map_err(OutputConfigReadError::TomlSerde)
     }
-}
-
-pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<OutputConfig>)> {
-    let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
-
-    for entry in iterator {
-        let entry = entry.unwrap();
-        let path = entry.path();
-
-        if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
-            return Some((
-                path.clone(),
-                OutputConfig::try_from(path.as_path()).context(""),
-            ));
-        }
-    }
-
-    None
 }
 
 #[cfg(test)]

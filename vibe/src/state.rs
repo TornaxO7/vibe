@@ -208,7 +208,7 @@ impl OutputHandler for State {
 
         info!("Detected output: '{}'", &name);
 
-        let config = match crate::output::config::load(&name) {
+        let config = match crate::output::config::OutputConfig::try_load_from_name(&name) {
             Some((path, res)) => match res {
                 Ok(config) => {
                     info!("Reusing '{}'.", path.to_string_lossy());
