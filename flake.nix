@@ -44,6 +44,7 @@
                     cargo-flamegraph
                     cargo-release
                     git-cliff
+                    wasm-pack
                   ] ++ [ rust-toolchain ];
 
                   buildInputs = vibe.buildInputs;
