@@ -143,7 +143,9 @@ impl OutputRenderer<'_> {
         let processor = config.sample_processor()?;
 
         let (output_config_path, output_config) = {
-            let Some((path, config)) = crate::output::config::load(&output_name) else {
+            let Some((path, config)) =
+                crate::output::config::OutputConfig::try_load_from_name(&output_name)
+            else {
                 bail!(
                     "The config file for '{}' does not exist. Can't start hot reloading.`",
                     output_name
@@ -211,7 +213,9 @@ impl OutputRenderer<'_> {
     // Returns `Err` if something un-saveable happened. => Signal for exiting
     pub fn refresh_config(&mut self) -> anyhow::Result<()> {
         self.output_config = {
-            let Some((path, output_config)) = crate::output::config::load(&self.output_name) else {
+            let Some((path, output_config)) =
+                crate::output::config::OutputConfig::try_load_from_name(&self.output_name)
+            else {
                 bail!(
                     "The config file of your output '{}' got removed. `vibe` will stop rendering...",
                     self.output_name

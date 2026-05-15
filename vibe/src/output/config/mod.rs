@@ -4,7 +4,11 @@ use crate::output::config::component::ComponentConfig;
 use anyhow::Context;
 use serde::{Deserialize, Serialize};
 use smithay_client_toolkit::output::OutputInfo;
-use std::{ffi::OsStr, io, path::PathBuf};
+use std::{
+    ffi::OsStr,
+    io,
+    path::{Path, PathBuf},
+};
 
 /// Represents the config file of an output.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -21,7 +25,7 @@ pub struct OutputConfig {
 }
 
 impl OutputConfig {
-    pub fn new(info: &OutputInfo, default_component: component::Config) -> anyhow::Result<Self> {
+    pub fn new(info: &OutputInfo, default_component: component::Config) -> io::Result<Self> {
         let name = info.name.as_ref().unwrap();
 
         let new = Self {
@@ -32,6 +36,28 @@ impl OutputConfig {
 
         new.save(name)?;
         Ok(new)
+    }
+
+    /// Tries to load the config of the given output name.
+    ///
+    /// # Returns
+    /// The absolute path to the config file of the given output name (if it exists)
+    /// and the deserialized config (if the config is correct).
+    pub fn try_load_from_name<S: AsRef<str>>(
+        output_name: S,
+    ) -> Option<(PathBuf, anyhow::Result<Self>)> {
+        let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
+
+        for entry in iterator {
+            let entry = entry.unwrap();
+            let path = entry.path();
+
+            if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
+                return Some((path.clone(), Self::try_from(path.as_path()).context("")));
+            }
+        }
+
+        None
     }
 
     /// Saves the current state of the config to the config file of the output.
@@ -63,20 +89,22 @@ impl OutputConfig {
     }
 }
 
-pub fn load<S: AsRef<str>>(output_name: S) -> Option<(PathBuf, anyhow::Result<OutputConfig>)> {
-    let iterator = std::fs::read_dir(crate::get_output_config_dir()).unwrap();
+#[derive(thiserror::Error, Debug)]
+pub enum OutputConfigReadError {
+    #[error(transparent)]
+    IO(#[from] io::Error),
 
-    for entry in iterator {
-        let entry = entry.unwrap();
-        let path = entry.path();
+    #[error(transparent)]
+    TomlSerde(#[from] toml::de::Error),
+}
 
-        if path.file_stem().unwrap() == OsStr::new(output_name.as_ref()) {
-            let content = std::fs::read_to_string(&path).unwrap();
-            return Some((path, toml::from_str(&content).context("")));
-        }
+impl TryFrom<&Path> for OutputConfig {
+    type Error = OutputConfigReadError;
+
+    fn try_from(path: &Path) -> Result<Self, Self::Error> {
+        let content = std::fs::read_to_string(path).map_err(OutputConfigReadError::IO)?;
+        toml::from_str(&content).map_err(OutputConfigReadError::TomlSerde)
     }
-
-    None
 }
 
 #[cfg(test)]
