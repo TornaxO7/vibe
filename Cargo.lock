@@ -3786,6 +3786,28 @@ dependencies = [
 ]
 
 [[package]]
+name = "vibe-web"
+version = "3.0.0"
+dependencies = [
+ "anyhow",
+ "cgmath",
+ "clap",
+ "image",
+ "raw-window-handle",
+ "serde",
+ "thiserror 2.0.18",
+ "toml",
+ "tracing",
+ "tracing-indicatif",
+ "tracing-subscriber",
+ "vibe-audio",
+ "vibe-renderer",
+ "wgpu",
+ "winit",
+ "xdg",
+]
+
+[[package]]
 name = "vt100"
 version = "0.16.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
