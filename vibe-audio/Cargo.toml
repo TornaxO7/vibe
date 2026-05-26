@@ -15,5 +15,5 @@ thiserror.workspace = true
 
 apodize = "1"
 cpal = "0.17"
-nalgebra = { version = "0.34", default-features = false, features = ["std"] }
+nalgebra = { version = "0.35", default-features = false, features = ["std"] }
 realfft = "3.5"
