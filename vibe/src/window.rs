@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{bail, Context};
 use notify::{INotifyWatcher, Watcher};
-use tracing::error;
+use tracing::{error, info};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{components::ComponentAudio, Renderer, RendererDescriptor};
 use winit::{
@@ -300,6 +300,8 @@ impl ApplicationHandler for OutputRenderer<'_> {
                 error!("{:?}", err);
                 event_loop.exit();
                 return;
+            } else {
+                info!("Refreshed config successfully");
             }
         }
 
