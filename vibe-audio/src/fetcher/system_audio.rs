@@ -15,11 +15,13 @@ pub enum SystemAudioError {
     #[error("Couldn't retrieve any config of the output stream of the default device.")]
     NoAvailableOutputConfigs,
 
-    #[error("Couldn't get supported output config of device: {0}")]
-    SupportedStreamConfigError(#[from] cpal::SupportedStreamConfigsError),
+    #[error(transparent)]
+    Cpal(#[from] cpal::Error),
+    // #[error("Couldn't get supported output config of device: {0}")]
+    // SupportedStreamConfigError(#[from] cpal::SupportedStreamConfigsError),
 
-    #[error("Couldn't build an audio stream:\n{0}")]
-    BuildOutputStreamError(#[from] cpal::BuildStreamError),
+    // #[error("Couldn't build an audio stream:\n{0}")]
+    // BuildOutputStreamError(#[from] cpal::BuildStreamError),
 }
 
 pub struct Descriptor {
@@ -92,7 +94,7 @@ impl SystemAudio {
 
         let stream = {
             let stream = device.build_input_stream(
-                &stream_config,
+                stream_config,
                 {
                     let buffer = sample_buffer.clone();
                     move |data: &[f32], _: &cpal::InputCallbackInfo| {
