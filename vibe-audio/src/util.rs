@@ -22,7 +22,7 @@ pub enum DeviceType {
 pub fn get_device(
     device_id: DeviceId,
     device_type: DeviceType,
-) -> Result<Option<cpal::Device>, cpal::DevicesError> {
+) -> Result<Option<cpal::Device>, cpal::Error> {
     let mut devices = get_devices(device_type)?;
 
     Ok(devices.find(|dev| dev.id().map(|id| id == device_id).unwrap_or(false)))
@@ -38,7 +38,7 @@ pub fn get_default_device(device_type: DeviceType) -> Option<cpal::Device> {
     }
 }
 
-fn get_devices(device_type: DeviceType) -> Result<Devices, cpal::DevicesError> {
+fn get_devices(device_type: DeviceType) -> Result<Devices, cpal::Error> {
     let host = cpal::default_host();
 
     match device_type {
@@ -49,6 +49,6 @@ fn get_devices(device_type: DeviceType) -> Result<Devices, cpal::DevicesError> {
 
 /// Returns a list of device ids which you can use for [`get_device`].
 /// Returns `Err` if there's a problem retrieving an output/input device.
-pub fn get_device_ids(device_type: DeviceType) -> Result<Vec<DeviceId>, cpal::DevicesError> {
+pub fn get_device_ids(device_type: DeviceType) -> Result<Vec<DeviceId>, cpal::Error> {
     get_devices(device_type).map(|devices| devices.filter_map(|d| d.id().ok()).collect())
 }
