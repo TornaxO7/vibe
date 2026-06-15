@@ -9,7 +9,7 @@ use smithay_client_toolkit::{
         WaylandSurface,
     },
 };
-use tracing::error;
+use tracing::{debug, error};
 use vibe_audio::{fetcher::SystemAudioFetcher, SampleProcessor};
 use vibe_renderer::{ComponentAudio, Renderer};
 use wayland_client::QueueHandle;
@@ -131,6 +131,8 @@ pub fn get_surface_config(
     let surface_caps = surface.get_capabilities(adapter);
     let format = {
         let formats = surface_caps.formats;
+
+        debug!("Available texture formats: {:#?}", formats);
 
         if formats.contains(&wgpu::TextureFormat::Bgra8Unorm) {
             wgpu::TextureFormat::Bgra8Unorm
