@@ -22,7 +22,7 @@ tracing-indicatif.workspace = true
 bytemuck.workspace = true
 
 fastrand = "2.4"
-pollster = "0.4"
+pollster = "1.0"
 wesl = "0.4"
 
 [dev-dependencies]
