@@ -91,8 +91,11 @@ impl State<'_> {
             wgpu::CurrentSurfaceTexture::Success(frame) => frame,
             wgpu::CurrentSurfaceTexture::Occluded
             | wgpu::CurrentSurfaceTexture::Timeout
-            | wgpu::CurrentSurfaceTexture::Outdated
-            | wgpu::CurrentSurfaceTexture::Suboptimal(_) => {
+            | wgpu::CurrentSurfaceTexture::Outdated => return,
+            wgpu::CurrentSurfaceTexture::Suboptimal(texture) => {
+                drop(texture);
+                self.surface
+                    .configure(renderer.device(), &self.surface_config);
                 return;
             }
             wgpu::CurrentSurfaceTexture::Validation => {
