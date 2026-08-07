@@ -71,6 +71,11 @@ impl OutputCtx {
         }
     }
 
+    pub fn reconfigure_surface(&self, renderer: &Renderer) {
+        self.surface
+            .configure(renderer.device(), &self.surface_config);
+    }
+
     pub fn request_redraw(&self, qh: &QueueHandle<State>) {
         let surface = self.layer_surface.wl_surface();
 
@@ -91,8 +96,7 @@ impl OutputCtx {
             self.surface_config.width = new_size.width;
             self.surface_config.height = new_size.height;
 
-            self.surface
-                .configure(renderer.device(), &self.surface_config);
+            self.reconfigure_surface(renderer);
 
             for component in self.components.iter_mut() {
                 component.update_resolution(renderer, [new_size.width, new_size.height]);

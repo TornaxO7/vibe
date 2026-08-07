@@ -147,6 +147,7 @@ impl State {
     }
 
     pub fn render(&mut self, output_key: WlOutput, qh: &QueueHandle<Self>) {
+        tracing::debug!("render");
         let output = self.outputs.get_mut(&output_key).unwrap();
 
         // update the buffers for the next frame
@@ -177,8 +178,13 @@ impl State {
             wgpu::CurrentSurfaceTexture::Occluded => {
                 warn!("The surface seems to be behind another layer/window. `vibe` will wait until it's seeable again before rendering again.");
             }
-            wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Suboptimal(_) => {
+            wgpu::CurrentSurfaceTexture::Outdated => {
                 warn!("Received outdated texture of surface. (nothing bad. Just going to skip a frame.)");
+            }
+            wgpu::CurrentSurfaceTexture::Suboptimal(surface) => {
+                drop(surface);
+                output.reconfigure_surface(&self.renderer);
+                output.request_redraw(qh);
             }
             wgpu::CurrentSurfaceTexture::Lost => {
                 error!("Lost texture of surface. Eh... dunno, what you should do about this. Should be fine to ignore this (otherwise please create an issue <.<)");
