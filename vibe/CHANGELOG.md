@@ -2,13 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
-## 3.0.0 - 2026-02-14
+## 3.0.1 - 2026-08-24
 
-[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[cac332c](cac332c518fd4d022ba28ef75d5b7b80b966b17d)
+[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[a6f83ae](a6f83ae366037c97ac0632d94523021287083e24)
 
 ### Bug Fixes
 
 - Forgot to update the tests after giving each descriptor the renderer ([f54a0eb](f54a0eb99dd3722278418826f52a64435d85301e))
+- Correctly apply surface-refonfiguration ([05065d9](05065d9b1a994e45a86e1d2a0483f5041c4ea95a))
+- Window didn't refresh correctly due to suboptimal ([a6f83ae](a6f83ae366037c97ac0632d94523021287083e24))
 
 ### Documentation
 
@@ -38,11 +40,23 @@ color = "$YOUR_ENV_NAME"
 ```
 - Add border option ([7c1602f](7c1602f05e51d48d02cbfd75b88e4bac1348f9b1))
 - Implement border option ([db63d00](db63d004a0ba0e3cd0b062924ea472ac4200ca8b))
+- Add presence gradient variant ([6fdfae6](6fdfae6ab2be0d96d9a383a504174d405b3b26e6))
+- Add canvas height option ([daa3dd3](daa3dd324bddece552f58b40bcf758b4352cd18d))
+- Add glowing bar for the spawn point of the blocks ([6e27b92](6e27b92d3e6a41ad6823bac530cb27620f2653bf))
+- Allow random spawning ([2632159](2632159bd4610c43c21beec8e91d57760bac7f35))
+- Add speed parameter ([e74bf8a](e74bf8a924d3ea9d03aa475da1c36c6e734d0cef))
+- Add easing option ([6babd5c](6babd5c670cef616b1aec2a56b5d02792c3aa1d1))
+- Add `up` and `down` option to audio configs ([11e5c08](11e5c084f56a420efe62921ed5e91d64fd5d5af1)), BREAKING CHANGE:`sensitivity` is replaced by `down`
+
+users are now able to configure the `up` and `down` speed of the bars
+- Add info for successfull config refresh ([e0f1efb](e0f1efb139e0b07e9a871132a259de5ae57a19b4))
 
 ### Miscellaneous Tasks
 
 - Make clippy happy ([a99adba](a99adbac5c72e223ff303018de4b8bf6ce5f96b2))
 - Remove release-plz ([cac332c](cac332c518fd4d022ba28ef75d5b7b80b966b17d))
+- Release ([c5fe54c](c5fe54c443baf6031e2f90a9de61b9e7659a12dd))
+- Add cubic easing ([619418a](619418a19f49b7a82c9cdc10fe95723b1c2eec1c))
 
 ### Refactor
 
@@ -58,12 +72,35 @@ color = "$YOUR_ENV_NAME"
 - Improve error message for environment variable errors ([b6d48f1](b6d48f158430fd64a73de65c155e6fb21cf0dd7d))
 - Remove `lib.rs` and merge it with `main.rs` again ([475c21b](475c21bdfbdca81311fca80a57521c13806a770b))
 - Remove comented out lines ([0b44c55](0b44c55b4452d8e5af5526e7b138828f1cce71ef))
+- Print message for kde users ([b744436](b7444364a5a62f7b017cc7c2d6480a8ad383c384))
+- Adding config option for rising blocks ([5fb32bf](5fb32bf85ab56f2688b05831cc046683ec5461f6))
+- Rename parameter pehaviour ([347bbc7](347bbc7b421c00d9a5929a37645a8d33aca01434))
+- Add more config options for bar processor ([b3125b9](b3125b9ced46d74ae2b1528e60ca057f87b2c22a))
+- Removing threshold option ([a4de961](a4de961f7354911670c413fb0c2680f446755325))
+- Check for available alpha channel ([7802f1e](7802f1ec83272cc7803034dffe39857a6cccfb87))
+- Add beat threshold option ([b97113a](b97113a3b79ebad2606bfc8d7d370939e5a173fc))
+- Add option to set color for background ([6b55b6b](6b55b6b79664ac32287ea94bae584cc079cdb9de))
+- Add foreground color option ([25bc06c](25bc06c7e764c68122a153027d924f6254d4a604))
+- Change heuristic for choosing TextureFormat ([05d1cdc](05d1cdc5767ad16054f1570a40d3d1836b85dd0c))
+- Add option to set the initial normalization factor ([f9acdfa](f9acdfaf28121708ed89d9ca908307cd0cd33633))
+- Add try_from to load from path ([5796414](57964145031820e77c6e4c7f93862a6cd543bfa1))
+- Add method for loading from given path ([4ea6743](4ea6743f925bcc400c10b6d62792ad55032fa74e))
+- Add debug entry for available texture formats ([46e40cc](46e40cc957065d2babf01591e83a42935cdcbf81))
 
 ### Testing
 
 - Add missing components for external-paths-test ([fcbb426](fcbb426cd4967cda7762807e1b1c8ca67a770e9a))
 - Add more entries ([305aa6e](305aa6ed868f7a8827bca440964c6465a75fdf70))
 - Add aurodio to new test framework ([f3a979b](f3a979bc354847aa8f9201f8cb9570a94b142e0a))
+- Add presence-gradient variant ([12e533d](12e533da1ccd338cc24e87f27ed0bf0c8b0195d6))
+
+### Build
+
+- Bump wgpu to 0.29 ([ca07baf](ca07bafb8786ff6b2200e00a38abbd54392c14fb))
+
+### Deps
+
+- Move as workspace dependency ([c1cc451](c1cc451f9e44fec6f4dd43d510da566ec831d2ca))
 
 ## ibe-v2.5.0 - 2026-01-29
 
