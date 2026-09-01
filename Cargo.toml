@@ -1,5 +1,5 @@
 [workspace]
-members = ["vibe-renderer", "vibe", "vibe-audio"]
+members = ["vibe-renderer", "vibe", "vibe-audio", "vibe-web"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -16,6 +16,8 @@ wgpu = { version = "29.0", default-features = false, features = [
   "serde",
   "glsl",
   "naga-ir",
+
+  "web",
 ] }
 
 serde = { version = "1", features = ["derive"] }
