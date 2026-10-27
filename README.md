@@ -5,6 +5,7 @@
 <a href="https://repology.org/project/vibe-audio-visualizer/versions">
     <img src="https://repology.org/badge/vertical-allrepos/vibe-audio-visualizer.svg" alt="Packaging status" align="right">
 </a>
+
 **Note:** Your compositor _must_ support the [`wlr-layer-shell`] protocol. See [here](https://wayland.app/protocols/wlr-layer-shell-unstable-v1#compositor-support)
 for a list of compositors on which `vibe` should be able to run.
 
@@ -35,6 +36,7 @@ However I can't promise to work on every suggestion/bug :>
 **Note:** I'm unsure if I'd declare the config file format(s) of `vibe` as "stable", so for the time being: Be prepared for breaking changes.
 
 # Start using `vibe`
+
 `vibe` won't work out of the box probably. Some steps are required.
 
 See [USAGE.md](./USAGE.md) for more information.
@@ -45,7 +47,7 @@ See the [`Config` wiki page](https://github.com/TornaxO7/vibe/wiki).
 
 # Similar projects
 
-- [WayVes]: OpenGL-based Visualiser Framework for Wayland 
+- [WayVes]: OpenGL-based Visualiser Framework for Wayland
 
 [shady-toy]: https://github.com/TornaxO7/shady/tree/main/shady-toy
 [glava]: https://github.com/jarcode-foss/glava
