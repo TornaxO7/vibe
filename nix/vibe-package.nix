@@ -3,6 +3,7 @@
 , pkg-config
 
 , alsa-lib
+, pipewire
 
 , libGL
 , libxkbcommon
@@ -31,10 +32,12 @@ rustPlatform.buildRustPackage rec {
     pkg-config
     makeWrapper
     flip
+    rustPlatform.bindgenHook
   ];
 
   buildInputs = [
     alsa-lib
+    pipewire
 
     # Without wayland in library path, this warning is raised:
     # "No windowing system present. Using surfaceless platform"
