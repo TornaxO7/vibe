@@ -2,9 +2,9 @@
 
 All notable changes to this project will be documented in this file.
 
-## 3.0.1 - 2026-08-24
+## ibe-v3.0.1 - 2026-08-24
 
-[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[a6f83ae](a6f83ae366037c97ac0632d94523021287083e24)
+[b0b519f](b0b519f9497781cf9e2c22e9f79b626fba476284)...[7b17437](7b17437a307a3f4db4b0a6a8d9cb30ad41c96a92)
 
 ### Bug Fixes
 
@@ -57,6 +57,7 @@ users are now able to configure the `up` and `down` speed of the bars
 - Remove release-plz ([cac332c](cac332c518fd4d022ba28ef75d5b7b80b966b17d))
 - Release ([c5fe54c](c5fe54c443baf6031e2f90a9de61b9e7659a12dd))
 - Add cubic easing ([619418a](619418a19f49b7a82c9cdc10fe95723b1c2eec1c))
+- Release ([7b17437](7b17437a307a3f4db4b0a6a8d9cb30ad41c96a92))
 
 ### Refactor
 
