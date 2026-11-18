@@ -25,7 +25,7 @@ See the [ArchWiki](https://wiki.archlinux.org/title/Arch_User_Repository) to lea
 ## `apt`
 
 ```
-sudo apt install rustup librust-wayland-client-dev librust-alsa-sys-dev libxkbcommon-dev pavucontrol
+sudo apt install rustup librust-wayland-client-dev librust-alsa-sys-dev libxkbcommon-dev pavucontrol libpipewire-0.3-dev
 ```
 
 ## `dnf`
