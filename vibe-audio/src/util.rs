@@ -32,6 +32,12 @@ pub fn get_device(
 pub fn get_default_device(device_type: DeviceType) -> Option<cpal::Device> {
     let host = cpal::default_host();
 
+    tracing::debug!(
+        "`cpal` host: {:?} (available: {:?})",
+        host.id(),
+        cpal::available_hosts()
+    );
+
     match device_type {
         DeviceType::Input => host.default_input_device(),
         DeviceType::Output => host.default_output_device(),

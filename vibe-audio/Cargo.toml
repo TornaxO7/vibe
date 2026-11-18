@@ -14,6 +14,6 @@ tracing.workspace = true
 thiserror.workspace = true
 
 apodize = "1"
-cpal = "0.18"
+cpal = { version = "0.18", features = ["pipewire"] }
 nalgebra = { version = "0.35", default-features = false, features = ["std"] }
 realfft = "3.5"
